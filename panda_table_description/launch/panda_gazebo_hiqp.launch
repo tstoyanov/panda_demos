@@ -13,8 +13,8 @@
     <arg name="controllers" default="joint_state_controller hiqp_joint_effort_controller"/>
     <arg name="rviz" default="false"/>
     
-    <rosparam command="load" file="$(find panda_table_launch)/config/controllers.yaml" ns="$(arg robot_namespace)" />
-    <rosparam command="load" file="$(find panda_table_launch)/config/franka_limits.yaml" ns="$(arg robot_namespace)" />
+    <rosparam command="load" file="$(find panda_table_launch)/config/controllers.yaml" />
+    <rosparam command="load" file="$(find panda_table_launch)/config/franka_limits.yaml" />
 
     <!--launch GAZEBO with own world configuration -->
     <include file="$(find gazebo_ros)/launch/empty_world.launch">
@@ -28,13 +28,9 @@
     <param name="robot_description" command="$(find xacro)/xacro --inorder '$(find panda_table_description)/urdf/panda_table.urdf.xacro' load_gripper:=$(arg load_gripper)"/>
     <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-param robot_description -urdf -model panda"/>
 
-  <group ns="$(arg robot_namespace)">
-     <param name="robot_description" command="$(find xacro)/xacro --inorder '$(find panda_table_description)/urdf/panda_table.urdf.xacro' load_gripper:=$(arg load_gripper)"/>
-
      <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" output="screen"/>
     <!-- load the controllers -->
-    <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="$(arg controllers)" />
-  </group>
+    <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="$(arg controllers)"/>
 
   <node name="rviz" pkg="rviz" type="rviz" if="$(arg rviz)"/>
     
