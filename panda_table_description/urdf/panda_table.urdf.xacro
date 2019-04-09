@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://ros.org/wiki/xacro"
-       name="amici" >
+       name="panda" >
 
   <!-- panda arm -->
   <xacro:include filename="$(find franka_description)/robots/panda_arm.xacro"/>
