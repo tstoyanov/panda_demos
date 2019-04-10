@@ -5,8 +5,8 @@
   <description>
      An automatically generated package with all the configuration and launch files for using the panda with the MoveIt! Motion Planning Framework
   </description>
-  <author email="tommaso@mail.com">Tommaso</author>
-  <maintainer email="tommaso@mail.com">Tommaso</maintainer>
+  <author email="tommaso@oru.se">Tommaso</author>
+  <maintainer email="tommaso@oru.se">Tommaso</maintainer>
 
   <license>BSD</license>
 

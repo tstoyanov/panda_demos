@@ -1,4 +1,4 @@
-amici:
+panda:
 # MoveIt-specific simulation settings
   moveit_sim_hw_interface:
     joint_model_group: controllers_initial_group_
@@ -26,49 +26,3 @@ amici:
     publish_rate: 50
   controller_list:
     []
-  position_joint_trajectory_controller:
-    type: effort_controllers/JointTrajectoryController
-    joints:
-      - panda_joint1
-      - panda_joint2
-      - panda_joint3
-      - panda_joint4
-      - panda_joint5
-      - panda_joint6
-      - panda_joint7
-    gains:
-      panda_joint1:
-        p: 100
-        d: 1
-        i: 1
-        i_clamp: 1
-      panda_joint2:
-        p: 100
-        d: 1
-        i: 1
-        i_clamp: 1
-      panda_joint3:
-        p: 100
-        d: 1
-        i: 1
-        i_clamp: 1
-      panda_joint4:
-        p: 100
-        d: 1
-        i: 1
-        i_clamp: 1
-      panda_joint5:
-        p: 100
-        d: 1
-        i: 1
-        i_clamp: 1
-      panda_joint6:
-        p: 100
-        d: 1
-        i: 1
-        i_clamp: 1
-      panda_joint7:
-        p: 100
-        d: 1
-        i: 1
-        i_clamp: 1
