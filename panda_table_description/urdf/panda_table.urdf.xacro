@@ -7,8 +7,9 @@
   <xacro:include filename="$(find franka_description)/robots/hand.xacro"/> 
 
   <!-- for simulation -->
-  <xacro:include filename="$(find franka_description)/robots/panda.gazebo.xacro"/>
   <xacro:include filename="$(find franka_description)/robots/panda.transmission.xacro"/>
+  
+  <xacro:include filename="$(find panda_table_description)/urdf/panda_table.gazebo.xacro"/>
   <!-- end for simulation -->
 
   <xacro:panda_arm connected_to="mount_flange_link" xyz="0.0 0.0 0.0" rpy="0 0 ${pi}" />
@@ -16,11 +17,38 @@
      <xacro:hand ns="panda" rpy="0 0 ${-pi/4}" connected_to="panda_link8"/>
   </xacro:if>
   <xacro:unless value="$(arg load_gripper)">
+   <link name="tool">
+     <inertial>
+       <mass value="0.642"/>
+       <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001" />
+       <origin/>
+     </inertial>
+     <visual>
+       <origin xyz="0 0 -0.15" rpy="0 0 0" />
+       <geometry>
+         <cylinder radius="0.0085" length="0.3" />
+       </geometry>       
+       <material name="orange"/>
+     </visual>
+     <collision name="tool_collision">
+       <origin xyz="0 0 -0.15" rpy="0 0 0" />
+       <geometry>
+         <cylinder radius="0.0085" length="0.3" />
+       </geometry>
+     </collision>
+   </link>
+  
+     <joint name="tool_joint" type="fixed">
+       <parent link="panda_link8" />
+       <child link = "tool" />
+       <origin xyz="0.0 0.0 0.3" rpy="0.0 0.0 0.0" />
+     </joint>
+
   </xacro:unless>
 
   <!-- for simulation -->
   <xacro:arg name="robot_name" default="panda"/>
-  <xacro:panda_gazebo robot_name="$(arg robot_name)" load_gripper="$(arg load_gripper)" />
+  <xacro:panda_table_gazebo robot_name="$(arg robot_name)" load_gripper="$(arg load_gripper)" />
   <xacro:panda_transmission robot_name="$(arg robot_name)" load_gripper="$(arg load_gripper)" />
   <!-- end for simulation -->
 
@@ -84,7 +112,21 @@
       <origin rpy="0 0 0" xyz="0.0 0.0 0.2575" />
     </collision>
    </link>
-  
+
+   <link name="work_piece">
+    <visual>
+      <geometry>
+	<mesh filename="package://panda_table_description/meshes/work_piece.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <origin rpy="0 1.5707 0" xyz="0.0 0.0 0.0" />
+    </visual>
+    <collision>
+      <geometry>
+	<mesh filename="package://panda_table_description/meshes/work_piece.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <origin rpy="0 1.5707 0" xyz="0.0 0.0 0.0" />
+    </collision>
+   </link>  
 
   <joint name="world_joint" type="fixed">
     <parent link="world" />
@@ -107,6 +149,11 @@
     <parent link="table" />
     <child link = "column2" />
     <origin xyz="-0.45 -0.505 0.7" rpy="0.0 0.0 0.0" />
+  </joint>
+  <joint name="table_wp" type="fixed">
+    <parent link="table" />
+    <child link = "work_piece" />
+    <origin xyz="0.45 0.105 0.72" rpy="0.0 0.0 0.0" />
   </joint>
   
 
