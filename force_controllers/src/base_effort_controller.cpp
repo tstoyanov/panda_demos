@@ -78,7 +78,9 @@ namespace force_controllers {
     if (controller_nh_.searchParam("robot_description", full_parameter_path))
     {
         controller_nh_.getParam(full_parameter_path, robot_urdf);
-        ROS_ASSERT(kdl_parser::treeFromString(robot_urdf, robot_state_data_.kdl_tree_));
+        bool success = kdl_parser::treeFromString(robot_urdf, robot_state_data_.kdl_tree_);
+
+        ROS_ASSERT(success);
         ROS_INFO_STREAM("Loaded the robot's urdf model and initialized the KDL tree successfully from "
                 <<full_parameter_path );
     }
@@ -108,7 +110,11 @@ namespace force_controllers {
       // Load all joint handles for all joint name references
     for (auto&& name : joint_names) {
       try {
-        unsigned int q_nr = kdl_getQNrFromJointName(robot_state_data_.kdl_tree_, name);
+        int q_nr = kdl_getQNrFromJointName(robot_state_data_.kdl_tree_, name);
+        if(q_nr < 0) {
+            ROS_ERROR_STREAM("Could not find joint "<<name<<" in the KDL model");
+            return -1;
+        }
         std::cout << "Joint found: '" << name << "', qnr: " << q_nr << "\n";
         joint_handles_map_.emplace(q_nr, hardware_interface_->getHandle(name));
       } catch (const hardware_interface::HardwareInterfaceException& e) {
