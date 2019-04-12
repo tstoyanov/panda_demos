@@ -51,66 +51,19 @@ Visualization Manager:
       Reference Frame: <Fixed Frame>
       Value: true
     - Class: rviz/TF
-      Enabled: true
+      Enabled: false
       Frame Timeout: 15
       Frames:
         All Enabled: false
-        column1:
-          Value: true
-        column2:
-          Value: true
-        mount_flange_link:
-          Value: true
-        panda_link0:
-          Value: true
-        panda_link1:
-          Value: true
-        panda_link2:
-          Value: true
-        panda_link3:
-          Value: true
-        panda_link4:
-          Value: true
-        panda_link5:
-          Value: true
-        panda_link6:
-          Value: true
-        panda_link7:
-          Value: true
-        panda_link8:
-          Value: true
-        table:
-          Value: true
-        tool:
-          Value: true
-        world:
-          Value: true
       Marker Scale: 1
       Name: TF
       Show Arrows: true
       Show Axes: true
       Show Names: true
       Tree:
-        world:
-          table:
-            column1:
-              {}
-            column2:
-              {}
-            mount_flange_link:
-              panda_link0:
-                panda_link1:
-                  panda_link2:
-                    panda_link3:
-                      panda_link4:
-                        panda_link5:
-                          panda_link6:
-                            panda_link7:
-                              panda_link8:
-                                tool:
-                                  {}
+        {}
       Update Interval: 0
-      Value: true
+      Value: false
     - Alpha: 1
       Class: rviz/RobotModel
       Collision Enabled: false
@@ -190,6 +143,11 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
+        work_piece:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
         world:
           Alpha: 1
           Show Axes: false
@@ -200,6 +158,14 @@ Visualization Manager:
       Update Interval: 0
       Value: true
       Visual Enabled: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /impedance_controller/visualization_marker
+      Name: MarkerArray
+      Namespaces:
+        impedance_controller: true
+      Queue Size: 100
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 230; 230; 230
@@ -240,10 +206,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.690398335
+      Pitch: 0.825398147
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.49039221
+      Yaw: 0.380384445
     Saved: ~
 Window Geometry:
   Displays:
