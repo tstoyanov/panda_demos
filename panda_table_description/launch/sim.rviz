@@ -163,7 +163,15 @@ Visualization Manager:
       Marker Topic: /impedance_controller/visualization_marker
       Name: MarkerArray
       Namespaces:
-        impedance_controller: true
+        {}
+      Queue Size: 100
+      Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /hiqp_joint_effort_controller/visualization_marker
+      Name: MarkerArray
+      Namespaces:
+        /yumi: true
       Queue Size: 100
       Value: true
   Enabled: true
