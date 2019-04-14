@@ -74,21 +74,21 @@ rosservice call /hiqp_joint_effort_controller/set_tasks \
   active: 1
   monitored: 0
   def_params: ['TDefFullPose', '0.0', '-1.17', '0.003', '-2.89', '-0.0', '1.82', '0.84']
-  dyn_params: ['TDynPD', '10.0', '6.5'] 
+  dyn_params: ['TDynPD', '10.0', '7.0'] 
 - name: 'ee_plane_project'
   priority: 1
   visible: 1
   active: 1
   monitored: 1
   def_params: ['TDefGeomProj', 'point', 'plane', 'ee_point = table_plane']
-  dyn_params: ['TDynPD', '200.0', '29.0']
+  dyn_params: ['TDynPD', '400.0', '51.0']
 - name: 'approach_align'
   priority: 1
   visible: 1
   active: 1
   monitored: 1
   def_params: ['TDefGeomAlign', 'line', 'line', 'ee_z_axis = table_z_axis']
-  dyn_params: ['TDynPD', '100.0', '21.0']
+  dyn_params: ['TDynPD', '400.0', '51.0']
 - name: 'ee_cage_front'
   priority: 2
   visible: 1
