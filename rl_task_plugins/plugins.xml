@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<library path="lib/librl_task_plugins_tdef">
+  <class type="hiqp::tasks::TDefFullPoseRL" base_class_type="hiqp::TaskDefinition">
+      <description>
+        A full pose task that takes in targets externally from an act service
+      </description>
+  </class>
+</library>
+
