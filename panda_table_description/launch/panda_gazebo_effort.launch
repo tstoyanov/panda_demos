@@ -22,12 +22,10 @@
         <arg name="headless" value="$(arg headless)"/>
     </include>
 
-    <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-param robot_description -urdf -model panda"/>
+    <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-param robot_description -urdf -model panda -J panda_joint1 0.0 -J panda_joint2 -1.1 -J panda_joint3 0.0 -J panda_joint4 -2.0 -J panda_joint5 0.0 -J panda_joint6 1.8 -J panda_joint7 0.8"/>
 
     <!-- Load joint controller configurations from YAML file to parameter server -->
     <rosparam file="$(find franka_control)/config/panda_gazebo_control.yaml" command="load"/>
-
-
 
     <!-- load the controllers -->
     <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="joint_state_controller position_joint_trajectory_controller" />
@@ -44,8 +42,12 @@
      <arg name="allow_trajectory_execution" value="true"/>
      <arg name="fake_execution" value="false"/>
    </include>
-    <include file="$(find panda_moveit_config)/launch/moveit_rviz.launch" if="$(arg start_moveit)"/>
+    <include file="$(find panda_moveit_config)/launch/moveit_rviz.launch" if="$(arg start_moveit)">
+     <arg name="config" value="true"/>
+   </include>
     <node name="joint_state_desired_publisher" pkg="topic_tools" type="relay" args="joint_states joint_states_desired" if="$(arg start_moveit)"/>
+
     
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find panda_table_description)/launch/sim.rviz" unless="$(arg start_moveit)" />
 
 </launch>
