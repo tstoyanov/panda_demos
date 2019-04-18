@@ -45,19 +45,19 @@ namespace force_controllers {
 
     cartesian_stiffness_.setZero();
     cartesian_damping_.setZero();
-    cartesian_stiffness_(0,0) = 10000;
-    cartesian_stiffness_(1,1) = 10000;
-    cartesian_stiffness_(2,2) = 10000;
-    cartesian_stiffness_(3,3) = 5000;
-    cartesian_stiffness_(4,4) = 5000;
-    cartesian_stiffness_(5,5) = 5000;
+    cartesian_stiffness_(0,0) = 1000;
+    cartesian_stiffness_(1,1) = 1000;
+    cartesian_stiffness_(2,2) = 1000;
+    cartesian_stiffness_(3,3) = 500;
+    cartesian_stiffness_(4,4) = 500;
+    cartesian_stiffness_(5,5) = 500;
     
-    cartesian_damping_(0,0) = 500;
-    cartesian_damping_(1,1) = 500;
-    cartesian_damping_(2,2) = 500;
-    cartesian_damping_(3,3) = 100;
-    cartesian_damping_(4,4) = 100;
-    cartesian_damping_(5,5) = 100;
+    cartesian_damping_(0,0) = 65;
+    cartesian_damping_(1,1) = 65;
+    cartesian_damping_(2,2) = 65;
+    cartesian_damping_(3,3) = 45;
+    cartesian_damping_(4,4) = 45;
+    cartesian_damping_(5,5) = 45;
   }
 
   void ImpedanceController::setJointAccelerations(RobotStatePtr robot_state, Eigen::VectorXd& ddq) 
