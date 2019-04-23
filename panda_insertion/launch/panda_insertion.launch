@@ -1,0 +1,5 @@
+<launch>
+  <env name="ROSCONSOLE_CONFIG_FILE" value="$(find panda_insertion)/config/custom_rosconsole.conf"/>
+
+    <node name="talker" pkg="panda_insertion" type="talker" output="screen"/>
+</launch>
