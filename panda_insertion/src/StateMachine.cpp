@@ -1,4 +1,5 @@
 #include "panda_insertion/StateMachine.hpp"
+#include "geometry_msgs/PoseStamped.h"
 #include <iostream>
 #include <ros/ros.h>
 
@@ -7,6 +8,7 @@ using namespace std;
 StateMachine::StateMachine() 
 {
     activeState = Start;
+
 }
 
 // Methods
@@ -47,4 +49,5 @@ void StateMachine::start()
 void StateMachine::initialPosition()
 {
     ROS_DEBUG("In Initial Position state");
+    controller.initialPosition();
 }

@@ -1,5 +1,6 @@
 #ifndef STATE_MACHINE_H
 #define STATE_MACHINE_H
+#include "panda_insertion/Controller.hpp"
 
 enum State {
     Start,
@@ -16,6 +17,7 @@ class StateMachine
 {
 private:
     State activeState;
+    Controller controller;
 
 public:
     StateMachine();

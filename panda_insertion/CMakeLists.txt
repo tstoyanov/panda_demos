@@ -25,8 +25,13 @@ add_definitions(-std=c++11)
 
 add_library(panda_insertion
   src/StateMachine.cpp
+  src/Controller.cpp
 )
 
-add_executable(talker src/talker.cpp src/StateMachine.cpp)
-target_link_libraries(talker ${catkin_LIBRARIES})
-add_dependencies(talker panda_insertion_cpp)
+add_executable(insertion
+  src/insertion.cpp
+  src/StateMachine.cpp
+  src/Controller.cpp
+)
+target_link_libraries(insertion ${catkin_LIBRARIES})
+add_dependencies(insertion panda_insertion_cpp)
