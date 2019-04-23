@@ -2,6 +2,7 @@
 #include "std_msgs/String.h"
 #include "trajectory_msgs/JointTrajectory.h"
 #include <std_msgs/Float64.h>
+#include "panda_insertion/StateMachine.hpp"
 
 #include <sstream>
 #include <vector>
@@ -17,9 +18,12 @@ int main(int argc, char **argv)
 
     ros::Rate loop_rate(10);
 
+    StateMachine stateMachine;
+
     while (ros::ok())
     {
-        ROS_INFO("Insertion says hello.");
+        //ROS_INFO("From talker");
+        stateMachine.run();
 
         trajectory_msgs::JointTrajectory message;
 
