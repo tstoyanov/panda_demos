@@ -41,13 +41,14 @@ void StateMachine::run()
 // States
 void StateMachine::start()
 {
-    ROS_DEBUG("In start state");
+    ROS_DEBUG_ONCE("In start state");
+    controller.startState();
     activeState = InitialPosition;
     ROS_DEBUG("Changed state to initialPosition");
 }
 
 void StateMachine::initialPosition()
 {
-    ROS_DEBUG("In Initial Position state");
-    controller.initialPosition();
+    ROS_DEBUG_ONCE("In Initial Position state");
+    controller.initialPositionState();
 }
