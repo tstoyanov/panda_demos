@@ -4,13 +4,13 @@
 
 enum State {
     Start,
+    MoveToInitialPosition,
     InitialPosition,
     ExternalDownMovement,
     SpiralMotion,
     InternalDownMovement,
     Straightening,
-    InsertionWiggle,
-    MoveToInitialPosition
+    InsertionWiggle
 };
 
 class StateMachine
@@ -21,10 +21,12 @@ private:
 
 public:
     StateMachine();
+    StateMachine(double loop_rate);
     void run();
 
     // States
     void start();
+    void moveToInitialPosition();
     void initialPosition();
 };
 

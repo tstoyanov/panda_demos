@@ -1,6 +1,8 @@
 #include "panda_insertion/Controller.hpp"
 #include "geometry_msgs/PoseStamped.h"
 #include "trajectory_msgs/JointTrajectory.h"
+#include "controller_manager_msgs/LoadController.h"
+#include "controller_manager_msgs/SwitchController.h"
 #include "ros/console.h"
 #include "ros/duration.h"
 #include "ros/time.h"
@@ -20,11 +22,39 @@ Controller::Controller()
 
 void Controller::startState()
 {
-    ROS_DEBUG("Start of start state");
     ros::Duration(2.0).sleep();
 
     trajectory_msgs::JointTrajectory initialPoseMessage = initialJointTrajectoryMessage();
     jointTrajectoryPublisher.publish(initialPoseMessage);
+
+    ros::Duration(5.0).sleep();
+}
+
+void Controller::setLoopRate(double loop_rate)
+{
+    this->loop_rate=loop_rate;
+}
+
+bool Controller::moveToInitialPositionState()
+{
+    if (!loadController("impedance_controller"))
+    {
+        return false;
+    }
+
+    switchController("impedance_controller", "position_joint_trajectory_controller");
+    ros::Duration(3.0).sleep();
+
+    geometry_msgs::PoseStamped initialPositionMessage = initialPoseMessage();
+
+    ros::Rate rate(loop_rate);
+    while (ros::ok())
+    {
+        equilibriumPosePublisher.publish(initialPositionMessage);
+        rate.sleep();
+    }
+
+    return true;
 }
 
 bool Controller::initialPositionState()
@@ -46,6 +76,79 @@ void Controller::initEquilibriumPosePublisher()
     const int queueSize = 1000;
 
     equilibriumPosePublisher = nodeHandler.advertise<geometry_msgs::PoseStamped>(topic, queueSize);
+}
+
+bool Controller::loadController(string controller)
+{
+    const string serviceName = "controller_manager/load_controller";
+    ros::ServiceClient client = nodeHandler.serviceClient<controller_manager_msgs::LoadController>(serviceName);
+
+    controller_manager_msgs::LoadController service;
+    service.request.name = controller.c_str();
+
+    if (client.call(service))
+    {
+        ROS_DEBUG("Loaded controller %s", controller.c_str());
+        return true;
+    }
+
+    ROS_ERROR("Could not load controller %s", controller.c_str());
+    return false;
+}
+
+bool Controller::switchController(string from, string to)
+{
+    const string serviceName = "controller_manager/switch_controller";
+    ros::ServiceClient client = nodeHandler.serviceClient<controller_manager_msgs::SwitchController>(serviceName);
+
+    controller_manager_msgs::SwitchController service;
+    service.request.start_controllers = {from.c_str()};
+    service.request.stop_controllers = {to.c_str()};
+    service.request.strictness = 3; 
+
+    if (client.call(service))
+    {
+        ROS_DEBUG("Switched controller from %s to %s", from.c_str(), to.c_str());
+        return true;
+    }
+    ROS_ERROR("Could not switch controller %s to %s", from.c_str(), to.c_str());
+    return false;
+
+}
+
+geometry_msgs::PoseStamped Controller::initialPoseMessage()
+{
+    geometry_msgs::PoseStamped message;
+
+    // Header
+    string frameId = "";
+    ros::Time stamp(0.0);
+    uint32_t seq = 0;
+
+    //Points
+    double position_x = 0.475;
+    double position_y = 0.105;
+    double position_z = 0.74;
+
+    double orientation_x = 1.0;
+    double orientation_y = 0.0;
+    double orientation_z = 0.0;
+    double orientation_w = 0.0;
+
+    message.header.frame_id = frameId;
+    message.header.stamp = stamp;
+    message.header.seq = seq;
+
+    message.pose.position.x = position_x;
+    message.pose.position.y = position_y;
+    message.pose.position.z = position_z;
+
+    message.pose.orientation.x = orientation_x;
+    message.pose.orientation.y = orientation_y;
+    message.pose.orientation.z = orientation_z;
+    message.pose.orientation.w = orientation_w;
+
+    return message;
 }
 
 trajectory_msgs::JointTrajectory Controller::initialJointTrajectoryMessage()

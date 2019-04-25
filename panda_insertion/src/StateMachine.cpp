@@ -11,6 +11,12 @@ StateMachine::StateMachine()
 
 }
 
+StateMachine::StateMachine(double loop_rate)
+{
+    controller.setLoopRate(loop_rate);
+    activeState = Start;
+}
+
 // Methods
 void StateMachine::run()
 {
@@ -21,6 +27,12 @@ void StateMachine::run()
         case Start:
         {
             start();
+            break;
+        }
+
+        case MoveToInitialPosition:
+        {
+            moveToInitialPosition();
             break;
         }
 
@@ -43,8 +55,15 @@ void StateMachine::start()
 {
     ROS_DEBUG_ONCE("In start state");
     controller.startState();
+    activeState = MoveToInitialPosition;
+    ROS_DEBUG("Changed state to MoveToInitialState");
+}
+
+void StateMachine::moveToInitialPosition()
+{
+    ROS_DEBUG_ONCE("In Move to Initial Position state");
+    controller.moveToInitialPositionState();
     activeState = InitialPosition;
-    ROS_DEBUG("Changed state to initialPosition");
 }
 
 void StateMachine::initialPosition()

@@ -11,9 +11,12 @@ int main(int argc, char **argv)
 {
     ros::init(argc, argv, "insertion");
 
-    StateMachine stateMachine;
-    ros::Duration(8.0).sleep();
-    ros::Rate loop_rate(10);
+    double frequency = 10;
+    
+    StateMachine stateMachine(frequency);
+    ros::Rate loop_rate(frequency);
+
+    ros::Duration(3.0).sleep();
 
     while (ros::ok())
     {
