@@ -19,20 +19,24 @@ public:
     // Constructors
     Controller();
 
-    //Setters
+    // Accessors
     void setLoopRate(double loop_rate);
-    //Getters
+
+    // Manipulators
+
 
     // States
     void startState();
     bool initialPositionState();
     bool moveToInitialPositionState();
 
-    // Helpers
+private:
     void initJointTrajectoryPublisher();
     void initEquilibriumPosePublisher();
+
     bool loadController(std::string controller);
     bool switchController(std::string from, std::string to);
+
     geometry_msgs::PoseStamped initialPoseMessage();
     trajectory_msgs::JointTrajectory initialJointTrajectoryMessage();
 };

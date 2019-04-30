@@ -13,6 +13,7 @@
 
 using namespace std;
 
+// Constructors
 Controller::Controller()
 {
     ROS_DEBUG("Initialize publishers");
@@ -20,6 +21,13 @@ Controller::Controller()
     initJointTrajectoryPublisher();
 }
 
+// Accessors
+
+
+// Manipulators
+
+
+// Public methods
 void Controller::startState()
 {
     ros::Duration(2.0).sleep();
@@ -62,6 +70,7 @@ bool Controller::initialPositionState()
     ROS_DEBUG_ONCE("Initial position from controller");
 }
 
+// Private methods
 void Controller::initJointTrajectoryPublisher()
 {
     const string topic = "position_joint_trajectory_controller/command";

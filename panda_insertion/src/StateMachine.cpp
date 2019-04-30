@@ -5,6 +5,7 @@
 
 using namespace std;
 
+// Constructors
 StateMachine::StateMachine() 
 {
     activeState = Start;
@@ -17,7 +18,13 @@ StateMachine::StateMachine(double loop_rate)
     activeState = Start;
 }
 
-// Methods
+// Accessors
+
+
+// Manipulators
+
+
+// Public methods
 void StateMachine::run()
 {
     
@@ -50,7 +57,7 @@ void StateMachine::run()
     }
 }
 
-// States
+// Private methods
 void StateMachine::start()
 {
     ROS_DEBUG_ONCE("In start state");

@@ -20,14 +20,24 @@ private:
     Controller controller;
 
 public:
+    // Constructors
     StateMachine();
     StateMachine(double loop_rate);
-    void run();
+
+    // Accessors
+
+    // Manipulators
 
     // States
     void start();
     void moveToInitialPosition();
     void initialPosition();
+
+    // Public methods
+    void run();
+
+private:
+
 };
 
 #endif
