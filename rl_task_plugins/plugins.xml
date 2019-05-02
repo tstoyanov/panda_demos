@@ -5,5 +5,10 @@
         A full pose task that takes in targets externally from an act service
       </description>
   </class>
+  <class type="hiqp::tasks::TDefRL2DSpace" base_class_type="hiqp::TaskDefinition">
+      <description>
+        A point to two planes projection for playing around in a 2D search space
+      </description>
+  </class>
 </library>
 

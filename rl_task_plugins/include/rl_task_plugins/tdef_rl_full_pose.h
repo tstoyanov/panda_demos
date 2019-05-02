@@ -1,6 +1,3 @@
-// The HiQP Control Framework, an optimal control framework targeted at robotics
-// Copyright (C) 2016 Marcus A Johansson
-//
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
@@ -29,9 +26,10 @@ namespace hiqp {
 namespace tasks {
 
 /*! \brief Represents a task definition that sets a specific joint
- * configuration. This task definition does not leave any redundancy available
+ * configuration. The configuration can be re-set from a dedicated service call.
+ * This task definition does not leave any redundancy available
  * to other tasks!
- *  \author Marcus A Johansson */
+ *  \author Todor Stoyanov */
 class TDefFullPoseRL : public TaskDefinition {
  public:
 

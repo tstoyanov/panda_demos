@@ -46,7 +46,10 @@ include_directories(
 
 link_directories(${GUROBI_LIB_DIR})
 
-add_library(${PROJECT_NAME}_tdef src/tdef_rl_full_pose.cpp)
+add_library(${PROJECT_NAME}_tdef 
+        src/tdef_rl_full_pose.cpp
+        src/tdef_rl_2dspace.cpp
+        )
 add_dependencies(${PROJECT_NAME}_tdef ${catkin_EXPORTED_TARGETS})
 target_link_libraries(${PROJECT_NAME}_tdef ${catkin_LIBRARIES} ${GUROBI_LIBS})
 
