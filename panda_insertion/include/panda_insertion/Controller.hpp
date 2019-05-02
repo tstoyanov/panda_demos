@@ -10,7 +10,7 @@
 class Controller
 {
 private:
-    ros::NodeHandle nodeHandler;
+    ros::NodeHandle* nodeHandler;
     ros::Publisher jointTrajectoryPublisher;
     ros::Publisher equilibriumPosePublisher;
     double loop_rate;
@@ -20,15 +20,18 @@ public:
     Controller();
 
     // Accessors
-    void setLoopRate(double loop_rate);
-
-    // Manipulators
 
 
-    // States
+    // Manipulators 
+
+
+    // Public methods
+    void init(ros::NodeHandle*);
+
     void startState();
     bool initialPositionState();
     bool moveToInitialPositionState();
+    bool externalDownMovementState();
 
 private:
     void initJointTrajectoryPublisher();

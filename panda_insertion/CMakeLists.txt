@@ -5,6 +5,8 @@ project(panda_insertion)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
+  std_srvs
+  tf2_msgs
   trajectory_msgs
 )
 
@@ -24,14 +26,16 @@ include_directories(
 add_definitions(-std=c++11) 
 
 add_library(panda_insertion
-  src/StateMachine.cpp
+  src/Insertion.cpp
   src/Controller.cpp
+  src/Panda.cpp
 )
 
 add_executable(insertion
-  src/insertion.cpp
-  src/StateMachine.cpp
+  src/insertion_main.cpp
+  src/Insertion.cpp
   src/Controller.cpp
+  src/Panda.cpp
 )
 target_link_libraries(insertion ${catkin_LIBRARIES})
-add_dependencies(insertion panda_insertion_cpp)
+add_dependencies(insertion ${catkin_EXPORTED_TARGETS})

@@ -14,12 +14,7 @@
 using namespace std;
 
 // Constructors
-Controller::Controller()
-{
-    ROS_DEBUG("Initialize publishers");
-    initEquilibriumPosePublisher();
-    initJointTrajectoryPublisher();
-}
+Controller::Controller() {}
 
 // Accessors
 
@@ -28,6 +23,15 @@ Controller::Controller()
 
 
 // Public methods
+void Controller::init(ros::NodeHandle* nodeHandler)
+{
+    loop_rate = 10;
+    this->nodeHandler = nodeHandler;
+
+    initEquilibriumPosePublisher();
+    initJointTrajectoryPublisher();
+}
+
 void Controller::startState()
 {
     ros::Duration(2.0).sleep();
@@ -36,11 +40,6 @@ void Controller::startState()
     jointTrajectoryPublisher.publish(initialPoseMessage);
 
     ros::Duration(5.0).sleep();
-}
-
-void Controller::setLoopRate(double loop_rate)
-{
-    this->loop_rate=loop_rate;
 }
 
 bool Controller::moveToInitialPositionState()
@@ -55,11 +54,13 @@ bool Controller::moveToInitialPositionState()
 
     geometry_msgs::PoseStamped initialPositionMessage = initialPoseMessage();
 
+    int i = 0;
     ros::Rate rate(loop_rate);
-    while (ros::ok())
+    while (ros::ok() && i<100)
     {
         equilibriumPosePublisher.publish(initialPositionMessage);
         rate.sleep();
+        i++;
     }
 
     return true;
@@ -68,6 +69,12 @@ bool Controller::moveToInitialPositionState()
 bool Controller::initialPositionState()
 {
     ROS_DEBUG_ONCE("Initial position from controller");
+    ros::Duration(3).sleep();
+}
+
+bool Controller::externalDownMovementState()
+{
+    ROS_DEBUG_ONCE("In external down movement state from controller");
 }
 
 // Private methods
@@ -76,7 +83,7 @@ void Controller::initJointTrajectoryPublisher()
     const string topic = "position_joint_trajectory_controller/command";
     const int queueSize = 1000;
 
-    jointTrajectoryPublisher = nodeHandler.advertise<trajectory_msgs::JointTrajectory>(topic, queueSize);
+    jointTrajectoryPublisher = nodeHandler->advertise<trajectory_msgs::JointTrajectory>(topic, queueSize);
 }
 
 void Controller::initEquilibriumPosePublisher()
@@ -84,13 +91,13 @@ void Controller::initEquilibriumPosePublisher()
     const string topic = "impedance_controller/equilibrium_pose";
     const int queueSize = 1000;
 
-    equilibriumPosePublisher = nodeHandler.advertise<geometry_msgs::PoseStamped>(topic, queueSize);
+    equilibriumPosePublisher = nodeHandler->advertise<geometry_msgs::PoseStamped>(topic, queueSize);
 }
 
 bool Controller::loadController(string controller)
 {
     const string serviceName = "controller_manager/load_controller";
-    ros::ServiceClient client = nodeHandler.serviceClient<controller_manager_msgs::LoadController>(serviceName);
+    ros::ServiceClient client = nodeHandler->serviceClient<controller_manager_msgs::LoadController>(serviceName);
 
     controller_manager_msgs::LoadController service;
     service.request.name = controller.c_str();
@@ -108,7 +115,7 @@ bool Controller::loadController(string controller)
 bool Controller::switchController(string from, string to)
 {
     const string serviceName = "controller_manager/switch_controller";
-    ros::ServiceClient client = nodeHandler.serviceClient<controller_manager_msgs::SwitchController>(serviceName);
+    ros::ServiceClient client = nodeHandler->serviceClient<controller_manager_msgs::SwitchController>(serviceName);
 
     controller_manager_msgs::SwitchController service;
     service.request.start_controllers = {from.c_str()};
@@ -198,3 +205,5 @@ trajectory_msgs::JointTrajectory Controller::initialJointTrajectoryMessage()
 
     return message;
 }
+
+// Private methods

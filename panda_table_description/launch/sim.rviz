@@ -163,8 +163,7 @@ Visualization Manager:
       Marker Topic: /impedance_controller/visualization_marker
       Name: MarkerArray
       Namespaces:
-        current: true
-        target: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -215,10 +214,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.495398462
+      Pitch: 0.465398729
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 0.6203866
+      Yaw: 0.575386643
     Saved: ~
 Window Geometry:
   Displays:
