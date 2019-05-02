@@ -1,8 +1,8 @@
-./safe_drl/bin/*
-./safe_drl/include/*
-./safe_drl/lib/*
-./safe_drl/local/*
-./safe_drl/models/*
-./safe_drl/runs/*
-./safe_drl/*.pyc
-./.idea/*
+/safe_drl/bin/*
+/safe_drl/include/*
+/safe_drl/lib/*
+/safe_drl/local/*
+/safe_drl/models/*
+/safe_drl/runs/*
+/safe_drl/*.pyc
+/.idea/*
