@@ -3,6 +3,7 @@
 #include "trajectory_msgs/JointTrajectory.h"
 #include "controller_manager_msgs/LoadController.h"
 #include "controller_manager_msgs/SwitchController.h"
+#include "panda_insertion/Panda.hpp"
 #include "ros/console.h"
 #include "ros/duration.h"
 #include "ros/time.h"
@@ -23,10 +24,11 @@ Controller::Controller() {}
 
 
 // Public methods
-void Controller::init(ros::NodeHandle* nodeHandler)
+void Controller::init(ros::NodeHandle* nodeHandler, Panda* panda)
 {
     loop_rate = 10;
     this->nodeHandler = nodeHandler;
+    this->panda = panda;
 
     initEquilibriumPosePublisher();
     initJointTrajectoryPublisher();
@@ -134,35 +136,10 @@ bool Controller::switchController(string from, string to)
 
 geometry_msgs::PoseStamped Controller::initialPoseMessage()
 {
-    geometry_msgs::PoseStamped message;
+    geometry_msgs::PoseStamped message = emptyPoseMessage();
 
-    // Header
-    string frameId = "";
-    ros::Time stamp(0.0);
-    uint32_t seq = 0;
-
-    //Points
-    double position_x = 0.475;
-    double position_y = 0.105;
-    double position_z = 0.74;
-
-    double orientation_x = 1.0;
-    double orientation_y = 0.0;
-    double orientation_z = 0.0;
-    double orientation_w = 0.0;
-
-    message.header.frame_id = frameId;
-    message.header.stamp = stamp;
-    message.header.seq = seq;
-
-    message.pose.position.x = position_x;
-    message.pose.position.y = position_y;
-    message.pose.position.z = position_z;
-
-    message.pose.orientation.x = orientation_x;
-    message.pose.orientation.y = orientation_y;
-    message.pose.orientation.z = orientation_z;
-    message.pose.orientation.w = orientation_w;
+    message.pose.position = panda->initialPosition;
+    message.pose.orientation = panda->initialOrientation;
 
     return message;
 }
@@ -202,6 +179,49 @@ trajectory_msgs::JointTrajectory Controller::initialJointTrajectoryMessage()
     message.points[0].effort = effort;
     message.points[0].accelerations = accelerations;
     message.points[0].time_from_start = timeFromStart;
+
+    return message;
+}
+
+geometry_msgs::PoseStamped Controller::externalDownMovementPoseMessage()
+{
+    geometry_msgs::PoseStamped message = emptyPoseMessage();
+    message.pose.position = panda->initialPosition;
+
+
+}
+
+geometry_msgs::PoseStamped Controller::emptyPoseMessage()
+{
+    geometry_msgs::PoseStamped message;
+
+    // Header
+    string frameId = "";
+    ros::Time stamp(0.0);
+    uint32_t seq = 0;
+
+    // Points
+    double position_x = 0.0;
+    double position_y = 0.0;
+    double position_z = 0.0;
+
+    double orientation_x = 0.0;
+    double orientation_y = 0.0;
+    double orientation_z = 0.0;
+    double orientation_w = 0.0;
+
+    message.header.frame_id = frameId;
+    message.header.stamp = stamp;
+    message.header.seq = seq;
+
+    message.pose.position.x = position_x;
+    message.pose.position.y = position_y;
+    message.pose.position.z = position_z;
+
+    message.pose.orientation.x = orientation_x;
+    message.pose.orientation.y = orientation_y;
+    message.pose.orientation.z = orientation_z;
+    message.pose.orientation.w = orientation_w;
 
     return message;
 }

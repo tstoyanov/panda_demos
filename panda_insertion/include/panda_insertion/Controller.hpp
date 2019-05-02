@@ -6,11 +6,14 @@
 #include "geometry_msgs/PoseStamped.h"
 #include "trajectory_msgs/JointTrajectory.h"
 #include "ros/duration.h"
+#include "panda_insertion/Panda.hpp"
 
 class Controller
 {
 private:
     ros::NodeHandle* nodeHandler;
+    Panda* panda;
+
     ros::Publisher jointTrajectoryPublisher;
     ros::Publisher equilibriumPosePublisher;
     double loop_rate;
@@ -26,7 +29,7 @@ public:
 
 
     // Public methods
-    void init(ros::NodeHandle*);
+    void init(ros::NodeHandle*, Panda* panda);
 
     void startState();
     bool initialPositionState();
@@ -42,6 +45,8 @@ private:
 
     geometry_msgs::PoseStamped initialPoseMessage();
     trajectory_msgs::JointTrajectory initialJointTrajectoryMessage();
+    geometry_msgs::PoseStamped externalDownMovementPoseMessage();
+    geometry_msgs::PoseStamped emptyPoseMessage();
 };
 
 #endif

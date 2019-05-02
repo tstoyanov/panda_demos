@@ -105,7 +105,7 @@ void Insertion::init()
     ROS_DEBUG("In init()");
     activeState = Start;
 
-    controller.init(&nodeHandler);
+    controller.init(&nodeHandler, &panda);
 
     periodicTimer = nodeHandler.createTimer(ros::Duration(0.1), &Insertion::periodicTimerCallback, this);
     tfSubscriber = nodeHandler.subscribe("/tf", 1, &Insertion::tfSubscriberCallback,this);
