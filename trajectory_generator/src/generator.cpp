@@ -52,8 +52,6 @@ int main(int argc, char **argv)
   ros::NodeHandle node;
   ros::Rate loop_rate(2);
 
-  // KDL::Tree * my_tree = new KDL::Tree();
-
   // ==========REAL POINTS==========
   double x0 = -0.531718997062;
   double y0 = 0.0892002648095;
@@ -106,17 +104,6 @@ int main(int argc, char **argv)
   {
     std::cout << "joint names: " << joint_names[i] << "\n";
   }
-
-  // KDL::Segment segment;
-  // KDL::SegmentMap segments_map;
-  // KDL::SegmentMap::iterator segments_it;
-  // segments_map = my_tree.getSegments();
-  // std::cout << "Segments:" << std::endl;
-  // for (segments_it = segments_map.begin(); segments_it != segments_map.end(); ++segments_it)
-  // {
-  //   segment = segments_it->second.segment;
-  //   std::cout << "\t" << segments_it->first << " => " << segments_it->second.segment.getName() << std::endl;
-  // }
 
   // ===== getting joint limits from URDF model =====
   pugi::xml_document doc;
@@ -176,8 +163,6 @@ int main(int argc, char **argv)
   {
     q_min(i) = joint_limits[joint_names[i]]["lower"];
     q_max(i) = joint_limits[joint_names[i]]["upper"];
-    // q_min(i) = joint_limits[joint_names[i]]["lower"] * 180 / pi;
-    // q_max(i) = joint_limits[joint_names[i]]["upper"] * 180 / pi;
     
     std::cout << "Joint " << joint_names[i] << "\n";
     std::cout << "\tlower " << q_min(i) << "\n";
@@ -218,7 +203,6 @@ int main(int argc, char **argv)
   // ====================CHAIN SOLVER====================
   KDL::ChainFkSolverPos_recursive chainFkSolverPos {my_chain};
   KDL::ChainIkSolverVel_wdls chainIkSolverVel {my_chain};
-  
   KDL::ChainIkSolverPos_NR_JL chainIkSolverPos {my_chain, q_min, q_max, chainFkSolverPos, chainIkSolverVel, max_iter, eps};
 
   int ret;
@@ -291,83 +275,12 @@ int main(int argc, char **argv)
     std::cout << "------------------------------\n";
     last_joint_pos = q_out;
   }
-  // ====================END CHAIN SOLVER====================
-/*
-  // ====================TREE SOLVER====================
-  KDL::TreeFkSolverPos_recursive fkSolverPos {my_tree};
-  KDL::TreeIkSolverVel_wdls ikSolverVel {my_tree, joint_names};
-  KDL::TreeIkSolverPos_NR_JL ikSolverPos {my_tree, chain_segments_names, q_min, q_max, fkSolverPos, ikSolverVel, max_iter, eps};
-  // KDL::TreeIkSolverPos_NR_JL ikSolverPos {my_tree, joint_names, q_min, q_max, fkSolverPos, ikSolverVel, max_iter, eps};
-  // ====================END TREE SOLVER====================
-
-
-
-
-  // ==========REAL TRAJECTORY==========
-  for (unsigned i = 0; i < number_of_samples; i++)
-  {
-    current_s += ds;
-    current_eef_pos = path.Pos(current_s).p;
-    current_eef_frame = KDL::Frame(current_eef_pos);
-    // current_frames[std::to_string(i)] = current_eef_frame;
-    current_frames["test"] = current_eef_frame;
-    eef_trajectory.push_back(current_eef_pos);
-
-    double ret = ikSolverPos.CartToJnt(last_joint_pos, current_frames, q_out);
-    std::cout << "\nret: " << ret << std::endl;
-
-    std::cout << "------------------------------\n";
-    std::cout << "Point " << i << ": " << std::endl;
-    std::cout << "x: " << current_eef_pos.x() << std::endl;
-    std::cout << "y: " << current_eef_pos.y() << std::endl;
-    std::cout << "z: " << current_eef_pos.z() << std::endl;
-    std::cout << "q_out:\n" << q_out.data << std::endl;
-    std::cout << "------------------------------\n";
-    last_joint_pos = q_out;
-  }
-  // ==========END REAL TRAJECTORY==========
-
-  // ==========TEST TRAJECTORY==========
-  // for (unsigned i = 0; i < 200; i++)
-  // {
-  //   current_s += ds;
-  //   current_eef_pos = path.Pos(current_s).p;
-  //   current_eef_frame = KDL::Frame(current_eef_pos);
-  //   // current_frames[std::to_string(i)] = current_eef_frame;
-  //   current_frames["test"] = current_eef_frame;
-  //   eef_trajectory.push_back(current_eef_pos);
-
-  //   ikSolverPos.CartToJnt(last_joint_pos, current_frames, q_out);
-
-  //   // for (unsigned ii = 0; ii < sizeof(start_joint_pos_array)/sizeof(start_joint_pos_array[0]); ii++)
-  //   // {
-  //   //   joint_diffs[ii] = last_joint_pos[i] - q_out[i]
-  //   // }
-
-  //   std::cout << "\n------------------------------\n";
-  //   std::cout << "Point " << i << ": " << std::endl;
-  //   std::cout << "x: " << current_eef_pos.x() << std::endl;
-  //   std::cout << "y: " << current_eef_pos.y() << std::endl;
-  //   std::cout << "z: " << current_eef_pos.z() << std::endl;
-  //   std::cout << "q_out:\n" << q_out.data << std::endl;
-  //   std::cout << "------------------------------\n";
-  //   last_joint_pos = q_out;
-  // }
-  // ==========END TEST TRAJECTORY==========
-
-  // // for (unsigned i = 0; i < eef_trajectory.size(); i++)
-  // // {
-  // //   std::cout << "Point " << i << ": " << std::endl;
-  // //   std::cout << "\tx" << ": " << eef_eventtrajectory[i].x() << std::endl;
-  // //   std::cout << "\ty" << ": " << eef_trajectory[i].y() << std::endl;
-  // //   std::cout << "\tz" << ": " << eef_trajectory[i].z() << std::endl;
-  // // }
-*/
 
   // ====================JSON====================
   json data;
   for (unsigned i = 0; i < joint_trajectory.size(); i++)
   {
+    data["joint_names"] = joint_names;
     for (unsigned ii = 0; ii < nr_of_joints; ii++)
     {
       data["joint_trajectory"][i][ii] = joint_trajectory[i].data[ii];
@@ -376,18 +289,11 @@ int main(int argc, char **argv)
     data["eef_trajectory"][i]["origin"]["x"] = eef_trajectory[i].p.x();
     data["eef_trajectory"][i]["origin"]["y"] = eef_trajectory[i].p.y();
     data["eef_trajectory"][i]["origin"]["z"] = eef_trajectory[i].p.z();
-    // data["eef_trajectory"][i]["x"] = eef_trajectory[i].x();
-    // data["eef_trajectory"][i]["y"] = eef_trajectory[i].y();
-    // data["eef_trajectory"][i]["z"] = eef_trajectory[i].z();
 
     data["fk_eef_trajectory"][i]["origin"]["x"] = fk_eef_trajectory[i].p.x();
     data["fk_eef_trajectory"][i]["origin"]["y"] = fk_eef_trajectory[i].p.y();
     data["fk_eef_trajectory"][i]["origin"]["z"] = fk_eef_trajectory[i].p.z();
-    // data["fk_eef_trajectory"][i]["x"] = fk_eef_trajectory[i].x();
-    // data["fk_eef_trajectory"][i]["y"] = fk_eef_trajectory[i].y();
-    // data["fk_eef_trajectory"][i]["z"] = fk_eef_trajectory[i].z();
   }
-  // std::cout << "\n\njson:\n" << data << std::endl;
 
   std::string pkg_path = ros::package::getPath("trajectory_generator");
   std::cout << "pkg_path: " << pkg_path << std::endl;
