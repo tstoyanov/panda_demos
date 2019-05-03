@@ -1,8 +1,5 @@
 
-trajectory_generator/generated_trajectories/cpp/*
-trajectory_generator/generated_trajectories/moveit/*
-!trajectory_generator/generated_trajectories/cpp/.gitkeep
-!trajectory_generator/generated_trajectories/moveit/.gitkeep
+trajectory_generator/generated_trajectories
 .vscode
 devel/
 logs/

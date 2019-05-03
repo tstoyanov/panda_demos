@@ -303,7 +303,7 @@ int main(int argc, char **argv)
   boost::filesystem::path dir(dir_path);
   if(!(boost::filesystem::exists(dir)))
   {
-    if (boost::filesystem::create_directory(dir))
+    if (boost::filesystem::create_directories(dir))
     {
       std::cout << "....Folder Successfully Created!" << std::endl;
     }
