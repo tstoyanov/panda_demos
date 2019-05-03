@@ -4,5 +4,6 @@
 /safe_drl/local/*
 /safe_drl/models/*
 /safe_drl/runs/*
+/safe_drl/share/*
 /safe_drl/*.pyc
 /.idea/*
