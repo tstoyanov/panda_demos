@@ -10,3 +10,21 @@ impedance_controller:
     - panda_joint7
   root_name: world
   tip_name: tool
+  cartesian_stiffness:
+    translation:
+      - 1000
+      - 1000
+      - 1000
+    rotation:
+      - 500
+      - 500
+      - 500
+  cartesian_damping:
+    translation:
+      - 65
+      - 65
+      - 65
+    rotation:
+      - 45
+      - 45
+      - 45

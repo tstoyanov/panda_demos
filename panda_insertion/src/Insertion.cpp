@@ -34,7 +34,7 @@ Insertion::Insertion(ros::NodeHandle nodeHandler)
 // Public methods
 void Insertion::stateMachineRun()
 {
-    ROS_DEBUG_STREAM_ONCE("State machine started, current state: " << activeState);
+    ROS_DEBUG_STREAM_ONCE("State machine started");
 
     switch(activeState)
     {
@@ -62,6 +62,12 @@ void Insertion::stateMachineRun()
             break;
         }
 
+        case SpiralMotion:
+        {
+            ROS_DEBUG_ONCE("Spiral motion.");
+            break;
+        }
+
         default:
         {
             ROS_DEBUG("Default");
@@ -72,7 +78,7 @@ void Insertion::stateMachineRun()
 
 void Insertion::periodicTimerCallback(const ros::TimerEvent& event)
 {
-    // ROS_DEBUG_STREAM_NAMED("thread_id" ,"Periodic timer callback in thread:" << boost::this_thread::get_id());
+    ROS_DEBUG_STREAM_NAMED("thread_id" ,"Periodic timer callback in thread:" << boost::this_thread::get_id());
     stateMachineRun();
 }
 
@@ -80,7 +86,7 @@ void Insertion::tfSubscriberCallback(const tf2_msgs::TFMessageConstPtr& message)
 {
     const unsigned int FREQUENCY_HZ = 5;
 
-    // ROS_DEBUG_STREAM_NAMED("thread_id", "tf subscriber callback in thread:" << boost::this_thread::get_id());
+    ROS_DEBUG_STREAM_NAMED("thread_id", "tf subscriber callback in thread:" << boost::this_thread::get_id());
 
     // tf2_msgs::TFMessage tfMessage = *(message.get());
 
@@ -137,5 +143,6 @@ void Insertion::externalDownMovement()
 {
     ROS_DEBUG_ONCE("In external down movement state");
     controller.externalDownMovementState();
-
+    ROS_DEBUG_ONCE("In external down movement DONE.");
+    activeState = SpiralMotion;
 }

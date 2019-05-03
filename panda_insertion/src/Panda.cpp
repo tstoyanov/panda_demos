@@ -19,7 +19,8 @@ void Panda::init()
     initialOrientation.y = 0.0;
     initialOrientation.z = 0.0;
     initialOrientation.w = 0.0;
+    position = initialPosition;
+    orientation = initialOrientation;
 }
-
 
 // Private methods

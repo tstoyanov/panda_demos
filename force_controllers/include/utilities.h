@@ -3,6 +3,27 @@
 
 #include <kdl/tree.hpp>
 #include <Eigen/Dense>
+#include <ros/ros.h>
+
+typedef struct Stiffness
+{
+    int translational_x;
+    int translational_y;
+    int translational_z;
+    int rotational_x;
+    int rotational_y;
+    int rotational_z;
+} Stiffness;
+
+typedef struct Damping
+{
+    int translational_x;
+    int translational_y;
+    int translational_z;
+    int rotational_x;
+    int rotational_y;
+    int rotational_z;
+} Damping;
 
 /*! \brief Calculates the Moore-Penrose Pseudoinverse for any sized matrices.
  *  \author http://eigendobetter.com/ (edited by Marcus A Johansson) */
@@ -24,5 +45,15 @@ Derived pinv(const Eigen::MatrixBase<Derived>& a)
 /*! \brief Gets the q-number (used in KDL for identifying joints) from a joint name.
  *  \author Marcus A Johansson */
 int kdl_getQNrFromJointName(const KDL::Tree& kdl_tree, const std::string& joint_name);
+
+/*! \brief Gets stiffness x,y,z parameters from the parameter server.
+ *  \author Tobias Lans and Bobo Lillqvist
+ */
+Stiffness getParameterStiffness(ros::NodeHandle* nodeHandle);
+
+/*! \brief Gets damping x,y,z parameters from the parameter server.
+ *  \author Tobias Lans and Bobo Lillqvist
+ */
+Damping getParameterDamping(ros::NodeHandle* nodeHandle);
 
 #endif

@@ -163,7 +163,8 @@ Visualization Manager:
       Marker Topic: /impedance_controller/visualization_marker
       Name: MarkerArray
       Namespaces:
-        {}
+        current: true
+        target: true
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -199,25 +200,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 2.54426527
+      Distance: 2.29360366
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.0801343694
-        Y: 0.0799999386
-        Z: 0.651298463
+        X: 0.0374485329
+        Y: 0.0369590223
+        Z: 0.859725773
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.0500000007
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.465398729
+      Pitch: 0.355398893
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 0.575386643
+      Yaw: 0.385386705
     Saved: ~
 Window Geometry:
   Displays:

@@ -8,6 +8,26 @@
 #include "ros/duration.h"
 #include "panda_insertion/Panda.hpp"
 
+typedef struct Stiffness
+{
+    int translational_x;
+    int translational_y;
+    int translational_z;
+    int rotational_x;
+    int rotational_y;
+    int rotational_z;
+} Stiffness;
+
+typedef struct Damping
+{
+    int translational_x;
+    int translational_y;
+    int translational_z;
+    int rotational_x;
+    int rotational_y;
+    int rotational_z;
+} Damping;
+
 class Controller
 {
 private:
@@ -47,6 +67,9 @@ private:
     trajectory_msgs::JointTrajectory initialJointTrajectoryMessage();
     geometry_msgs::PoseStamped externalDownMovementPoseMessage();
     geometry_msgs::PoseStamped emptyPoseMessage();
+
+    void setParameterStiffness(Stiffness stiffness);
+    void setParameterDamping(Damping damping);
 };
 
 #endif

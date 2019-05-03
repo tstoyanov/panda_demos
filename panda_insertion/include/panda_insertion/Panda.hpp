@@ -11,6 +11,8 @@ private:
 public:
     geometry_msgs::Point initialPosition;
     geometry_msgs::Quaternion initialOrientation;
+    geometry_msgs::Point position;
+    geometry_msgs::Quaternion orientation;
 
 // Methods
 public:

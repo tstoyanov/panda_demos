@@ -46,6 +46,22 @@ void Controller::startState()
 
 bool Controller::moveToInitialPositionState()
 {
+    std::vector<int> translational_stiffness, rotational_stiffness,
+                     translational_damping, rotational_damping;
+    translational_stiffness = {5000, 5000, 5000};
+    const std::string param_translation_stiffness = "/impedance_controller/cartesian_stiffness/translation";
+    const std::string param_rotation_stiffness = "/impedance_controller/cartesian_stiffness/rotation";
+    const std::string param_translation_damping = "/impedance_controller/cartesian_damping/translation";
+    const std::string param_rotation_damping = "/impedance_controller/cartesian_damping/rotation";
+    nodeHandler->setParam(param_translation_stiffness, translational_stiffness); 
+    
+    if (!nodeHandler->getParam(param_translation_stiffness, translational_stiffness))
+    {
+      ROS_ERROR_STREAM("Parameter " << param_translation_stiffness << " not retreived");
+    }
+    ROS_INFO_STREAM("Translation stiffness xyz: " << translational_stiffness.at(0) << translational_stiffness.at(1) << translational_stiffness.at(2) );
+
+
     if (!loadController("impedance_controller"))
     {
         return false;
@@ -58,7 +74,7 @@ bool Controller::moveToInitialPositionState()
 
     int i = 0;
     ros::Rate rate(loop_rate);
-    while (ros::ok() && i<100)
+    while (ros::ok() && i<130)
     {
         equilibriumPosePublisher.publish(initialPositionMessage);
         rate.sleep();
@@ -77,6 +93,54 @@ bool Controller::initialPositionState()
 bool Controller::externalDownMovementState()
 {
     ROS_DEBUG_ONCE("In external down movement state from controller");
+
+    Stiffness stiffness;
+    Damping damping;
+    stiffness.translational_x = 5000;
+    stiffness.translational_y = 5000;
+    stiffness.translational_z = 5000;
+    stiffness.rotational_x = 5000;
+    stiffness.rotational_y = 5000;
+    stiffness.rotational_z = 5000;
+
+    damping.translational_x = 65;
+    damping.translational_y = 65;
+    damping.translational_z = 65;
+    damping.rotational_x = 45;
+    damping.rotational_y = 45;
+    damping.rotational_z = 45;
+
+    setParameterStiffness(stiffness);
+    setParameterDamping(damping);
+
+    std::vector<int> translational_stiffness, rotational_stiffness,
+                     translational_damping, rotational_damping;
+    translational_stiffness = {5000, 5000, 5000};
+    const std::string param_translation_stiffness = "/impedance_controller/cartesian_stiffness/translation";
+    const std::string param_rotation_stiffness = "/impedance_controller/cartesian_stiffness/rotation";
+    const std::string param_translation_damping = "/impedance_controller/cartesian_damping/translation";
+    const std::string param_rotation_damping = "/impedance_controller/cartesian_damping/rotation";
+    
+    if (!nodeHandler->getParam(param_translation_stiffness, translational_stiffness))
+    {
+      ROS_ERROR_STREAM("Parameter " << param_translation_stiffness << " not retreived");
+    }
+    ROS_INFO_STREAM("Translation stiffness xyz: " << translational_stiffness.at(0) << translational_stiffness.at(1) << translational_stiffness.at(2) );
+
+    
+    
+    int i = 0;
+    ros::Rate rate(loop_rate);
+    geometry_msgs::PoseStamped externalDownMovementPositionMessage = externalDownMovementPoseMessage();
+    
+    while (ros::ok())
+    {
+        equilibriumPosePublisher.publish(externalDownMovementPositionMessage);
+        rate.sleep();
+        i++;
+    }
+
+    return true;
 }
 
 // Private methods
@@ -188,7 +252,17 @@ geometry_msgs::PoseStamped Controller::externalDownMovementPoseMessage()
     geometry_msgs::PoseStamped message = emptyPoseMessage();
     message.pose.position = panda->initialPosition;
 
+    panda->position.z = 0.72;
+    // if (panda->position.z>0.0)
+    // {
+    //     panda->position.z -= 0.001;
+    // } 
+    ROS_DEBUG_STREAM("Panda position z =" << panda->position.z);
 
+    message.pose.position = panda->position;
+    message.pose.orientation = panda->orientation;
+    
+    return message;
 }
 
 geometry_msgs::PoseStamped Controller::emptyPoseMessage()
@@ -224,6 +298,43 @@ geometry_msgs::PoseStamped Controller::emptyPoseMessage()
     message.pose.orientation.w = orientation_w;
 
     return message;
+}
+
+void Controller::setParameterStiffness(Stiffness stiffness)
+{
+    std::vector<int> translational_stiffness, rotational_stiffness;
+
+    translational_stiffness.push_back(stiffness.translational_x);
+    translational_stiffness.push_back(stiffness.translational_y);
+    translational_stiffness.push_back(stiffness.translational_z);
+
+    rotational_stiffness.push_back(stiffness.rotational_x);
+    rotational_stiffness.push_back(stiffness.rotational_y);
+    rotational_stiffness.push_back(stiffness.rotational_z);
+
+    const std::string param_translation_stiffness = "/impedance_controller/cartesian_stiffness/translation";
+    const std::string param_rotation_stiffness = "/impedance_controller/cartesian_stiffness/rotation";
+
+    nodeHandler->setParam(param_translation_stiffness, translational_stiffness); 
+    nodeHandler->setParam(param_rotation_stiffness, rotational_stiffness);
+}
+
+void Controller::setParameterDamping(Damping damping)
+{
+    std::vector<int> translational_damping, rotational_damping;
+    
+    translational_damping.push_back(damping.translational_x);
+    translational_damping.push_back(damping.translational_y);
+    translational_damping.push_back(damping.translational_z);
+
+    rotational_damping.push_back(damping.rotational_x);
+    rotational_damping.push_back(damping.rotational_y);
+    rotational_damping.push_back(damping.rotational_z);
+
+    const std::string param_translation_damping = "/impedance_controller/cartesian_damping/translation";
+    const std::string param_rotation_damping = "/impedance_controller/cartesian_damping/rotation";
+
+    nodeHandler->setParam(param_translation_damping, translational_damping); 
 }
 
 // Private methods

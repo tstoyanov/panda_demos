@@ -3,6 +3,7 @@
 #include <iostream>
 #include <cmath>
 #include <memory>
+#include <string>
 
 #include "utilities.h"
 
@@ -45,19 +46,80 @@ namespace force_controllers {
 
     cartesian_stiffness_.setZero();
     cartesian_damping_.setZero();
-    cartesian_stiffness_(0,0) = 1000;
-    cartesian_stiffness_(1,1) = 1000;
-    cartesian_stiffness_(2,2) = 1000;
-    cartesian_stiffness_(3,3) = 500;
-    cartesian_stiffness_(4,4) = 500;
-    cartesian_stiffness_(5,5) = 500;
+  
+    Stiffness stiffness = getParameterStiffness(&getControllerNodeHandle());
+    Damping damping = getParameterDamping(&getControllerNodeHandle());
+  
+    // std::vector<int> translational_stiffness, rotational_stiffness,
+    //                  translational_damping, rotational_damping;
+    // const std::string param_translation_stiffness = "/impedance_controller/cartesian_stiffness/translation";
+    // const std::string param_rotation_stiffness = "/impedance_controller/cartesian_stiffness/rotation";
+    // const std::string param_translation_damping = "/impedance_controller/cartesian_damping/translation";
+    // const std::string param_rotation_damping = "/impedance_controller/cartesian_damping/rotation";
+
+    // if (!getControllerNodeHandle().getParam(param_translation_stiffness, translational_stiffness))
+    // {
+    //   ROS_ERROR_STREAM("Parameter " << param_translation_stiffness << " not retreived");
+    // }
+    // if (!getControllerNodeHandle().getParam(param_rotation_stiffness, rotational_stiffness))
+    // {
+    //   ROS_ERROR_STREAM("Parameter " << param_rotation_stiffness << " not retreived");
+    // }
+    // if (!getControllerNodeHandle().getParam(param_translation_damping, translational_damping))
+    // {
+    //   ROS_ERROR_STREAM("Parameter " << param_translation_damping << " not retreived");
+    // }
+    // if (!getControllerNodeHandle().getParam(param_rotation_damping, rotational_damping))
+    // {
+    //   ROS_ERROR_STREAM("Parameter " << param_rotation_damping << " not retreived");
+    // }
     
-    cartesian_damping_(0,0) = 65;
-    cartesian_damping_(1,1) = 65;
-    cartesian_damping_(2,2) = 65;
-    cartesian_damping_(3,3) = 45;
-    cartesian_damping_(4,4) = 45;
-    cartesian_damping_(5,5) = 45;
+    // ROS_INFO_STREAM("xyz: " << translational_stiffness.at(0) << translational_stiffness.at(1) << translational_stiffness.at(2) );
+    // ROS_INFO_STREAM("xyz: " << rotational_stiffness.at(0) << rotational_stiffness.at(1) << rotational_stiffness.at(2) );
+    // ROS_INFO_STREAM("xyz: " << translational_damping.at(0) << translational_damping.at(1) << translational_damping.at(2) );
+    // ROS_INFO_STREAM("xyz: " << rotational_damping.at(0) << rotational_damping.at(1) << rotational_damping.at(2) );
+  
+    // cartesian_stiffness_(0,0) = translational_stiffness.at(0);
+    // cartesian_stiffness_(1,1) = translational_stiffness.at(1);
+    // cartesian_stiffness_(2,2) = translational_stiffness.at(2);
+    // cartesian_stiffness_(3,3) = rotational_stiffness.at(0);
+    // cartesian_stiffness_(4,4) = rotational_stiffness.at(1);
+    // cartesian_stiffness_(5,5) = rotational_stiffness.at(2);
+    
+    // cartesian_damping_(0,0) = translational_damping.at(0);
+    // cartesian_damping_(1,1) = translational_damping.at(1);
+    // cartesian_damping_(2,2) = translational_damping.at(2);
+    // cartesian_damping_(3,3) = rotational_damping.at(0);
+    // cartesian_damping_(4,4) = rotational_damping.at(1);
+    // cartesian_damping_(5,5) = rotational_damping.at(2);
+
+    ROS_INFO_STREAM("T Stiffness (x,y,z): (" << stiffness.translational_x << ","
+                                             << stiffness.translational_y << ", "
+                                             << stiffness.translational_z << ")");
+    ROS_INFO_STREAM("R Stiffness (x,y,z): (" << stiffness.rotational_x << ","
+                                             << stiffness.rotational_y << ", "
+                                             << stiffness.rotational_z << ")");
+
+    ROS_INFO_STREAM("T Damping (x,y,z): (" << damping.translational_x << ","
+                                           << damping.translational_y << ", "
+                                           << damping.translational_z << ")");
+    ROS_INFO_STREAM("R Damping (x,y,z): (" << damping.rotational_x << ","
+                                           << damping.rotational_y << ", "
+                                           << damping.rotational_z << ")");
+
+    cartesian_stiffness_(0,0) = stiffness.translational_x;
+    cartesian_stiffness_(1,1) = stiffness.translational_y;
+    cartesian_stiffness_(2,2) = stiffness.translational_z;
+    cartesian_stiffness_(3,3) = stiffness.rotational_x;
+    cartesian_stiffness_(4,4) = stiffness.rotational_y;
+    cartesian_stiffness_(5,5) = stiffness.rotational_z;
+    
+    cartesian_damping_(0,0) = damping.translational_x;
+    cartesian_damping_(1,1) = damping.translational_y;
+    cartesian_damping_(2,2) = damping.translational_z;
+    cartesian_damping_(3,3) = damping.rotational_x;
+    cartesian_damping_(4,4) = damping.rotational_y;
+    cartesian_damping_(5,5) = damping.rotational_z;
   }
 
   void ImpedanceController::setJointAccelerations(RobotStatePtr robot_state, Eigen::VectorXd& ddq) 
