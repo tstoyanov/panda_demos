@@ -1,0 +1,7 @@
+/home/ilbetzy/orebro/src/panda_demos/trajectory_generator/pugixml-1.9/src/CMakeFiles/install.dir
+/home/ilbetzy/orebro/src/panda_demos/trajectory_generator/pugixml-1.9/src/CMakeFiles/list_install_components.dir
+/home/ilbetzy/orebro/src/panda_demos/trajectory_generator/pugixml-1.9/src/CMakeFiles/rebuild_cache.dir
+/home/ilbetzy/orebro/src/panda_demos/trajectory_generator/pugixml-1.9/src/CMakeFiles/pugixml.dir
+/home/ilbetzy/orebro/src/panda_demos/trajectory_generator/pugixml-1.9/src/CMakeFiles/install/strip.dir
+/home/ilbetzy/orebro/src/panda_demos/trajectory_generator/pugixml-1.9/src/CMakeFiles/install/local.dir
+/home/ilbetzy/orebro/src/panda_demos/trajectory_generator/pugixml-1.9/src/CMakeFiles/edit_cache.dir

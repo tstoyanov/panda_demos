@@ -1,6 +1,6 @@
 
-trajectory_generation_ws/generated_trajectories/cpp/*
-trajectory_generation_ws/generated_trajectories/moveit/*
+trajectory_generator/generated_trajectories/cpp/*
+trajectory_generator/generated_trajectories/moveit/*
 !generated_trajectories/cpp/.gitkeep
 !generated_trajectories/moveit/.gitkeep
 .vscode
