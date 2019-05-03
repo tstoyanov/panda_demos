@@ -1,14 +1,30 @@
 <?xml version="1.0"?>
 <library path="lib/librl_task_plugins_tdef">
+  <!-- task definition plugins -->
   <class type="hiqp::tasks::TDefFullPoseRL" base_class_type="hiqp::TaskDefinition">
-      <description>
-        A full pose task that takes in targets externally from an act service
-      </description>
+    <description>
+    A full pose task that takes in targets externally from an act service
+    </description>
   </class>
   <class type="hiqp::tasks::TDefRL2DSpace" base_class_type="hiqp::TaskDefinition">
-      <description>
-        A point to two planes projection for playing around in a 2D search space
-      </description>
+    <description>
+    A point to two planes projection for playing around in a 2D search space
+    </description>
   </class>
+
+  <!-- task dynamics plugins -->
+  <class type="hiqp::tasks::TDynRandom" base_class_type="hiqp::TaskDynamics">
+    <description>
+    A plugin for task dynamics - random dynamics.
+    </description>
+  </class>
+  
+  <class type="hiqp::tasks::TDynAsyncPolicy" base_class_type="hiqp::TaskDynamics">
+    <description>
+    A plugin for task dynamics that lets us set policy actions from outside.
+    </description>
+  </class>
+
+
 </library>
 

@@ -27,6 +27,8 @@
 
 #include <ros/ros.h>
 
+#include <Eigen/Core>
+
 namespace hiqp {
 namespace tasks {
 
@@ -61,6 +63,8 @@ class TDefRL2DSpace : public TaskDefinition {
 
   std::shared_ptr<GeometricPoint> target_point_;
   KDL::Vector normal1_, normal2_;
+
+  Eigen::VectorXd qdot_,qddot_;
 
   //internal solver objects
   KDL::Frame pose_a_;        ///pose of the target_point_ frame

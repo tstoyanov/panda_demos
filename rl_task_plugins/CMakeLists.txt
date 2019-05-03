@@ -17,6 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   message_generation
 )
+add_message_files(FILES DesiredErrorDynamicsMsg.msg)
 
 add_service_files(
         FILES
@@ -49,6 +50,8 @@ link_directories(${GUROBI_LIB_DIR})
 add_library(${PROJECT_NAME}_tdef 
         src/tdef_rl_full_pose.cpp
         src/tdef_rl_2dspace.cpp
+        src/tdyn_random.cpp
+        src/tdyn_async_policy.cpp
         )
 add_dependencies(${PROJECT_NAME}_tdef ${catkin_EXPORTED_TARGETS})
 target_link_libraries(${PROJECT_NAME}_tdef ${catkin_LIBRARIES} ${GUROBI_LIBS})

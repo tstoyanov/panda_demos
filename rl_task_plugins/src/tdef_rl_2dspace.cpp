@@ -27,8 +27,10 @@ namespace hiqp {
       e_dot_ = Eigen::VectorXd::Zero(n_controls);
       J_ = Eigen::MatrixXd::Zero(n_controls, n_joints);
       J_dot_ = Eigen::MatrixXd::Zero(n_controls, n_joints);
-      performance_measures_.resize(0);
+      performance_measures_.resize(n_controls);
       task_signs_.insert(task_signs_.begin(), n_controls, 0); //equality task
+      qddot_ = Eigen::VectorXd::Zero(n_joints);
+      qdot_ = Eigen::VectorXd::Zero(n_joints);
      
       fk_solver_pos_ =
           std::make_shared<KDL::TreeFkSolverPos_recursive>(robot_state->kdl_tree_);
@@ -124,11 +126,18 @@ namespace hiqp {
         J_.row(0) = Eigen::Map<Eigen::Matrix<double,1,3> >(normal1_.data)*J_p1k.data.topRows<3>();
         J_.row(1) = Eigen::Map<Eigen::Matrix<double,1,3> >(normal2_.data)*J_p1k.data.topRows<3>();
       
-        Eigen::VectorXd qdot=robot_state->kdl_jnt_array_vel_.qdot.data;      
+        Eigen::VectorXd qdot=robot_state->kdl_jnt_array_vel_.qdot.data;
+        //qddot_ = (1/robot_state->sampling_time_)*(qdot-qdot_);
+        //qdot_=qdot;
+
         e_dot_=J_*qdot;
 
         J_dot_.row(0) = Eigen::Map<Eigen::Matrix<double,1,3> >(normal1_.data)*J_dot_p1k.data.topRows<3>();
         J_dot_.row(1) = Eigen::Map<Eigen::Matrix<double,1,3> >(normal2_.data)*J_dot_p1k.data.topRows<3>();
+
+        //FIXME seems this is not working properly
+        qddot_ = robot_state->kdl_effort_.data;
+        performance_measures_ = J_*qddot_ + J_dot_*qdot; // e_ddot
 
         //cleanup
         maskJacobian(robot_state);
