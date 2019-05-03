@@ -40,13 +40,13 @@ parser.add_argument('--seed', type=int, default=4, metavar='N',
                     help='random seed (default: 4)')
 parser.add_argument('--batch_size', type=int, default=512, metavar='N',
                     help='batch size (default: 128)')
-parser.add_argument('--num_steps', type=int, default=1000, metavar='N',
+parser.add_argument('--num_steps', type=int, default=10000, metavar='N',
                     help='max episode length (default: 1000)')
-parser.add_argument('--num_episodes', type=int, default=5001, metavar='N',
+parser.add_argument('--num_episodes', type=int, default=1000, metavar='N',
                     help='number of episodes (default: 1000)')
 parser.add_argument('--hidden_size', type=int, default=128, metavar='N',
                     help='number of episodes (default: 128)')
-parser.add_argument('--updates_per_step', type=int, default=5, metavar='N',
+parser.add_argument('--updates_per_step', type=int, default=1, metavar='N',
                     help='model updates per simulator step (default: 5)')
 parser.add_argument('--replay_size', type=int, default=1000000, metavar='N',
                     help='size of replay buffer (default: 1000000)')
@@ -71,6 +71,7 @@ np.random.seed(args.seed)
 # -- initialize agent, Q and Q' --
 agent = NAF(args.gamma, args.tau, args.hidden_size,
             env.observation_space.shape[0], env.action_space, device)
+torch.cuda.init()
 
 # -- load existing model --
 if args.load_agent and os.path.exists('models/'):
@@ -85,6 +86,7 @@ rewards = []
 total_numsteps = 0
 updates = 0
 greedy_reward = []
+avg_greedy_rewards = []
 upper_reward = []
 lower_reward = []
 
@@ -102,6 +104,7 @@ for i_episode in range(args.num_episodes):
 
     while(True):
         # -- action selection, observation and store transition --
+        torch.cuda.synchronize()
         action = agent.select_action(state, ounoise)
         next_state, reward, done, _ = env.step(action.cpu().numpy()[0])
         total_numsteps += 1
@@ -109,13 +112,12 @@ for i_episode in range(args.num_episodes):
         mask = torch.cuda.FloatTensor([not done])
         next_state = torch.cuda.FloatTensor([next_state])
         reward = torch.cuda.FloatTensor([reward])
-
         memory.push(state, action, mask, next_state, reward)
-
         state = next_state
 
         # -- training --
         if len(memory) > args.batch_size:
+            torch.cuda.synchronize()
             for _ in range(args.updates_per_step):
                 transitions = memory.sample(args.batch_size)
                 batch = Transition(*zip(*transitions))
@@ -135,26 +137,29 @@ for i_episode in range(args.num_episodes):
 
     # -- calculates every 10th episode without N --
     if i_episode % 10 == 0:
-        state = torch.cuda.FloatTensor([env.reset()])
-        episode_reward = 0
-        while True:
-            #env.render()
-            action = agent.select_action(state)
+        for _ in range(0,9):
+            state = torch.cuda.FloatTensor([env.reset()])
+            episode_reward = 0
+            while True:
+                #env.render()
+                torch.cuda.synchronize()
+                action = agent.select_action(state)
+                next_state, reward, done, _ = env.step(action.cpu().numpy()[0])
+                episode_reward += reward
 
-            next_state, reward, done, _ = env.step(action.cpu().numpy()[0])
-            episode_reward += reward
+                next_state = torch.cuda.FloatTensor([next_state])
+                state = next_state
+                if done:
 
-            next_state = torch.cuda.FloatTensor([next_state])
-            state = next_state
-            if done:
-                upper_reward.append(np.max(rewards[-10:]))
-                lower_reward.append(np.min(rewards[-10:]))
-                greedy_reward.append(episode_reward)
-                break
+                    greedy_reward.append(episode_reward)
+                    break
 
         writer.add_scalar('reward/test', episode_reward, i_episode)
 
-        rewards.append(episode_reward)
+        upper_reward.append(np.max(rewards[-10:]))
+        lower_reward.append(np.min(rewards[-10:]))
+        avg_greedy_rewards.append(np.mean(greedy_reward[-10:]))
+
         print("Episode: {}, total numsteps: {}, reward: {}, average reward: {}".format(i_episode, total_numsteps, episode_reward, np.mean(rewards[-10:])))
 
 # -- saves model --
@@ -166,11 +171,11 @@ print('Total time : {} m').format((time.time() - t_start) / 60)
 print('Time per episode : {} s').format((time.time() - t_start) / args.num_episodes)
 
 pos_greedy = []
-for j in range(0, len(greedy_reward)):
+for j in range(0, len(avg_greedy_rewards)):
     pos_greedy.append(j*10)
 
 plt.fill_between(pos_greedy, lower_reward, upper_reward, facecolor='red', alpha=0.3)
-plt.plot(pos_greedy, greedy_reward, 'r')
+plt.plot(pos_greedy, avg_greedy_rewards, 'r')
 plt.show()
 
 env.close()

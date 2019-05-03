@@ -54,6 +54,7 @@ class Policy(nn.Module):
         self.diag_mask = Variable(torch.diag(torch.diag(torch.ones(num_outputs, num_outputs))).unsqueeze(0))
         self.tril_mask, self.diag_mask = self.tril_mask.to(device), self.diag_mask.to(device)
 
+
     def forward(self, inputs):
         x, u = inputs
         x = self.bn0(x)
@@ -98,6 +99,7 @@ class NAF:
 
         hard_update(self.target_model, self.model)
 
+
     def select_action(self, state, action_noise=None):
         self.model.eval()
         mu, _, _ = self.model((Variable(state), None))
@@ -107,7 +109,7 @@ class NAF:
             mu += torch.cuda.FloatTensor(action_noise.noise())
         return mu.clamp(-1, 1)
 
-    def update_parameters(self, batch):
+    def calc_action_values(self, batch):
         state_batch = Variable(torch.cat(batch.state))
         action_batch = Variable(torch.cat(batch.action))
         reward_batch = Variable(torch.cat(batch.reward))
@@ -122,8 +124,13 @@ class NAF:
 
         _, state_action_values, _ = self.model((state_batch, action_batch))
 
+        return state_action_values, expected_state_action_values
+
+    def update_parameters(self, batch):
+        state_action_values, expected_state_action_values = self.calc_action_values(batch)
         loss = MSELoss(state_action_values, expected_state_action_values)
 
+        torch.cuda.synchronize()
         self.optimizer.zero_grad()
         loss.backward()
         torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1)
