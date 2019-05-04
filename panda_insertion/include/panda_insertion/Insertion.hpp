@@ -54,6 +54,7 @@ public:
     void moveToInitialPosition();
     void initialPosition();
     void externalDownMovement();
+    void spiralMotion();
 
     void stateMachineRun();
 

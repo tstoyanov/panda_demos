@@ -8,6 +8,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_srvs
   tf2_msgs
   trajectory_msgs
+  roslib
 )
 
 ## Declare a catkin package

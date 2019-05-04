@@ -8,6 +8,7 @@
 #include "ros/duration.h"
 #include "panda_insertion/Panda.hpp"
 
+
 typedef struct Stiffness
 {
     int translational_x;
@@ -28,11 +29,18 @@ typedef struct Damping
     int rotational_z;
 } Damping;
 
+
+typedef struct Point
+{
+    double x, y, z;
+} Point;
+
 class Controller
 {
 private:
     ros::NodeHandle* nodeHandler;
     Panda* panda;
+    std::vector<Point> spiralTrajectory;
 
     ros::Publisher jointTrajectoryPublisher;
     ros::Publisher equilibriumPosePublisher;
@@ -55,6 +63,7 @@ public:
     bool initialPositionState();
     bool moveToInitialPositionState();
     bool externalDownMovementState();
+    bool spiralMotionState();
 
 private:
     void initJointTrajectoryPublisher();
@@ -67,9 +76,13 @@ private:
     trajectory_msgs::JointTrajectory initialJointTrajectoryMessage();
     geometry_msgs::PoseStamped externalDownMovementPoseMessage();
     geometry_msgs::PoseStamped emptyPoseMessage();
+    geometry_msgs::PoseStamped spiralPointPoseMessage(Point point);
 
     void setParameterStiffness(Stiffness stiffness);
     void setParameterDamping(Damping damping);
+
+    void initSpiralVector();
+    void writeSpiralToFile();
 };
 
 #endif

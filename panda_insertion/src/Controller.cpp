@@ -6,11 +6,13 @@
 #include "panda_insertion/Panda.hpp"
 #include "ros/console.h"
 #include "ros/duration.h"
+#include "ros/package.h"
 #include "ros/time.h"
 #include "stdint.h"
 #include "string"
 #include "vector"
 #include <iostream>
+#include <fstream>
 
 using namespace std;
 
@@ -37,7 +39,6 @@ void Controller::init(ros::NodeHandle* nodeHandler, Panda* panda)
 void Controller::startState()
 {
     ros::Duration(2.0).sleep();
-
     trajectory_msgs::JointTrajectory initialPoseMessage = initialJointTrajectoryMessage();
     jointTrajectoryPublisher.publish(initialPoseMessage);
 
@@ -57,7 +58,7 @@ bool Controller::moveToInitialPositionState()
     
     if (!nodeHandler->getParam(param_translation_stiffness, translational_stiffness))
     {
-      ROS_ERROR_STREAM("Parameter " << param_translation_stiffness << " not retreived");
+        ROS_ERROR_STREAM("Parameter " << param_translation_stiffness << " not retreived");
     }
     ROS_INFO_STREAM("Translation stiffness xyz: " << translational_stiffness.at(0) << translational_stiffness.at(1) << translational_stiffness.at(2) );
 
@@ -74,7 +75,7 @@ bool Controller::moveToInitialPositionState()
 
     int i = 0;
     ros::Rate rate(loop_rate);
-    while (ros::ok() && i<130)
+    while (ros::ok() && i < 130)
     {
         equilibriumPosePublisher.publish(initialPositionMessage);
         rate.sleep();
@@ -111,29 +112,13 @@ bool Controller::externalDownMovementState()
     damping.rotational_z = 45;
 
     setParameterStiffness(stiffness);
-    setParameterDamping(damping);
-
-    std::vector<int> translational_stiffness, rotational_stiffness,
-                     translational_damping, rotational_damping;
-    translational_stiffness = {5000, 5000, 5000};
-    const std::string param_translation_stiffness = "/impedance_controller/cartesian_stiffness/translation";
-    const std::string param_rotation_stiffness = "/impedance_controller/cartesian_stiffness/rotation";
-    const std::string param_translation_damping = "/impedance_controller/cartesian_damping/translation";
-    const std::string param_rotation_damping = "/impedance_controller/cartesian_damping/rotation";
-    
-    if (!nodeHandler->getParam(param_translation_stiffness, translational_stiffness))
-    {
-      ROS_ERROR_STREAM("Parameter " << param_translation_stiffness << " not retreived");
-    }
-    ROS_INFO_STREAM("Translation stiffness xyz: " << translational_stiffness.at(0) << translational_stiffness.at(1) << translational_stiffness.at(2) );
-
-    
+    setParameterDamping(damping);    
     
     int i = 0;
     ros::Rate rate(loop_rate);
     geometry_msgs::PoseStamped externalDownMovementPositionMessage = externalDownMovementPoseMessage();
     
-    while (ros::ok())
+    while (ros::ok() && i < 35)
     {
         equilibriumPosePublisher.publish(externalDownMovementPositionMessage);
         rate.sleep();
@@ -141,6 +126,25 @@ bool Controller::externalDownMovementState()
     }
 
     return true;
+}
+
+bool Controller::spiralMotionState()
+{
+    ROS_DEBUG_ONCE("In spiral motion state from controller");
+
+    ros::Rate rate(loop_rate);
+    initSpiralVector();
+    
+    writeSpiralToFile();
+
+    geometry_msgs::PoseStamped spiralMotionMessage = emptyPoseMessage();
+
+    for (auto point : spiralTrajectory)
+    {
+        spiralMotionMessage = spiralPointPoseMessage(point);
+        equilibriumPosePublisher.publish(spiralMotionMessage);
+        rate.sleep();
+    }
 }
 
 // Private methods
@@ -253,10 +257,7 @@ geometry_msgs::PoseStamped Controller::externalDownMovementPoseMessage()
     message.pose.position = panda->initialPosition;
 
     panda->position.z = 0.72;
-    // if (panda->position.z>0.0)
-    // {
-    //     panda->position.z -= 0.001;
-    // } 
+
     ROS_DEBUG_STREAM("Panda position z =" << panda->position.z);
 
     message.pose.position = panda->position;
@@ -300,6 +301,47 @@ geometry_msgs::PoseStamped Controller::emptyPoseMessage()
     return message;
 }
 
+geometry_msgs::PoseStamped Controller::spiralPointPoseMessage(Point point)
+{
+    geometry_msgs::PoseStamped message;
+    message.pose.position.x = point.x;
+    message.pose.position.y = point.y;
+    message.pose.position.z = point.z;
+    return message;
+}
+
+void Controller::initSpiralVector()
+{
+    double initX = double(panda->initialPosition.x);
+    double initY = double(panda->initialPosition.y);
+    double initZ = double(panda->initialPosition.z);
+
+    ROS_DEBUG_STREAM("Init x,y,z: " << initX << ", " << initY << ", " << initZ);
+    ROS_DEBUG_STREAM("Init x,y,z, panda_init: " << panda->initialPosition.x << ", " << panda->initialPosition.y<< ", " << panda->initialPosition.z);
+
+    double radian, x = initX, y = initY, z = initZ;
+    const double radianShrinkage = 0.01;
+    double angle = 0;
+    int a = 2, b = 2;
+    const int nrOfPoints = 200;
+
+    for (int i = 0; i < nrOfPoints; i++)
+    {
+        Point point;
+
+        radian = radianShrinkage * i;
+        x = (a + b * angle) * cos(angle);
+        y = (a + b * angle) * sin(angle);
+        z -= 0.0001;
+
+        point.x = x;
+        point.y = y;
+        point.z = z;
+
+        spiralTrajectory.push_back(point);
+    }
+}
+
 void Controller::setParameterStiffness(Stiffness stiffness)
 {
     std::vector<int> translational_stiffness, rotational_stiffness;
@@ -337,4 +379,27 @@ void Controller::setParameterDamping(Damping damping)
     nodeHandler->setParam(param_translation_damping, translational_damping); 
 }
 
+void Controller::writeSpiralToFile()
+{
+    std::stringstream filePath;
+
+    filePath << ros::package::getPath("panda_insertion") << "/src/spiral.csv";
+    ofstream myFile(filePath.str());
+
+    ROS_DEBUG_STREAM("Writing file to: " << filePath.str());
+
+    if (!myFile.is_open())
+    {
+        ROS_WARN("Unable to open file.");
+        return;
+    }
+
+    myFile << "x,y,z\n";
+    for (auto point : spiralTrajectory)
+    {
+        myFile << point.x << "," << point.y << "," << point.z << "\n";
+    }
+
+    myFile.close();
+}
 // Private methods

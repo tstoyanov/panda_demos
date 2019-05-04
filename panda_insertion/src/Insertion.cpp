@@ -65,6 +65,13 @@ void Insertion::stateMachineRun()
         case SpiralMotion:
         {
             ROS_DEBUG_ONCE("Spiral motion.");
+            spiralMotion();
+            break;
+        }
+
+        case InsertionWiggle:
+        {
+            ROS_DEBUG_ONCE("Insertion Wiggle");
             break;
         }
 
@@ -87,19 +94,6 @@ void Insertion::tfSubscriberCallback(const tf2_msgs::TFMessageConstPtr& message)
     const unsigned int FREQUENCY_HZ = 5;
 
     ROS_DEBUG_STREAM_NAMED("thread_id", "tf subscriber callback in thread:" << boost::this_thread::get_id());
-
-    // tf2_msgs::TFMessage tfMessage = *(message.get());
-
-    // for (int i = 0; i < 7; i++)
-    // {
-    //     string childID = tfMessage.transfexternalDownMovement();orms[i].child_frame_id;
-    //     double x = tfMessage.transforms[i].transform.rotation.x;
-    //     double y = tfMessage.transforms[i].transform.rotation.y;
-    //     double z = tfMessage.transforms[i].transform.rotation.z;
-
-    //     ROS_DEBUG_STREAM("child_frame_id: " << childID);
-    //     ROS_DEBUG_STREAM("(" << x << ", " << y << ", " << z << ")" << endl);
-    // }
 
     ros::Rate loop_rate(FREQUENCY_HZ);
     loop_rate.sleep();
@@ -143,6 +137,14 @@ void Insertion::externalDownMovement()
 {
     ROS_DEBUG_ONCE("In external down movement state");
     controller.externalDownMovementState();
-    ROS_DEBUG_ONCE("In external down movement DONE.");
+    ROS_DEBUG_ONCE("External down movement DONE.");
     activeState = SpiralMotion;
+}
+
+void Insertion::spiralMotion()
+{
+    ROS_DEBUG_ONCE("In spiral motion state");
+    controller.spiralMotionState();
+    ROS_DEBUG_ONCE("Spiral motion DONE.");
+    activeState = InsertionWiggle;
 }
