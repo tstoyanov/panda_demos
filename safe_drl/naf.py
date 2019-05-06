@@ -5,20 +5,24 @@ import torch.nn as nn
 from torch.optim import Adam
 from torch.autograd import Variable
 
+#@profile
 def MSELoss(input, target):
     return torch.sum((input - target)**2) / input.data.nelement()
 
+#@profile
 def soft_update(target, source, tau):
     for target_param, param in zip(target.parameters(), source.parameters()):
         target_param.data.copy_(target_param.data * (1.0 - tau) + param.data * tau)
 
+#@profile
 def hard_update(target, source):
     for target_param, param in zip(target.parameters(), source.parameters()):
         target_param.data.copy_(param.data)
 
+# -- Network --
 class Policy(nn.Module):
 
-    def __init__(self, hidden_size, num_inputs, action_space, device):
+    def __init__(self, hidden_size, num_inputs, action_space):
         super(Policy, self).__init__()
         self.action_space = action_space
         num_outputs = action_space.shape[0]
@@ -52,17 +56,16 @@ class Policy(nn.Module):
         self.tril_mask = Variable(torch.tril(torch.ones(
             num_outputs, num_outputs), diagonal=-1).unsqueeze(0))
         self.diag_mask = Variable(torch.diag(torch.diag(torch.ones(num_outputs, num_outputs))).unsqueeze(0))
-        self.tril_mask, self.diag_mask = self.tril_mask.to(device), self.diag_mask.to(device)
 
-
+    #@profile
     def forward(self, inputs):
         x, u = inputs
         x = self.bn0(x)
-        x = torch.tanh(self.linear1(x))
-        x = torch.tanh(self.linear2(x))
+        x = (self.linear1(x)).tanh()
+        x = (self.linear2(x)).tanh()
 
         V = self.V(x)
-        mu = torch.tanh(self.mu(x))
+        mu = (self.mu(x)).tanh()
 
         Q = None
         if u is not None:
@@ -72,6 +75,7 @@ class Policy(nn.Module):
                 self.tril_mask.expand_as(
                     L) + torch.exp(L) * self.diag_mask.expand_as(L)
             P = torch.bmm(L, L.transpose(2, 1))
+
             u_mu = (u - mu).unsqueeze(2)
             A = -0.5 * \
                 torch.bmm(torch.bmm(u_mu.transpose(2, 1), P), u_mu)[:, :, 0]
@@ -83,15 +87,12 @@ class Policy(nn.Module):
 
 class NAF:
 
-    def __init__(self, gamma, tau, hidden_size, num_inputs, action_space, device):
-        self.device = device
+    def __init__(self, gamma, tau, hidden_size, num_inputs, action_space):
         self.action_space = action_space
         self.num_inputs = num_inputs
 
-        self.model = Policy(hidden_size, num_inputs, action_space, device)
-        self.model = self.model.to(device)
-        self.target_model = Policy(hidden_size, num_inputs, action_space, device)
-        self.target_model = self.target_model.to(device)
+        self.model = Policy(hidden_size, num_inputs, action_space)
+        self.target_model = Policy(hidden_size, num_inputs, action_space)
         self.optimizer = Adam(self.model.parameters(), lr=1e-3)
 
         self.gamma = gamma
@@ -99,17 +100,20 @@ class NAF:
 
         hard_update(self.target_model, self.model)
 
-
+    #@profile
     def select_action(self, state, action_noise=None):
         self.model.eval()
         mu, _, _ = self.model((Variable(state), None))
         self.model.train()
         mu = mu.data
         if action_noise is not None:
-            mu += torch.cuda.FloatTensor(action_noise.noise())
+            mu += torch.Tensor(action_noise.noise())
+
         return mu.clamp(-1, 1)
 
-    def calc_action_values(self, batch):
+    #@profile
+    def update_parameters(self, batch):
+
         state_batch = Variable(torch.cat(batch.state))
         action_batch = Variable(torch.cat(batch.action))
         reward_batch = Variable(torch.cat(batch.reward))
@@ -120,17 +124,15 @@ class NAF:
 
         reward_batch = reward_batch.unsqueeze(1)
         mask_batch = mask_batch.unsqueeze(1)
+
+        ####### switched mask_batch * next_state_values from mask_batch + next_state_values
         expected_state_action_values = reward_batch + (self.gamma * mask_batch * next_state_values)
+        #######
 
         _, state_action_values, _ = self.model((state_batch, action_batch))
 
-        return state_action_values, expected_state_action_values
-
-    def update_parameters(self, batch):
-        state_action_values, expected_state_action_values = self.calc_action_values(batch)
         loss = MSELoss(state_action_values, expected_state_action_values)
 
-        torch.cuda.synchronize()
         self.optimizer.zero_grad()
         loss.backward()
         torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1)
@@ -140,12 +142,12 @@ class NAF:
 
         return loss.item(), 0
 
-    def save_model(self, env_name, suffix="", model_path=None):
+    def save_model(self, env_name, batch_size, suffix="", model_path=None):
         if not os.path.exists('models/'):
             os.makedirs('models/')
 
         if model_path is None:
-            model_path = "models/naf_{}_{}".format(env_name, suffix)
+            model_path = "models/naf_{}_{}_{}".format(env_name, batch_size, suffix)
         print('Saving model to {}'.format(model_path))
         torch.save(self.model.state_dict(), model_path)
 
