@@ -2,35 +2,24 @@
 #include <kdl_parser/kdl_parser.hpp>
 #include <kdl/path_roundedcomposite.hpp>
 #include <kdl/rotational_interpolation_sa.hpp>
-#include <kdl/treeiksolverpos_nr_jl.hpp>
 #include <kdl/chain.hpp>
 #include <kdl/jntarray.hpp>
-// #include <kdl/treefksolverpos_recursive.hpp>
-// #include <kdl/treeiksolvervel_wdls.hpp>
 
 #include <kdl/chainiksolverpos_nr_jl.hpp>
 #include <kdl/chainfksolverpos_recursive.hpp>
 #include <kdl/chainiksolvervel_wdls.hpp>
 
-// #include <kdl/chainiksolvervel_pinv_givens.hpp>
-// #include <kdl/chainiksolvervel_pinv.hpp>
-// #include <kdl/chainiksolverpos_nr.hpp>
-
-#include <set> 
 #include <chrono>
 #include <fstream>
 #include <iostream>
 #include <boost/filesystem.hpp>
 
 #include <ros/package.h>
-
 #include <jsoncpp/json/json.h>
-// #include <jsoncpp/json/forwards.h>
-
 #include <tinyxml.h>
 
-#include <boost/math/constants/constants.hpp>
-const double pi = boost::math::constants::pi<double>();
+#include <math.h>
+#include <random>
 
 std::string getExePath()
 {
@@ -54,42 +43,6 @@ int main(int argc, char **argv)
   ros::NodeHandle node;
   ros::Rate loop_rate(2);
 
-  // ==========REAL POINTS==========
-  double x0 = -0.531718997062;
-  double y0 = 0.0892002648095;
-  double z0 = 1.08671006067;
-
-  double x1 = -0.131718997062;
-  double y1 = 0.0892002648095;
-  double z1 = 0.886710060669;
-
-  double x2 = 0.368281002938;
-  double y2 = 0.0892002648095;
-  double z2 = 0.886710060669;
-
-  double x3 = 0.468281002938;
-  double y3 = 0.0892002648095;
-  double z3 = 0.986710060669;
-
-  KDL::Vector position_vector_0 {x0, y0, z0};
-  KDL::Frame waypoint_frame_0 {position_vector_0};
-  KDL::Vector position_vector_1 {x1, y1, z1};
-  KDL::Frame waypoint_frame_1 {position_vector_1};
-  KDL::Vector position_vector_2 {x2, y2, z2};
-  KDL::Frame waypoint_frame_2 {position_vector_2};
-  KDL::Vector position_vector_3 {x3, y3, z3};
-  KDL::Frame waypoint_frame_3 {position_vector_3};
-
-  KDL::RotationalInterpolation_SingleAxis * orient = new KDL::RotationalInterpolation_SingleAxis();
-
-  KDL::Path_RoundedComposite path(radius, eqradius, orient, true);
-
-  path.Add(waypoint_frame_0);
-  path.Add(waypoint_frame_1);
-  path.Add(waypoint_frame_2);
-  path.Add(waypoint_frame_3);
-  path.Finish();
-
   // ===== getting URDF model form param server =====
   std::string robot_desc_string;
   node.param("robot_description", robot_desc_string, std::string());
@@ -104,12 +57,11 @@ int main(int argc, char **argv)
   node.getParam(param_server_joints, joint_names);
 
   // ===== getting joint limits from URDF model =====
+  double average;
   TiXmlDocument tiny_doc;
   tiny_doc.Parse(robot_desc_string.c_str());
-
-  double average;
   std::map<std::string, std::map<std::string, double>> joint_limits;
-  
+
   TiXmlHandle doc_handle {&tiny_doc};
   std::string joint_name;
   std::vector<std::string>::iterator it;
@@ -144,7 +96,7 @@ int main(int argc, char **argv)
   KDL::Chain my_chain = KDL::Chain {};
   std::vector<std::string> chain_segments_names;
   my_tree.getChain("world", "panda_hand", my_chain);
-  unsigned int nr_of_joints = my_chain.getNrOfJoints();
+  unsigned nr_of_joints = my_chain.getNrOfJoints();
   // std::cout << "my_chain.getNrOfJoints(): " << my_chain.getNrOfJoints() << std::endl;
   // for (unsigned i = 0; i < my_chain.getNrOfSegments(); i++)
   // {
@@ -152,8 +104,8 @@ int main(int argc, char **argv)
   //   std::cout << "\tchain segment" << i << ": " << my_chain.getSegment(i).getName() << std::endl;
   // }
 
-  KDL::JntArray q_min {(unsigned int) joint_names.size()};
-  KDL::JntArray q_max {(unsigned int) joint_names.size()};
+  KDL::JntArray q_min {(unsigned) joint_names.size()};
+  KDL::JntArray q_max {(unsigned) joint_names.size()};
   for (unsigned i = 0; i < joint_names.size(); i++)
   {
     q_min(i) = joint_limits[joint_names[i]]["lower"];
@@ -163,9 +115,94 @@ int main(int argc, char **argv)
     // std::cout << "\tupper " << q_max(i) << "\n";
     // std::cout << "\taverage " << (q_min(i) + q_max(i)) / 2 << "\n";
   }
-  unsigned int max_iter = 100;
+  unsigned max_iter = 100;
   double eps = 1e-12;
 
+   // ==================== CHAIN SOLVER ====================
+  KDL::ChainFkSolverPos_recursive chainFkSolverPos {my_chain};
+  KDL::ChainIkSolverVel_wdls chainIkSolverVel {my_chain};
+  KDL::ChainIkSolverPos_NR_JL chainIkSolverPos {my_chain, q_min, q_max, chainFkSolverPos, chainIkSolverVel, max_iter, eps};
+
+  // ========== WAYPOINTS ==========
+  std::vector<std::vector<double>> starting_waypoints =
+  {
+    // good
+    // {x, y, z}
+    {-0.401718997062, 0.0892002648095, 0.986710060669},
+    {0.368281002938, 0.0892002648095, 0.886710060669},
+    {0.468281002938, 0.0892002648095, 0.986710060669}
+    
+    // collision test
+    // {x, y, z}
+    // {-0.401718997062, 0.4892002648095, 0.986710060669},
+    // {0.368281002938, 0.4892002648095, 0.886710060669},
+    // {0.468281002938, 0.4892002648095, 0.986710060669}
+    
+    // old
+    // {x, y, z}
+    // {-0.531718997062, 0.0892002648095, 1.08671006067},
+    // {-0.131718997062, 0.0892002648095, 0.886710060669},
+    // {0.368281002938, 0.0892002648095, 0.886710060669},
+    // {0.468281002938, 0.0892002648095, 0.986710060669}
+  };
+
+  KDL::RotationalInterpolation_SingleAxis * orient = new KDL::RotationalInterpolation_SingleAxis();
+  KDL::Path_RoundedComposite path(radius, eqradius, orient, true);
+
+  // ========== adding noise to the waypoints ==========
+  // int sign
+  bool path_error;
+  double noise;
+  std::default_random_engine generator {std::random_device()()};
+  std::normal_distribution<double> distribution(0.0, 1.66); // 99% of the noise falls inside 3*stddev (1.66 = +/- 5 m?)
+  
+  // do
+  // {
+    path_error = false;
+    std::vector<std::vector<double>> noisy_waypoints = starting_waypoints;
+    for (unsigned i = 0; i < noisy_waypoints.size(); i++)
+    {
+      for (unsigned ii = 0; ii < noisy_waypoints[i].size(); ii++)
+      {
+        noise = distribution(generator) / 100.0;
+        if (!(noise < 0.05 && noise > -0.05)){
+          std::cout << "fail" << std::endl;
+          noise = distribution(generator) / 100.0;
+        }
+        else
+        {
+          noisy_waypoints[i][ii] += noise;
+        }
+        std::cout << "\nnoise: " << noise << std::endl;
+        std::cout << "noisy_waypoints[" << i << "][" << ii << "]: " << noisy_waypoints[i][ii] << std::endl;
+      }
+      path.Add(KDL::Frame(KDL::Vector(noisy_waypoints[i][0], noisy_waypoints[i][1], noisy_waypoints[i][2])));
+    }
+    // try
+    // {
+      path.Finish();
+  //   }
+  //   catch(const std::exception& e)
+  //   {
+  //     path_error = true;
+  //     std::cout << "\nEXCEPTION\n";
+  //     std::cerr << e.what() << '\n';
+  //   }
+  // }
+  // while (!path_error);
+
+  double current_s = 0;
+  KDL::Frame current_eef_frame;
+  KDL::Frame fk_current_eef_frame;
+  std::vector<KDL::Frame> eef_trajectory;
+  std::vector<KDL::Frame> fk_eef_trajectory;
+  KDL::Vector current_eef_pos;
+  KDL::Vector fk_current_eef_pos;
+  std::vector<KDL::JntArray> joint_trajectory;
+  KDL::JntArray q_out {nr_of_joints};
+  KDL::JntArray last_joint_pos {nr_of_joints};
+
+  int ret;
   double number_of_samples = 100;
   double path_length = path.PathLength();
   double ds = path_length / number_of_samples;
@@ -173,39 +210,36 @@ int main(int argc, char **argv)
   double average_start_joint_pos_array[] = {0, 0, 0, -1.5708, 0, 1.8675, 0};
   double kdl_start_joint_pos_array[] = {-0.443379, 0.702188, -0.556869, -1.9368, -2.55769, 0.667764, -2.56121};
 
-  double current_s = 0;
-  KDL::Frame current_eef_frame;
-  KDL::Frame fk_current_eef_frame;
-  KDL::Frames current_frames;
-  std::vector<KDL::Frame> eef_trajectory;
-  std::vector<KDL::Frame> fk_eef_trajectory;
-  KDL::Vector current_eef_pos;
-  KDL::Vector fk_current_eef_pos;
-  std::vector<KDL::JntArray> joint_trajectory;
-  KDL::JntArray q_out {nr_of_joints};
-
-  KDL::JntArray last_joint_pos {nr_of_joints};
   for (unsigned i = 0; i < nr_of_joints; i++)
   {
-    // last_joint_pos(i) = average_start_joint_pos_array[i];
     last_joint_pos(i) = start_joint_pos_array[i];
+  }
+
+  ret = chainFkSolverPos.JntToCart(last_joint_pos, fk_current_eef_frame);
+  std::cout << "FK RET: " << ret << std::endl;
+  KDL::Rotation starting_orientation = fk_current_eef_frame.M;
+
+  // calculate the new joint coordinates for the starting point
+  current_eef_frame = path.Pos(0);
+  current_eef_frame.M = starting_orientation;
+  ret = chainIkSolverPos.CartToJnt(last_joint_pos, current_eef_frame, last_joint_pos);
+  std::cout << "New starting joint coordinates RET = " << ret << std::endl;
+
+  for (unsigned i = 0; i < last_joint_pos.rows(); i++)
+  {
+    std::cout << "last_joint_pos(" << i << "): " << last_joint_pos(i) << std::endl;
   }
   joint_trajectory.push_back(last_joint_pos);
   eef_trajectory.push_back(path.Pos(0));
-  
-  // ====================CHAIN SOLVER====================
-  KDL::ChainFkSolverPos_recursive chainFkSolverPos {my_chain};
-  KDL::ChainIkSolverVel_wdls chainIkSolverVel {my_chain};
-  KDL::ChainIkSolverPos_NR_JL chainIkSolverPos {my_chain, q_min, q_max, chainFkSolverPos, chainIkSolverVel, max_iter, eps};
 
-  int ret;
+  // char c;
+  // std::cin >> c;
 
   // ====================FK====================
   ret = chainFkSolverPos.JntToCart(last_joint_pos, fk_current_eef_frame);
   std::cout << "FK RET: " << ret << std::endl;
   fk_current_eef_pos = fk_current_eef_frame.p;
   fk_eef_trajectory.push_back(fk_current_eef_frame);
-  KDL::Rotation starting_orientation = fk_current_eef_frame.M;
   std::cout << "------------------------------\n";
   std::cout << "FK EEF pos: " << std::endl;
   std::cout << "\tx: " << fk_current_eef_pos.x() << std::endl;
@@ -282,20 +316,40 @@ int main(int argc, char **argv)
   std::cout << "pkg_path: " << pkg_path << std::endl;
   long long ts = std::chrono::system_clock::now().time_since_epoch().count();
   std::cout << "time: " << ts << std::endl;
+  std::string latest_dir_path = pkg_path + "/generated_trajectories/cpp/latest";
   std::string dir_path = pkg_path + "/generated_trajectories/cpp/" + std::to_string(ts);
   boost::filesystem::path dir(dir_path);
+  boost::filesystem::path latest_dir(latest_dir_path);
   if(!(boost::filesystem::exists(dir)))
   {
     if (boost::filesystem::create_directories(dir))
     {
-      std::cout << "....Folder Successfully Created!" << std::endl;
+      std::cout << "....'timestamp' folder Successfully Created!" << std::endl;
     }
     else
     {
-      std::cout << "....ERROR Folder Couldn't Be Created!" << std::endl;
+      std::cout << "....ERROR 'timestamp' folder Couldn't Be Created!" << std::endl;
+    }
+  }
+  if(!(boost::filesystem::exists(latest_dir)))
+  {
+    if (boost::filesystem::create_directories(latest_dir))
+    {
+      std::cout << "....'latest' folder Successfully Created!" << std::endl;
+    }
+    else
+    {
+      std::cout << "....ERROR 'latest' folder Couldn't Be Created!" << std::endl;
     }
   }
   std::ofstream myfile (dir_path + "/trajectories.txt");
+  if (myfile.is_open())
+  {
+    myfile << data << std::endl;
+    myfile.close();
+  }
+
+  myfile.open(latest_dir_path + "/trajectories.txt");
   if (myfile.is_open())
   {
     myfile << data << std::endl;

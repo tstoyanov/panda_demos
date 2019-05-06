@@ -11,8 +11,7 @@ import moveit_commander
 import getopt
 import os
 
-input_folder = "test"
-# tot_time_nsecs = 10000000000  # total execution time for the trajectory in nanoseconds
+input_folder = "latest"
 tot_time_nsecs = 3000000000  # total execution time for the trajectory in nanoseconds
 
 try:
@@ -50,16 +49,13 @@ def talker():
     kdl_fl_start = [0.841403, 0.4, -0.7, -2.22141, -0.25, 1.8, -2.2]
     kdl_average_start = [-0.455889, 0.710596, -0.561466, -1.90657, -2.56471, 0.690288, -2.56108]
     kdl_start_joint_pos_array = [-0.443379, 0.702188, -0.556869, -1.9368, -2.55769, 0.667764, -2.56121]
-    for i in range(len(start)):
-        joint_goal[i] = start[i]
-    group.go(joint_goal, wait=True)
-    group.stop()
+    # for i in range(len(start)):
+    #     joint_goal[i] = start[i]
+    # group.go(joint_goal, wait=True)
+    # group.stop()
 
     script_path = os.path.abspath(__file__)
     main_dir = script_path[:script_path.rfind('/utils')]
-    
-    print("=== Press `Enter` to write ===")
-    raw_input()
 
     # getting the generated trajectory data
     with open(main_dir + "/generated_trajectories/cpp/" + input_folder + "/trajectories.txt", 'r') as f:
@@ -89,6 +85,15 @@ def talker():
         eef_pose["origin"]["x"].append(values["origin"]["x"])
         eef_pose["origin"]["y"].append(values["origin"]["y"])
         eef_pose["origin"]["z"].append(values["origin"]["z"])
+
+    # go to the real initial point
+    for i in range(len(joint_trajectories)):
+        joint_goal[i] = joint_trajectories[i][0]
+    group.go(joint_goal, wait=True)
+    group.stop()
+
+    print("=== Press `Enter` to write ===")
+    raw_input()
 
     # create the message with the right data to publish 
     now = rospy.get_rostime()

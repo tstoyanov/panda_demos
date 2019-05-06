@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import json, ast, collections, sys, getopt, os
 
 scale = 1
-input_folder = "test"
+input_folder = "latest"
 # if len(sys.arvg) == 2:
 #     input_folder = sys.argv[1]
 
