@@ -2,17 +2,8 @@
 import json
 import copy
 import rospy
-from std_msgs.msg import Header
-from std_msgs.msg import String
-from actionlib_msgs.msg import GoalID
-from trajectory_msgs.msg import JointTrajectory
 from trajectory_msgs.msg import JointTrajectoryPoint
-from control_msgs.msg import FollowJointTrajectoryGoal
 from control_msgs.msg import FollowJointTrajectoryActionGoal
-from moveit_msgs.msg import ExecuteTrajectoryGoal
-from moveit_msgs.msg import ExecuteTrajectoryActionGoal
-
-from rospy_message_converter import json_message_converter
 
 import ast
 import sys
@@ -83,12 +74,14 @@ def talker():
             joint_trajectories[i].append(values[i])
     joint_names = trajectories["joint_names"]
     eef_pose = {
-        "origin": {
-        "x": [],
-        "y": [],
-        "z": [],
+        "origin":
+        {
+            "x": [],
+            "y": [],
+            "z": [],
         },
-        "orientation": {
+        "orientation":
+        {
         }
     }
     for values in trajectories["eef_trajectory"]:

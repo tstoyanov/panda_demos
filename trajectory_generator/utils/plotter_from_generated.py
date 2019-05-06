@@ -1,14 +1,13 @@
 #!/usr/bin/python
 import numpy as np
 import matplotlib.pyplot as plt
-# from rospy_message_converter import json_message_converter
 
-import json, ast, collections, sys, getopt
+import json, ast, collections, sys, getopt, os
 
 scale = 1
-folder_name = "test"
+input_folder = "test"
 # if len(sys.arvg) == 2:
-#     folder_name = sys.argv[1]
+#     input_folder = sys.argv[1]
 
 try:
     opts, args = getopt.getopt(sys.argv[1:],"i:",["input="])
@@ -20,9 +19,13 @@ for opt, arg in opts:
         print("test.py -i <input_folder>")
         sys.exit()
     elif opt in ("-i", "--input"):
-        folder_name = arg
+        input_folder = arg
 
-with open("/home/ilbetzy/orebro/trajectory_generation_ws/generated_trajectories/" + folder_name + "/trajectories.txt", 'r') as f:
+script_path = os.path.abspath(__file__)
+main_dir = script_path[:script_path.rfind('/utils')]
+
+# with open("/home/ilbetzy/orebro/trajectory_generation_ws/generated_trajectories/" + input_folder + "/trajectories.txt", 'r') as f:
+with open(main_dir + "/generated_trajectories/cpp/" + input_folder + "/trajectories.txt", 'r') as f:
     data = f.read()
 trajectories = json.loads(data)
 trajectories = ast.literal_eval(json.dumps(trajectories))
@@ -146,7 +149,7 @@ for values in trajectories["fk_eef_trajectory"]:
 print("processing graphs")
 for i in range(len(trajectories["joint_trajectory"][0])):
     steps = range(len(trajectories["joint_trajectory"]))
-    plt.figure(folder_name + " joint_trajectory " + str(i))
+    plt.figure(input_folder + " joint_trajectory " + str(i))
     plt.subplot(1, 1, 1)
     plt.plot(steps, joint_trajectories[i], 'o-g', label="joint_trajectory " + str(i))
     plt.ylabel(str(i))
@@ -167,7 +170,7 @@ for i in range(len(trajectories["joint_trajectory"][0])):
 
 # # ============================3D EEF POSE PLOT=================================
 from mpl_toolkits.mplot3d import Axes3D
-fig = plt.figure("eef_trajectory " + folder_name)
+fig = plt.figure("eef_trajectory " + input_folder)
 ax = fig.add_subplot(111, projection='3d')
 ax.scatter3D(eef_pose["origin"]["x"], eef_pose["origin"]["y"], eef_pose["origin"]["z"], c=eef_pose["origin"]["z"], cmap='Greens', label="eef_trajectory");
 
@@ -177,7 +180,7 @@ ax.scatter3D(fk_eef_pose["origin"]["x"], fk_eef_pose["origin"]["y"], fk_eef_pose
 plt.legend()
 
 # # =============================================================================
-#     # plt.figure(folder_name + " " + str(n))
+#     # plt.figure(input_folder + " " + str(n))
 #     # plt.subplot(3, 1, 1)
 #     # plt.plot(ts_goal, positions_goal[joint_name], 'o-g', label="goal positions")
 #     # plt.plot(ts_joint_states, positions_joint_states[joint_name], 'x-b', label="joint_states positions")

@@ -5,17 +5,18 @@
 #include <kdl/treeiksolverpos_nr_jl.hpp>
 #include <kdl/chain.hpp>
 #include <kdl/jntarray.hpp>
-#include <kdl/treefksolverpos_recursive.hpp>
-#include <kdl/treeiksolvervel_wdls.hpp>
+// #include <kdl/treefksolverpos_recursive.hpp>
+// #include <kdl/treeiksolvervel_wdls.hpp>
 
 #include <kdl/chainiksolverpos_nr_jl.hpp>
 #include <kdl/chainfksolverpos_recursive.hpp>
 #include <kdl/chainiksolvervel_wdls.hpp>
 
-#include <kdl/chainiksolvervel_pinv_givens.hpp>
-#include <kdl/chainiksolvervel_pinv.hpp>
-#include <kdl/chainiksolverpos_nr.hpp>
+// #include <kdl/chainiksolvervel_pinv_givens.hpp>
+// #include <kdl/chainiksolvervel_pinv.hpp>
+// #include <kdl/chainiksolverpos_nr.hpp>
 
+#include <set> 
 #include <chrono>
 #include <fstream>
 #include <iostream>
@@ -23,9 +24,10 @@
 
 #include <ros/package.h>
 
-#include <json.hpp>
-using json = nlohmann::json;
-#include <pugixml.hpp>
+#include <jsoncpp/json/json.h>
+// #include <jsoncpp/json/forwards.h>
+
+#include <tinyxml.h>
 
 #include <boost/math/constants/constants.hpp>
 const double pi = boost::math::constants::pi<double>();
@@ -100,56 +102,49 @@ int main(int argc, char **argv)
   std::string param_server_joints = "/position_joint_trajectory_controller/joints";
   std::vector<std::string> joint_names;
   node.getParam(param_server_joints, joint_names);
-  for (unsigned i = 0; i < joint_names.size(); i++)
-  {
-    std::cout << "joint names: " << joint_names[i] << "\n";
-  }
 
   // ===== getting joint limits from URDF model =====
-  pugi::xml_document doc;
-  pugi::xml_node limit;
-  pugi::xml_parse_result result = doc.load_string(robot_desc_string.c_str());
-  // std::cout << "Load result: " << result.description() << ", robot name: " << doc.child("robot").attribute("name").value() << std::endl;
+  TiXmlDocument tiny_doc;
+  tiny_doc.Parse(robot_desc_string.c_str());
 
   double average;
-  std::string joint_name;
   std::map<std::string, std::map<std::string, double>> joint_limits;
-  for (pugi::xml_node joint = doc.child("robot").child("joint"); joint; joint = joint.next_sibling("joint"))
+  
+  TiXmlHandle doc_handle {&tiny_doc};
+  std::string joint_name;
+  std::vector<std::string>::iterator it;
+  for (TiXmlElement* tiny_joint = doc_handle.FirstChild("robot").Child("joint", 0).ToElement(); tiny_joint; tiny_joint = tiny_joint -> NextSiblingElement("joint"))
   {
-    joint_name = joint.attribute("name").value();
-    if (std::find(joint_names.begin(), joint_names.end(), joint_name) != joint_names.end())
+    joint_name = tiny_joint -> Attribute("name");
+    it = std::find(joint_names.begin(), joint_names.end(), joint_name);
+    if (it != joint_names.end())
     {
-      limit = joint.child("limit");
-      for (pugi::xml_attribute_iterator ait = limit.attributes_begin(); ait != limit.attributes_end(); ++ait)
-      {
-        // std::cout << "\t" << ait->name() << "=" << ait->value() << std::endl;
-        joint_limits[joint_name].insert({{ait->name(), std::stod(ait->value())}});
-      }
-      
-      // ====================FAKE LIMITS====================
-      // joint_limits["panda_joint1"]["lower"] = -0.6;
-      // joint_limits["panda_joint1"]["upper"] = 1.0;
-      // joint_limits["panda_joint2"]["lower"] = -0.1;
-      // joint_limits["panda_joint2"]["upper"] = 0.4;
-      // joint_limits["panda_joint3"]["lower"] = -0.7;
-      // joint_limits["panda_joint3"]["upper"] = 0.25;
-      // joint_limits["panda_joint4"]["lower"] = -3.0;
-      // joint_limits["panda_joint4"]["upper"] = -1.5;
-      // joint_limits["panda_joint5"]["lower"] = -0.25;
-      // joint_limits["panda_joint5"]["upper"] = 0.3;
-      // joint_limits["panda_joint6"]["lower"] = 1.8;
-      // joint_limits["panda_joint6"]["upper"] = 3.25;
-      // joint_limits["panda_joint7"]["lower"] = -2.2;
-      // joint_limits["panda_joint7"]["upper"] = 0.4;
-      // ====================END FAKE LIMITS====================
+      joint_limits[joint_name].insert({{"lower", std::stod(tiny_joint -> FirstChild("limit") -> ToElement() -> Attribute("lower"))}});
+      joint_limits[joint_name].insert({{"upper", std::stod(tiny_joint -> FirstChild("limit") -> ToElement() -> Attribute("upper"))}});
     }
   }
+      
+  // ====================FAKE LIMITS====================
+  // joint_limits["panda_joint1"]["lower"] = -0.6;
+  // joint_limits["panda_joint1"]["upper"] = 1.0;
+  // joint_limits["panda_joint2"]["lower"] = -0.1;
+  // joint_limits["panda_joint2"]["upper"] = 0.4;
+  // joint_limits["panda_joint3"]["lower"] = -0.7;
+  // joint_limits["panda_joint3"]["upper"] = 0.25;
+  // joint_limits["panda_joint4"]["lower"] = -3.0;
+  // joint_limits["panda_joint4"]["upper"] = -1.5;
+  // joint_limits["panda_joint5"]["lower"] = -0.25;
+  // joint_limits["panda_joint5"]["upper"] = 0.3;
+  // joint_limits["panda_joint6"]["lower"] = 1.8;
+  // joint_limits["panda_joint6"]["upper"] = 3.25;
+  // joint_limits["panda_joint7"]["lower"] = -2.2;
+  // joint_limits["panda_joint7"]["upper"] = 0.4;
+  // ====================END FAKE LIMITS====================
 
   KDL::Chain my_chain = KDL::Chain {};
   std::vector<std::string> chain_segments_names;
-  my_tree.getChain("table", "panda_hand", my_chain);
+  my_tree.getChain("world", "panda_hand", my_chain);
   unsigned int nr_of_joints = my_chain.getNrOfJoints();
-  // my_tree.getChain("mount_flange_link", "panda_hand", my_chain);
   // std::cout << "my_chain.getNrOfJoints(): " << my_chain.getNrOfJoints() << std::endl;
   // for (unsigned i = 0; i < my_chain.getNrOfSegments(); i++)
   // {
@@ -163,11 +158,10 @@ int main(int argc, char **argv)
   {
     q_min(i) = joint_limits[joint_names[i]]["lower"];
     q_max(i) = joint_limits[joint_names[i]]["upper"];
-    
-    std::cout << "Joint " << joint_names[i] << "\n";
-    std::cout << "\tlower " << q_min(i) << "\n";
-    std::cout << "\tupper " << q_max(i) << "\n";
-    std::cout << "\taverage " << (q_min(i) + q_max(i)) / 2 << "\n";
+    // std::cout << "Joint " << joint_names[i] << "\n";
+    // std::cout << "\tlower " << q_min(i) << "\n";
+    // std::cout << "\tupper " << q_max(i) << "\n";
+    // std::cout << "\taverage " << (q_min(i) + q_max(i)) / 2 << "\n";
   }
   unsigned int max_iter = 100;
   double eps = 1e-12;
@@ -189,7 +183,6 @@ int main(int argc, char **argv)
   KDL::Vector fk_current_eef_pos;
   std::vector<KDL::JntArray> joint_trajectory;
   KDL::JntArray q_out {nr_of_joints};
-  KDL::JntArray q_out_norm {nr_of_joints};
 
   KDL::JntArray last_joint_pos {nr_of_joints};
   for (unsigned i = 0; i < nr_of_joints; i++)
@@ -234,25 +227,16 @@ int main(int argc, char **argv)
     eef_trajectory.push_back(current_eef_frame);
 
     current_eef_frame.M.GetEulerZYX(Z, Y, X);
+    std::cout << "EEF frame orientation" << std::endl;
     std::cout << "\t\t\tX: " << X << std::endl;
     std::cout << "\t\t\tY: " << Y << std::endl;
     std::cout << "\t\t\tZ: " << Z << std::endl;
 
     ret = chainIkSolverPos.CartToJnt(last_joint_pos, current_eef_frame, q_out);
     std::cout << "RET TRUE: " << ret << std::endl;
-    q_out_norm = q_out;
-    for (unsigned n = 0; n < nr_of_joints; n++)
-    {
-      // std::cout << "--------------------------\nbefore: " << n << "\n" << q_out.data[n] << std::endl;
-      // q_out_norm.data[n] = q_out.data[n] * pi / 180;z
-      // q_out_norm.data[n] = fmod(q_out.data[n], pi);
-      // std::cout << "after:\n" << q_out_norm.data[n] << "\n--------------------------" <<std::endl;
-    }
-    joint_trajectory.push_back(q_out_norm);
-    // joint_trajectory.push_back(q_out);
+    joint_trajectory.push_back(q_out);
 
-    ret = chainFkSolverPos.JntToCart(q_out_norm, fk_current_eef_frame);
-    // ret = chainFkSolverPos.JntToCart(q_out, fk_current_eef_frame);
+    ret = chainFkSolverPos.JntToCart(q_out, fk_current_eef_frame);
     std::cout << "------------------------------\n";
     std::cout << "FK RET: " << ret << std::endl;
     std::cout << "FK EEF pos: " << std::endl;
@@ -262,25 +246,24 @@ int main(int argc, char **argv)
     std::cout << "------------------------------\n";
     fk_eef_trajectory.push_back(fk_current_eef_frame);
 
-    // std::cout << "\nret: " << ret << std::endl;
-    // std::cout << "my_chain.getNrOfJoints(): " << my_chain.getNrOfJoints() << std::endl;
-
     std::cout << "------------------------------\n";
     std::cout << "Point " << i << ": " << std::endl;
     std::cout << "x: " << current_eef_frame.p.x() << std::endl;
     std::cout << "y: " << current_eef_frame.p.y() << std::endl;
     std::cout << "z: " << current_eef_frame.p.z() << std::endl;
     std::cout << "q_out:\n" << q_out.data << std::endl;
-    std::cout << "q_out_norm:\n" << q_out_norm.data << std::endl;
     std::cout << "------------------------------\n";
     last_joint_pos = q_out;
   }
 
   // ====================JSON====================
-  json data;
+  Json::Value data;
+  for (unsigned i = 0; i < joint_names.size(); i++)
+  {
+    data["joint_names"].append(Json::Value(joint_names[i]));
+  }
   for (unsigned i = 0; i < joint_trajectory.size(); i++)
   {
-    data["joint_names"] = joint_names;
     for (unsigned ii = 0; ii < nr_of_joints; ii++)
     {
       data["joint_trajectory"][i][ii] = joint_trajectory[i].data[ii];
@@ -326,15 +309,6 @@ int main(int argc, char **argv)
   std::cout << "path.GetNrOfSegments(): " << path.GetNrOfSegments() << std::endl;
   std::cout << "path.GetLengthToEndOfSegment(" << path.GetNrOfSegments()-1 << "): " << path.GetLengthToEndOfSegment(n-1) << std::endl;
   std::cout << "path.PathLength(): " << path.PathLength() << std::endl;
-  
-  unsigned i = 0;
-  while (ros::ok())
-  {
-    i++;
-    if (i > 1) {
-      ros::shutdown();
-    }
-  }
 
   return 0;
 }

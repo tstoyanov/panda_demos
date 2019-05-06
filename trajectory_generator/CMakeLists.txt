@@ -13,7 +13,12 @@ add_compile_options(-std=c++11)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   roslib
+  cmake_modules
 )
+
+find_package(TinyXML REQUIRED)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(JSONCPP jsoncpp)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -105,10 +110,10 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
+ INCLUDE_DIRS include
 #  LIBRARIES trajectory_generator
  CATKIN_DEPENDS roscpp roslib
-#  DEPENDS system_lib
+ DEPENDS system_lib TinyXML
 )
 
 ###########
@@ -118,15 +123,13 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 
-# find_package(pugixml REQUIRED)
 find_package(Eigen3 REQUIRED)
 include_directories(
   # include
   ${catkin_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIRS}
-  # ${pugixml_INCLUDE_DIRS}
-  pugixml-1.9/src
-  nlohmann
+  ${TinyXML_INCLUDE_DIRS}
+  # nlohmann
 )
 
 ## Declare a C++ library
@@ -143,10 +146,6 @@ include_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(generator src/generator.cpp)
-# add_executable(generator2 src/generator2.cpp)
-
-# add_subdirectory(pugixml-1.9)
-# add_subdirectory(/home/ilbetzy/pugixml-1.9/build/CMakeFiles/pugixml.dir/src)
 
 find_package(orocos_kdl)
 find_package(kdl_parser)
@@ -154,13 +153,9 @@ target_link_libraries(generator
   ${catkin_LIBRARIES}
   ${kdl_parser_LIBRARIES}
   ${orocos_kdl_LIBRARIES}
-  # pugixml
+  ${TinyXML_LIBRARIES}
+  ${JSONCPP_LIBRARIES}
 )
-# target_link_libraries(generator2
-#   ${catkin_LIBRARIES}
-#   ${kdl_parser_LIBRARIES}
-#   ${orocos_kdl_LIBRARIES}
-# )
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
