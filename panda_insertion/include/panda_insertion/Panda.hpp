@@ -13,6 +13,8 @@ public:
     geometry_msgs::Quaternion initialOrientation;
     geometry_msgs::Point position;
     geometry_msgs::Quaternion orientation;
+    const double holeDiameter;
+    const double endEffectorDiameter;
 
 // Methods
 public:
@@ -25,6 +27,7 @@ public:
 
     // Methods
     void init();
+    void updatePosition(double x, double y, double z);
 
 private:
     // Methods

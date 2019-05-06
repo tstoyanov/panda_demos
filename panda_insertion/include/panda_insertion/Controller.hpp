@@ -35,12 +35,13 @@ typedef struct Point
     double x, y, z;
 } Point;
 
+typedef std::vector<Point> Trajectory;
+
 class Controller
 {
 private:
     ros::NodeHandle* nodeHandler;
     Panda* panda;
-    std::vector<Point> spiralTrajectory;
 
     ros::Publisher jointTrajectoryPublisher;
     ros::Publisher equilibriumPosePublisher;
@@ -81,8 +82,9 @@ private:
     void setParameterStiffness(Stiffness stiffness);
     void setParameterDamping(Damping damping);
 
-    void initSpiralVector();
-    void writeSpiralToFile();
+    Trajectory generateArchimedeanSpiral(double a, double b, int nrOfPoints);
+
+    void writeTrajectoryToFile(Trajectory trajectory, const std::string& fileName, bool appendToFile = false);
 };
 
 #endif

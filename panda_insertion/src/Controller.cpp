@@ -133,9 +133,11 @@ bool Controller::spiralMotionState()
     ROS_DEBUG_ONCE("In spiral motion state from controller");
 
     ros::Rate rate(loop_rate);
-    initSpiralVector();
     
-    writeSpiralToFile();
+    Trajectory spiralTrajectory = generateArchimedeanSpiral((panda->holeDiameter / 2) * 0.005, 0.003, 150);
+
+    // Write to file
+    writeTrajectoryToFile(spiralTrajectory, "spiral.csv");
 
     geometry_msgs::PoseStamped spiralMotionMessage = emptyPoseMessage();
 
@@ -143,6 +145,7 @@ bool Controller::spiralMotionState()
     {
         spiralMotionMessage = spiralPointPoseMessage(point);
         equilibriumPosePublisher.publish(spiralMotionMessage);
+        panda->updatePosition(spiralMotionMessage.pose.position.x, spiralMotionMessage.pose.position.y, spiralMotionMessage.pose.position.z);
         rate.sleep();
     }
 }
@@ -303,43 +306,46 @@ geometry_msgs::PoseStamped Controller::emptyPoseMessage()
 
 geometry_msgs::PoseStamped Controller::spiralPointPoseMessage(Point point)
 {
-    geometry_msgs::PoseStamped message;
+    geometry_msgs::PoseStamped message = emptyPoseMessage();
+
     message.pose.position.x = point.x;
     message.pose.position.y = point.y;
     message.pose.position.z = point.z;
+
+    message.pose.orientation = panda->orientation;
+
     return message;
 }
 
-void Controller::initSpiralVector()
+Trajectory Controller::generateArchimedeanSpiral(double a, double b, int nrOfPoints)
 {
-    double initX = double(panda->initialPosition.x);
-    double initY = double(panda->initialPosition.y);
-    double initZ = double(panda->initialPosition.z);
+    Trajectory spiral;
 
-    ROS_DEBUG_STREAM("Init x,y,z: " << initX << ", " << initY << ", " << initZ);
-    ROS_DEBUG_STREAM("Init x,y,z, panda_init: " << panda->initialPosition.x << ", " << panda->initialPosition.y<< ", " << panda->initialPosition.z);
+    double initX = double(panda->position.x);
+    double initY = double(panda->position.y);
+    double initZ = double(panda->position.z);
 
-    double radian, x = initX, y = initY, z = initZ;
-    const double radianShrinkage = 0.01;
-    double angle = 0;
-    int a = 2, b = 2;
-    const int nrOfPoints = 200;
+    const double RANGE = (12 * M_PI);
+    double x = initX, y = initY, z = initZ;
 
-    for (int i = 0; i < nrOfPoints; i++)
+    for (auto i = 0; i <= nrOfPoints; i++)
     {
         Point point;
 
-        radian = radianShrinkage * i;
-        x = (a + b * angle) * cos(angle);
-        y = (a + b * angle) * sin(angle);
-        z -= 0.0001;
+        double theta = i * (RANGE / nrOfPoints);
+        double r = (a - b * theta);
+
+        x = initX + r * cos(theta);
+        y = initY + r * sin(theta);
 
         point.x = x;
         point.y = y;
         point.z = z;
 
-        spiralTrajectory.push_back(point);
+        spiral.push_back(point);
     }
+    std::reverse(spiral.begin(), spiral.end());
+    return spiral;
 }
 
 void Controller::setParameterStiffness(Stiffness stiffness)
@@ -379,27 +385,31 @@ void Controller::setParameterDamping(Damping damping)
     nodeHandler->setParam(param_translation_damping, translational_damping); 
 }
 
-void Controller::writeSpiralToFile()
+void Controller::writeTrajectoryToFile(Trajectory trajectory, const string& fileName, bool appendToFile)
 {
+    ofstream outfile;
+
     std::stringstream filePath;
+    filePath << ros::package::getPath("panda_insertion") << "/trajectories/" << fileName;
 
-    filePath << ros::package::getPath("panda_insertion") << "/src/spiral.csv";
-    ofstream myFile(filePath.str());
+    if (appendToFile)
+        outfile.open(filePath.str(), ios_base::app);
+    else
+        outfile.open(filePath.str());
 
-    ROS_DEBUG_STREAM("Writing file to: " << filePath.str());
-
-    if (!myFile.is_open())
+    if (!outfile.is_open())
     {
-        ROS_WARN("Unable to open file.");
+        ROS_WARN_STREAM("Unable to open file " << filePath.str());
         return;
     }
 
-    myFile << "x,y,z\n";
-    for (auto point : spiralTrajectory)
+    for (auto point : trajectory)
     {
-        myFile << point.x << "," << point.y << "," << point.z << "\n";
+        outfile << point.x << "," << point.y << "," << point.z << "\n";
     }
 
-    myFile.close();
+    ROS_DEBUG_STREAM("Wrote trajectory to file " << filePath.str());
+
+    outfile.close();
 }
 // Private methods
