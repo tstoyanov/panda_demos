@@ -76,6 +76,48 @@ rosservice call /hiqp_joint_effort_controller/set_tasks \
   monitored: 0
   def_params: ['TDefFullPose', '0.0', '-1.17', '0.003', '-2.89', '-0.0', '1.82', '0.84']
   dyn_params: ['TDynPD', '64.0', '17.0'] 
+- name: 'ee_plane_project'
+  priority: 1
+  visible: 1
+  active: 1
+  monitored: 0
+  def_params: ['TDefGeomProj', 'point', 'plane', 'ee_point = table_plane']
+  dyn_params: ['TDynPD', '400.0', '51.0']
+- name: 'approach_align'
+  priority: 1
+  visible: 1
+  active: 1
+  monitored: 0
+  def_params: ['TDefGeomAlign', 'line', 'line', 'ee_z_axis = table_z_axis']
+  dyn_params: ['TDynPD', '400.0', '51.0']
+- name: 'ee_cage_front'
+  priority: 2
+  visible: 1
+  active: 1
+  monitored: 0
+  def_params: ['TDefGeomProj', 'point', 'plane', 'ee_point < front_plane']
+  dyn_params: ['TDynPD', '100.0', '21.0']
+- name: 'ee_cage_back'
+  priority: 2
+  visible: 1
+  active: 1
+  monitored: 0
+  def_params: ['TDefGeomProj', 'point', 'plane', 'ee_point > back_plane']
+  dyn_params: ['TDynPD', '100.0', '21.0']
+- name: 'ee_cage_left'
+  priority: 2
+  visible: 1
+  active: 1
+  monitored: 0
+  def_params: ['TDefGeomProj', 'point', 'plane', 'ee_point < left_plane']
+  dyn_params: ['TDynPD', '100.0', '21.0']
+- name: 'ee_cage_right'
+  priority: 2
+  visible: 1
+  active: 1
+  monitored: 0
+  def_params: ['TDefGeomProj', 'point', 'plane', 'ee_point > right_plane']
+  dyn_params: ['TDynPD', '100.0', '21.0']
 - name: 'ee_rl'
   priority: 3
   visible: 1

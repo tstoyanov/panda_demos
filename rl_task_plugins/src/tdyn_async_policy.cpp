@@ -67,6 +67,7 @@ namespace hiqp
     int TDynAsyncPolicy::update(const RobotStatePtr robot_state, 
                 const std::shared_ptr< TaskDefinition > def) {
 
+      /*
       if(n_repeated_ == 0) {  
           e_ddot_star_ = desired_dynamics_;
       } 
@@ -76,6 +77,10 @@ namespace hiqp
           e_ddot_star_.setZero();
       }
       n_repeated_++;
+      */
+
+      Eigen::VectorXd qdot=robot_state->kdl_jnt_array_vel_.qdot.data;
+      e_ddot_star_= desired_dynamics_ - 1000*def->getTaskDerivative();
 
       return 0;
     }
