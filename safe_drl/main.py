@@ -37,21 +37,23 @@ parser.add_argument('--exploration_end', type=int, default=100, metavar='N',
 parser.add_argument('--seed', type=int, default=4, metavar='N',
                     help='random seed (default: 4)')
 parser.add_argument('--batch_size', type=int, default=512, metavar='N',
-                    help='batch size (default: 128)')
+                    help='batch size (default: 512)')
 parser.add_argument('--num_steps', type=int, default=1000, metavar='N',
                     help='max episode length (default: 1000)')
-parser.add_argument('--num_episodes', type=int, default=10000, metavar='N',
+parser.add_argument('--num_episodes', type=int, default=1000, metavar='N',
                     help='number of episodes (default: 1000)')
 parser.add_argument('--hidden_size', type=int, default=128, metavar='N',
                     help='hidden size (default: 128)')
 parser.add_argument('--replay_size', type=int, default=1000000, metavar='N',
                     help='size of replay buffer (default: 1000000)')
-parser.add_argument('--save_agent', type=bool, default=True,
+parser.add_argument('--save_agent', type=bool, default=False,
                     help='save model to file')
 parser.add_argument('--load_agent', type=bool, default=False,
                     help='load model from file')
-parser.add_argument('--train_model', type=bool, default=True,
+parser.add_argument('--train_model', type=bool, default=False,
                     help='Training or run')
+parser.add_argument('--greedy_steps', type=int, default=100, metavar='N',
+                    help='amount of times greedy goes (default: 100)')
 
 args = parser.parse_args()
 
@@ -67,7 +69,8 @@ agent = NAF(args.gamma, args.tau, args.hidden_size,
 
 # -- load existing model --
 if args.load_agent:
-    agent.load_model('./models/naf_test_Pendulum-v0_.pth')
+    agent.load_model(args.env_name, args.batch_size, '.pth')
+    print("agent: naf_{}_{}_{}, is loaded").format(args.env_name, args.batch_size, '.pth')
 
 
 # -- declare memory buffer and random process N
@@ -102,21 +105,23 @@ for i_episode in range(args.num_episodes):
         total_numsteps += 1
         episode_reward += reward
 
-        action = torch.Tensor(action)
-        mask = torch.Tensor([not done])
-        next_state = torch.Tensor([next_state])
-        reward = torch.Tensor([reward])
-
-        memory.push(state, action, mask, next_state, reward)
-
-        state = next_state
-
         # -- training --
         if args.train_model and len(memory) > args.batch_size:
+            action = torch.Tensor(action)
+            mask = torch.Tensor([not done])
+            next_state = torch.Tensor([next_state])
+            reward = torch.Tensor([reward])
+
+            memory.push(state, action, mask, next_state, reward)
+
+            state = next_state
+
             transitions = memory.sample(args.batch_size)
             batch = Transition(*zip(*transitions))
 
             value_loss, policy_loss = agent.update_parameters(batch)
+        else:
+            state = torch.Tensor([next_state])
 
         if done:
             break
@@ -124,10 +129,14 @@ for i_episode in range(args.num_episodes):
     rewards.append(episode_reward)
 
     # -- calculates episode without noise --
-    greedy_episode = args.num_episodes/100
+    if args.train_model:
+        greedy_episode = args.num_episodes/100
+    else:
+        greedy_episode = 10
+    greedy_range = min(args.greedy_steps, greedy_episode)
 
     if i_episode % greedy_episode == 0:
-        for _ in range(0, 360):
+        for _ in range(0, greedy_range):
             state = torch.Tensor([env.reset()])
             episode_reward = 0
 
@@ -144,9 +153,10 @@ for i_episode in range(args.num_episodes):
                     break
         upper_reward.append(np.max(rewards[-greedy_episode:]))
         lower_reward.append(np.min(rewards[-greedy_episode:]))
-        avg_greedy_reward.append((np.mean(greedy_reward[-360:])))
+        avg_greedy_reward.append((np.mean(greedy_reward[-greedy_range:])))
 
-        print("Episode: {}, total numsteps: {}, avg_greedy_reward: {}, average reward: {}".format(i_episode, total_numsteps, avg_greedy_reward[-1], np.mean(rewards[-10:])))
+        print("Episode: {}, total numsteps: {}, avg_greedy_reward: {}, average reward: {}".format(
+            i_episode, total_numsteps, avg_greedy_reward[-1], np.mean(rewards[-greedy_episode:])))
 
 
 
@@ -156,12 +166,10 @@ if args.save_agent:
 
 print('Training ended after {} minutes'.format((time.time() - t_start)/60))
 print('Time per ep : {} s').format((time.time() - t_start) / args.num_episodes)
+print('Mean greedy reward: {}'.format(np.mean(greedy_reward)))
 
 # -- plot learning curve --
 pos_greedy = []
-
-print('Mean greedy reward: {}'.format(np.mean(greedy_reward)))
-
 for pos in range(0, len(lower_reward)):
     pos_greedy.append(pos*greedy_episode)
 
