@@ -5,5 +5,6 @@
 /safe_drl/models/*
 /safe_drl/runs/*
 /safe_drl/share/*
+/safe_drl/saved_plots/*
 /safe_drl/*.pyc
 /.idea/*

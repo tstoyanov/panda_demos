@@ -36,7 +36,7 @@ parser.add_argument('--exploration_end', type=int, default=100, metavar='N',
                     help='number of episodes with noise (default: 100)')
 parser.add_argument('--seed', type=int, default=4, metavar='N',
                     help='random seed (default: 4)')
-parser.add_argument('--batch_size', type=int, default=64, metavar='N',
+parser.add_argument('--batch_size', type=int, default=512, metavar='N',
                     help='batch size (default: 128)')
 parser.add_argument('--num_steps', type=int, default=1000, metavar='N',
                     help='max episode length (default: 1000)')
@@ -123,11 +123,14 @@ for i_episode in range(args.num_episodes):
 
     rewards.append(episode_reward)
 
-    # -- calculates every 10th episode without noise --
-    if i_episode % 10 == 0:
-        state = torch.Tensor([env.reset()])
-        episode_reward = 0
-        for _ in range(0,10):
+    # -- calculates episode without noise --
+    greedy_episode = args.num_episodes/100
+
+    if i_episode % greedy_episode == 0:
+        for _ in range(0, 360):
+            state = torch.Tensor([env.reset()])
+            episode_reward = 0
+
             while True:
                 #env.render()
                 action = agent.select_action(state)
@@ -139,15 +142,15 @@ for i_episode in range(args.num_episodes):
                 if done:
                     greedy_reward.append(episode_reward)
                     break
-        upper_reward.append(np.max(rewards[-10:]))
-        lower_reward.append(np.min(rewards[-10:]))
-        avg_greedy_reward.append((np.mean(greedy_reward[-10:])))
+        upper_reward.append(np.max(rewards[-greedy_episode:]))
+        lower_reward.append(np.min(rewards[-greedy_episode:]))
+        avg_greedy_reward.append((np.mean(greedy_reward[-360:])))
 
         print("Episode: {}, total numsteps: {}, avg_greedy_reward: {}, average reward: {}".format(i_episode, total_numsteps, avg_greedy_reward[-1], np.mean(rewards[-10:])))
 
 
 
-# -- saves model --
+# -- saves model --greedy_episode
 if args.save_agent:
     agent.save_model(args.env_name, args.batch_size, '.pth')
 
@@ -159,11 +162,13 @@ pos_greedy = []
 
 print('Mean greedy reward: {}'.format(np.mean(greedy_reward)))
 
-for _ in range(0, len(lower_reward)):
-    pos_greedy.append(_*10)
+for pos in range(0, len(lower_reward)):
+    pos_greedy.append(pos*greedy_episode)
+
 plt.fill_between(pos_greedy, lower_reward, upper_reward, facecolor='red', alpha=0.3)
 plt.plot(pos_greedy, avg_greedy_reward, 'r')
 fname = 'plot_{}_{}'.format(args.batch_size, '.png')
 plt.savefig(fname)
 
 env.close()
+
