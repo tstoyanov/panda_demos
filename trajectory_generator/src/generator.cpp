@@ -21,6 +21,13 @@
 #include <math.h>
 #include <random>
 
+#define MAX_PATH_GENERATION_ATTEMPTS 10
+#define MAX_NOISE_GENERATION_ATTEMPTS 10
+
+#define NOISE_MEAN 0 // 1 will be converted to 1 cm for now
+#define NOISE_STDDEV 5 // 1 will be converted to 1 cm for now
+                          // 99% of the noise falls inside MEAN +/- 3*NOISE_STDDEV (1.66 = +/- 5m? => 5cm in the end)
+
 std::string getExePath()
 {
   char result[ PATH_MAX ];
@@ -33,7 +40,7 @@ int main(int argc, char **argv)
   double radius = 0.3;
   double eqradius = 0.3;
 
-  if (argc > 1) 
+  if (argc > 1)
   {
     radius = std::stod(argv[1]);
     eqradius = std::stod(argv[1]);
@@ -147,49 +154,23 @@ int main(int argc, char **argv)
   };
 
   KDL::RotationalInterpolation_SingleAxis * orient = new KDL::RotationalInterpolation_SingleAxis();
-  KDL::Path_RoundedComposite path(radius, eqradius, orient, true);
+  KDL::Path_RoundedComposite *path;
 
   // ========== adding noise to the waypoints ==========
-  // int sign
   bool path_error;
   double noise;
+  int noise_generation_counter;
+  std::vector<std::vector<double>> noisy_waypoints;
+  // double NOISE_MEAN = 0;
+  // double NOISE_STDDEV = 1.66;
+  double max_noise = NOISE_MEAN + 3*NOISE_STDDEV;
+  double min_noise = -NOISE_MEAN - 3*NOISE_STDDEV;
   std::default_random_engine generator {std::random_device()()};
-  std::normal_distribution<double> distribution(0.0, 1.66); // 99% of the noise falls inside 3*stddev (1.66 = +/- 5 m?)
-  
-  // do
-  // {
-    path_error = false;
-    std::vector<std::vector<double>> noisy_waypoints = starting_waypoints;
-    for (unsigned i = 0; i < noisy_waypoints.size(); i++)
-    {
-      for (unsigned ii = 0; ii < noisy_waypoints[i].size(); ii++)
-      {
-        noise = distribution(generator) / 100.0;
-        if (!(noise < 0.05 && noise > -0.05)){
-          std::cout << "fail" << std::endl;
-          noise = distribution(generator) / 100.0;
-        }
-        else
-        {
-          noisy_waypoints[i][ii] += noise;
-        }
-        std::cout << "\nnoise: " << noise << std::endl;
-        std::cout << "noisy_waypoints[" << i << "][" << ii << "]: " << noisy_waypoints[i][ii] << std::endl;
-      }
-      path.Add(KDL::Frame(KDL::Vector(noisy_waypoints[i][0], noisy_waypoints[i][1], noisy_waypoints[i][2])));
-    }
-    // try
-    // {
-      path.Finish();
-  //   }
-  //   catch(const std::exception& e)
-  //   {
-  //     path_error = true;
-  //     std::cout << "\nEXCEPTION\n";
-  //     std::cerr << e.what() << '\n';
-  //   }
-  // }
-  // while (!path_error);
+  std::normal_distribution<double> distribution(NOISE_MEAN, NOISE_STDDEV);
+  int exception_count = 0;
+
+  std::cout << "max_noise: " << max_noise/100 << std::endl;
+  std::cout << "min_noise: " << min_noise/100 << std::endl;
 
   double current_s = 0;
   KDL::Frame current_eef_frame;
@@ -204,11 +185,76 @@ int main(int argc, char **argv)
 
   int ret;
   double number_of_samples = 100;
-  double path_length = path.PathLength();
-  double ds = path_length / number_of_samples;
+  double path_length;
+  double ds;
   double start_joint_pos_array[] = {-0.448125769162, 0.32964587676, -0.621680615641, -1.82515059054, 0.269715026327, 2.11438395741, -1.94274845254};
   double average_start_joint_pos_array[] = {0, 0, 0, -1.5708, 0, 1.8675, 0};
   double kdl_start_joint_pos_array[] = {-0.443379, 0.702188, -0.556869, -1.9368, -2.55769, 0.667764, -2.56121};
+
+  KDL::Rotation starting_orientation;
+  KDL::Rotation test_orientation {1, 0, 0, 0, -1, 0, 0, 0, -1};
+
+  Json::Value data;
+
+  long long ts;
+  std::string pkg_path;
+  std::string latest_dir_path;
+  std::string dir_path;
+  std::ofstream myfile;
+  boost::filesystem::path dir;
+  boost::filesystem::path latest_dir;
+  
+  do
+  {
+    try
+    {
+      path_error = false;
+      noisy_waypoints = starting_waypoints;
+      path = new KDL::Path_RoundedComposite(radius, eqradius, orient, true);
+      for (unsigned i = 0; i < noisy_waypoints.size(); i++)
+      {
+        for (unsigned ii = 0; ii < noisy_waypoints[i].size(); ii++)
+        {
+          noise_generation_counter = 0;
+          do
+          {
+            if (noise_generation_counter >= MAX_NOISE_GENERATION_ATTEMPTS)
+            {
+              std::cout << "PROGRAM ABORTED: 'Couldn't generate noise inside the interval: (" << min_noise / 100 << ", " << max_noise / 100 << ") after " << MAX_NOISE_GENERATION_ATTEMPTS << " attempts'" << std::endl;
+              return 0;
+            }
+            std::cout << "Generating noise: " << noise_generation_counter << std::endl;
+            noise = distribution(generator) / 100.0;
+            noise_generation_counter++;
+          }
+          while (!(noise < max_noise / 100.0 && noise > min_noise / 100.0));
+          noisy_waypoints[i][ii] += noise;
+          std::cout << "\nnoise: " << noise << std::endl;
+          std::cout << "noisy_waypoints[" << i << "][" << ii << "]: " << noisy_waypoints[i][ii] << std::endl;
+        }
+          path -> Add(KDL::Frame(KDL::Vector(noisy_waypoints[i][0], noisy_waypoints[i][1], noisy_waypoints[i][2])));
+      }
+      path -> Finish();
+    }
+    catch(std::exception& e)
+    {
+      exception_count++;
+      path_error = true;
+      std::cerr << e.what() << '\n';
+    }
+    catch(...)
+    {
+      exception_count++;
+      path_error = true;
+      std::cout << "\nDEFAULT EXCEPTION\n";
+    }
+    if (exception_count >= MAX_PATH_GENERATION_ATTEMPTS)
+    {
+      std::cout << "PROGRAM ABORTED: 'Couldn't find a feasible path after " << MAX_PATH_GENERATION_ATTEMPTS << " attempts'" << std::endl;
+      return 0;
+    }
+  }
+  while (path_error);
 
   for (unsigned i = 0; i < nr_of_joints; i++)
   {
@@ -217,11 +263,30 @@ int main(int argc, char **argv)
 
   ret = chainFkSolverPos.JntToCart(last_joint_pos, fk_current_eef_frame);
   std::cout << "FK RET: " << ret << std::endl;
-  KDL::Rotation starting_orientation = fk_current_eef_frame.M;
+  starting_orientation = fk_current_eef_frame.M;
+
+  path_length = path -> PathLength();
+  ds = path_length / number_of_samples;
+
+  // double euler_X;
+  // double euler_Y;
+  // double euler_Z;
+  // test_orientation.GetEulerZYX(euler_Z, euler_Y, euler_X);
+  // std::cout << "test_orientation: " << test_orientation << std::endl;
+  // std::cout << "euler_X: " << euler_X << std::endl;
+  // std::cout << "euler_Y: " << euler_Y << std::endl;
+  // std::cout << "euler_Z: " << euler_Z << std::endl;
+
+  // starting_orientation.GetEulerZYX(euler_Z, euler_Y, euler_X);
+  // std::cout << "starting_orientation: " << starting_orientation << std::endl;
+  // std::cout << "euler_X: " << euler_X << std::endl;
+  // std::cout << "euler_Y: " << euler_Y << std::endl;
+  // std::cout << "euler_Z: " << euler_Z << std::endl;
 
   // calculate the new joint coordinates for the starting point
-  current_eef_frame = path.Pos(0);
-  current_eef_frame.M = starting_orientation;
+  current_eef_frame = path -> Pos(0);
+  current_eef_frame.M = test_orientation;
+  // current_eef_frame.M = starting_orientation;
   ret = chainIkSolverPos.CartToJnt(last_joint_pos, current_eef_frame, last_joint_pos);
   std::cout << "New starting joint coordinates RET = " << ret << std::endl;
 
@@ -230,10 +295,10 @@ int main(int argc, char **argv)
     std::cout << "last_joint_pos(" << i << "): " << last_joint_pos(i) << std::endl;
   }
   joint_trajectory.push_back(last_joint_pos);
-  eef_trajectory.push_back(path.Pos(0));
+  eef_trajectory.push_back(path -> Pos(0));
 
-  // char c;
-  // std::cin >> c;
+  char c;
+  std::cin >> c;
 
   // ====================FK====================
   ret = chainFkSolverPos.JntToCart(last_joint_pos, fk_current_eef_frame);
@@ -256,8 +321,9 @@ int main(int argc, char **argv)
     double W;
 
     current_s += ds;
-    current_eef_frame = path.Pos(current_s);
-    current_eef_frame.M = starting_orientation;
+    current_eef_frame = path -> Pos(current_s);
+    current_eef_frame.M = test_orientation;
+    // current_eef_frame.M = starting_orientation;
     eef_trajectory.push_back(current_eef_frame);
 
     current_eef_frame.M.GetEulerZYX(Z, Y, X);
@@ -291,7 +357,6 @@ int main(int argc, char **argv)
   }
 
   // ====================JSON====================
-  Json::Value data;
   for (unsigned i = 0; i < joint_names.size(); i++)
   {
     data["joint_names"].append(Json::Value(joint_names[i]));
@@ -312,25 +377,33 @@ int main(int argc, char **argv)
     data["fk_eef_trajectory"][i]["origin"]["z"] = fk_eef_trajectory[i].p.z();
   }
 
-  std::string pkg_path = ros::package::getPath("trajectory_generator");
+  pkg_path = ros::package::getPath("trajectory_generator");
   std::cout << "pkg_path: " << pkg_path << std::endl;
-  long long ts = std::chrono::system_clock::now().time_since_epoch().count();
+  ts = std::chrono::system_clock::now().time_since_epoch().count();
   std::cout << "time: " << ts << std::endl;
-  std::string latest_dir_path = pkg_path + "/generated_trajectories/cpp/latest";
-  std::string dir_path = pkg_path + "/generated_trajectories/cpp/" + std::to_string(ts);
-  boost::filesystem::path dir(dir_path);
-  boost::filesystem::path latest_dir(latest_dir_path);
-  if(!(boost::filesystem::exists(dir)))
-  {
-    if (boost::filesystem::create_directories(dir))
-    {
-      std::cout << "....'timestamp' folder Successfully Created!" << std::endl;
-    }
-    else
-    {
-      std::cout << "....ERROR 'timestamp' folder Couldn't Be Created!" << std::endl;
-    }
-  }
+  latest_dir_path = pkg_path + "/generated_trajectories/cpp/latest";
+  dir_path = pkg_path + "/generated_trajectories/cpp/" + std::to_string(ts);
+  dir = boost::filesystem::path(dir_path);
+  latest_dir = boost::filesystem::path(latest_dir_path);
+
+  // if(!(boost::filesystem::exists(dir)))
+  // {
+  //   if (boost::filesystem::create_directories(dir))
+  //   {
+  //     std::cout << "....'timestamp' folder Successfully Created!" << std::endl;
+  //   }
+  //   else
+  //   {
+  //     std::cout << "....ERROR 'timestamp' folder Couldn't Be Created!" << std::endl;
+  //   }
+  // }
+  // myfile.open(dir_path + "/trajectories.txt");
+  // if (myfile.is_open())
+  // {
+  //   myfile << data << std::endl;
+  //   myfile.close();
+  // }
+
   if(!(boost::filesystem::exists(latest_dir)))
   {
     if (boost::filesystem::create_directories(latest_dir))
@@ -342,13 +415,6 @@ int main(int argc, char **argv)
       std::cout << "....ERROR 'latest' folder Couldn't Be Created!" << std::endl;
     }
   }
-  std::ofstream myfile (dir_path + "/trajectories.txt");
-  if (myfile.is_open())
-  {
-    myfile << data << std::endl;
-    myfile.close();
-  }
-
   myfile.open(latest_dir_path + "/trajectories.txt");
   if (myfile.is_open())
   {
@@ -357,12 +423,13 @@ int main(int argc, char **argv)
   }
   // ====================END JSON====================
   
-  int n = path.GetNrOfSegments();
-  double length = path.GetLengthToEndOfSegment(n);
-  std::cout << "my_tree.getNrOfJoints(): " << my_tree.getNrOfJoints() << std::endl;
-  std::cout << "path.GetNrOfSegments(): " << path.GetNrOfSegments() << std::endl;
-  std::cout << "path.GetLengthToEndOfSegment(" << path.GetNrOfSegments()-1 << "): " << path.GetLengthToEndOfSegment(n-1) << std::endl;
-  std::cout << "path.PathLength(): " << path.PathLength() << std::endl;
+  // int n = path -> GetNrOfSegments();
+  // double length = path -> GetLengthToEndOfSegment(n);
+  // std::cout << "my_tree.getNrOfJoints(): " << my_tree.getNrOfJoints() << std::endl;
+  // std::cout << "path -> GetNrOfSegments(): " << path -> GetNrOfSegments() << std::endl;
+  // std::cout << "path -> GetLengthToEndOfSegment(" << path -> GetNrOfSegments()-1 << "): " << path -> GetLengthToEndOfSegment(n-1) << std::endl;
+  // std::cout << "path -> PathLength(): " << path -> PathLength() << std::endl;
+  // std::cout << "exception_count: " << exception_count << std::endl;
 
   return 0;
 }

@@ -172,12 +172,13 @@ for i in range(len(trajectories["joint_trajectory"][0])):
 from mpl_toolkits.mplot3d import Axes3D
 fig = plt.figure("eef_trajectory " + input_folder)
 ax = fig.add_subplot(111, projection='3d')
-ax.scatter3D(eef_pose["origin"]["x"], eef_pose["origin"]["y"], eef_pose["origin"]["z"], c=eef_pose["origin"]["z"], cmap='Greens', label="eef_trajectory");
+ax.scatter3D(eef_pose["origin"]["x"], eef_pose["origin"]["y"], eef_pose["origin"]["z"], c=eef_pose["origin"]["z"], cmap='Greens', label="eef_trajectory")
 
 # fig = plt.figure("fk_eef_trajectory")
 # ax = fig.add_subplot(111, projection='3d')
-ax.scatter3D(fk_eef_pose["origin"]["x"], fk_eef_pose["origin"]["y"], fk_eef_pose["origin"]["z"], c=fk_eef_pose["origin"]["z"], marker='^', cmap='Reds', label="fk_eef_trajectory");
+ax.scatter3D(fk_eef_pose["origin"]["x"], fk_eef_pose["origin"]["y"], fk_eef_pose["origin"]["z"], c=fk_eef_pose["origin"]["z"], marker='^', cmap='Reds', label="fk_eef_trajectory")
 plt.legend()
+ax.axis('equal')
 
 # # =============================================================================
 #     # plt.figure(input_folder + " " + str(n))
