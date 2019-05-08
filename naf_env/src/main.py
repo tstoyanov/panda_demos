@@ -62,7 +62,6 @@ env = NormalizedActions(gym.make(args.env_name))
 env.seed(args.seed)
 torch.manual_seed(args.seed)
 np.random.seed(args.seed)
-
 # -- initialize agent, Q and Q' --
 agent = NAF(args.gamma, args.tau, args.hidden_size,
             env.observation_space.shape[0], env.action_space)
@@ -106,7 +105,7 @@ for i_episode in range(args.num_episodes):
         episode_reward += reward
 
         # -- training --
-        if args.train_model and len(memory) > args.batch_size:
+        if args.train_model:
             action = torch.Tensor(action)
             mask = torch.Tensor([not done])
             next_state = torch.Tensor([next_state])
@@ -116,10 +115,11 @@ for i_episode in range(args.num_episodes):
 
             state = next_state
 
-            transitions = memory.sample(args.batch_size)
-            batch = Transition(*zip(*transitions))
+            if len(memory) > args.batch_size:
+                transitions = memory.sample(args.batch_size)
+                batch = Transition(*zip(*transitions))
 
-            value_loss, policy_loss = agent.update_parameters(batch)
+                value_loss, policy_loss = agent.update_parameters(batch)
         else:
             state = torch.Tensor([next_state])
 
@@ -130,7 +130,7 @@ for i_episode in range(args.num_episodes):
 
     # -- calculates episode without noise --
     if args.train_model:
-        greedy_episode = args.num_episodes/100
+        greedy_episode = max(args.num_episodes/100, 10)
     else:
         greedy_episode = 10
     greedy_range = min(args.greedy_steps, greedy_episode)

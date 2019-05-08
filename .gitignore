@@ -1,10 +1,5 @@
-/safe_drl/bin/*
-/safe_drl/include/*
-/safe_drl/lib/*
-/safe_drl/local/*
-/safe_drl/models/*
-/safe_drl/runs/*
-/safe_drl/share/*
-/safe_drl/saved_plots/*
-/safe_drl/*.pyc
+/naf_env/models/*
+/naf_env/runs/*
+/naf_env/saved_plots/*
+/naf_env/*.pyc
 /.idea/*
