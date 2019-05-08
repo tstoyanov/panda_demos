@@ -1,29 +1,32 @@
 #include "panda_insertion/Controller.hpp"
+#include "panda_insertion/Panda.hpp"
+
+#include <iostream>
+#include <fstream>
+#include "stdint.h"
+#include "string"
+#include "vector"
+
+#include <Eigen/Geometry>
+#include <Eigen/SVD>
+#include <Eigen/Core>
+#include <eigen_conversions/eigen_msg.h>
+
 #include "geometry_msgs/PoseStamped.h"
 #include "trajectory_msgs/JointTrajectory.h"
 #include "controller_manager_msgs/LoadController.h"
 #include "controller_manager_msgs/SwitchController.h"
-#include "panda_insertion/Panda.hpp"
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+
 #include "ros/console.h"
 #include "ros/duration.h"
 #include "ros/package.h"
 #include "ros/time.h"
-#include "stdint.h"
-#include "string"
-#include "vector"
-#include <iostream>
-#include <fstream>
 
 using namespace std;
 
 // Constructors
 Controller::Controller() {}
-
-// Accessors
-
-
-// Manipulators
-
 
 // Public methods
 void Controller::init(ros::NodeHandle* nodeHandler, Panda* panda)
@@ -116,7 +119,8 @@ bool Controller::externalDownMovementState()
     
     int i = 0;
     ros::Rate rate(loop_rate);
-    geometry_msgs::PoseStamped externalDownMovementPositionMessage = externalDownMovementPoseMessage();
+    double z_coord = 0.72;
+    geometry_msgs::PoseStamped externalDownMovementPositionMessage = downMovementPoseMessage(z_coord);
     
     while (ros::ok() && i < 35)
     {
@@ -134,7 +138,7 @@ bool Controller::spiralMotionState()
 
     ros::Rate rate(loop_rate);
     
-    Trajectory spiralTrajectory = generateArchimedeanSpiral((panda->holeDiameter / 2) * 0.005, 0.003, 150);
+    Trajectory spiralTrajectory = generateArchimedeanSpiral((panda->holeDiameter / 2) * 0.001, 0.0002, 150);
 
     // Write to file
     writeTrajectoryToFile(spiralTrajectory, "spiral.csv");
@@ -148,6 +152,88 @@ bool Controller::spiralMotionState()
         panda->updatePosition(spiralMotionMessage.pose.position.x, spiralMotionMessage.pose.position.y, spiralMotionMessage.pose.position.z);
         rate.sleep();
     }
+    return true;
+}
+
+bool Controller::insertionWiggleState()
+{
+    ROS_DEBUG_ONCE("In insertion wiggle state from controller");
+
+    int i = 0;
+    ros::Rate rate(loop_rate);
+
+    
+    double x_angle = 0.0005;
+    while (ros::ok() && i < 60)
+    {
+        
+        geometry_msgs::PoseStamped insertionWiggleMessage = insertionWigglePoseMessage(x_angle);
+
+        equilibriumPosePublisher.publish(insertionWiggleMessage);
+        rate.sleep();
+        ROS_DEBUG_STREAM("Panda ring: (xyz) " << panda->orientation.x << ", "<< panda->orientation.y << ", "<< panda->orientation.z<< ", "<< panda->orientation.w);
+        i++;
+        if (!(i%3))
+        {
+            ROS_DEBUG_STREAM("x_angle flipped: x_angle = " << x_angle);
+            x_angle = -(x_angle);
+        }
+    }
+
+    return true;
+}
+
+bool Controller::straighteningState()
+{
+    ROS_DEBUG_ONCE("In straightening state from controller");
+
+    int i = 0;
+    ros::Rate rate(loop_rate);
+    while (ros::ok() && i < 15)
+    {
+        geometry_msgs::PoseStamped straighteningMessage = straighteningPoseMessage();
+        equilibriumPosePublisher.publish(straighteningMessage);
+        rate.sleep();
+        i++;
+    }
+    return true;
+}
+
+bool Controller::internalDownMovementState()
+{
+    ROS_DEBUG_ONCE("In internal down movement state from controller");
+
+    Stiffness stiffness;
+    Damping damping;
+    stiffness.translational_x = 500;
+    stiffness.translational_y = 500;
+    stiffness.translational_z = 500;
+    stiffness.rotational_x = 500;
+    stiffness.rotational_y = 500;
+    stiffness.rotational_z = 500;
+
+    damping.translational_x = 65;
+    damping.translational_y = 65;
+    damping.translational_z = 65;
+    damping.rotational_x = 45;
+    damping.rotational_y = 45;
+    damping.rotational_z = 45;
+
+    setParameterStiffness(stiffness);
+    setParameterDamping(damping);    
+    
+    int i = 0;
+    ros::Rate rate(loop_rate);
+    double z_coord = 0.70;
+    geometry_msgs::PoseStamped externalDownMovementPositionMessage = downMovementPoseMessage(z_coord);
+    
+    while (ros::ok() && i < 35)
+    {
+        equilibriumPosePublisher.publish(externalDownMovementPositionMessage);
+        rate.sleep();
+        i++;
+    }
+    return true;
 }
 
 // Private methods
@@ -254,12 +340,12 @@ trajectory_msgs::JointTrajectory Controller::initialJointTrajectoryMessage()
     return message;
 }
 
-geometry_msgs::PoseStamped Controller::externalDownMovementPoseMessage()
+geometry_msgs::PoseStamped Controller::downMovementPoseMessage(double z_coord)
 {
     geometry_msgs::PoseStamped message = emptyPoseMessage();
     message.pose.position = panda->initialPosition;
 
-    panda->position.z = 0.72;
+    panda->position.z = z_coord;
 
     ROS_DEBUG_STREAM("Panda position z =" << panda->position.z);
 
@@ -317,6 +403,43 @@ geometry_msgs::PoseStamped Controller::spiralPointPoseMessage(Point point)
     return message;
 }
 
+geometry_msgs::PoseStamped Controller::insertionWigglePoseMessage(double x_angle)
+{
+    geometry_msgs::PoseStamped message = emptyPoseMessage();
+    message.pose.orientation = panda->orientation;
+    message.pose.position = panda->position;
+
+    // Convert to matrix
+    Eigen::Affine3d tMatrix;
+    tf::poseMsgToEigen(message.pose, tMatrix);
+
+    Eigen::Affine3d rotated_tMatrix = rotateMatrixRPY(tMatrix, x_angle * M_PI, 0.0 * M_PI, 0.0 * M_PI);
+    ROS_DEBUG_STREAM("rotated_tMatrix: " << endl << rotated_tMatrix.rotation());
+
+    // Convert back to msg
+    tf::poseEigenToMsg(rotated_tMatrix, message.pose);
+
+    // Set new orientation
+    panda->orientation = message.pose.orientation;
+
+    return message;
+}
+
+geometry_msgs::PoseStamped Controller::straighteningPoseMessage()
+{
+    geometry_msgs::PoseStamped message = emptyPoseMessage();
+
+    message.pose.position = panda->position;
+    message.pose.orientation = panda->orientation;
+    message.pose.orientation.x = 1;
+    message.pose.orientation.y = 0;
+    message.pose.orientation.z = 0;
+    message.pose.orientation.w = 0;
+    panda->orientation = message.pose.orientation;
+
+    return message;
+}
+
 Trajectory Controller::generateArchimedeanSpiral(double a, double b, int nrOfPoints)
 {
     Trajectory spiral;
@@ -344,7 +467,6 @@ Trajectory Controller::generateArchimedeanSpiral(double a, double b, int nrOfPoi
 
         spiral.push_back(point);
     }
-    std::reverse(spiral.begin(), spiral.end());
     return spiral;
 }
 
@@ -412,4 +534,16 @@ void Controller::writeTrajectoryToFile(Trajectory trajectory, const string& file
 
     outfile.close();
 }
-// Private methods
+
+Eigen::Affine3d Controller::rotateMatrixRPY(Eigen::Affine3d tMatrix, double rollAngle, double pitchAngle, double yawAngle)
+{
+    Eigen::AngleAxisd roll(rollAngle, Eigen::Vector3d::UnitX());
+    Eigen::AngleAxisd pitch(pitchAngle, Eigen::Vector3d::UnitY());
+    Eigen::AngleAxisd yaw(yawAngle, Eigen::Vector3d::UnitZ());
+    Eigen::Quaterniond quaternion = yaw * pitch * roll;
+
+
+    Eigen::Affine3d rotated_tMatrix = tMatrix.rotate(quaternion);
+
+    return rotated_tMatrix;
+}

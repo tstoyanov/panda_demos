@@ -1,0 +1,22 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "",
+        "limitSymbolsToIncludedHeaders": true
+      },
+      "includePath": [
+        "/home/aass/catkin_ws/devel/include",
+        "/opt/ros/kinetic/include",
+        "/home/aass/catkin_ws/src/panda_demos/force_controllers/include",
+        "/home/aass/catkin_ws/src/franka_ros/franka_control/include",
+        "/home/aass/catkin_ws/src/franka_ros/franka_example_controllers/include",
+        "/home/aass/catkin_ws/src/franka_ros/franka_gripper/include",
+        "/home/aass/catkin_ws/src/franka_ros/franka_hw/include",
+        "/home/aass/catkin_ws/src/panda_demos/panda_insertion/include",
+        "/usr/include"
+      ],
+      "name": "Linux"
+    }
+  ]
+}

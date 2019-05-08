@@ -14,7 +14,8 @@ enum State {
     SpiralMotion,
     InternalDownMovement,
     Straightening,
-    InsertionWiggle
+    InsertionWiggle,
+    Finish
 };
 
 class Insertion
@@ -55,6 +56,10 @@ public:
     void initialPosition();
     void externalDownMovement();
     void spiralMotion();
+    void straightening();
+    void insertion();
+    void internalDownMovement();
+    void finish();
 
     void stateMachineRun();
 

@@ -18,20 +18,12 @@ public:
 
 // Methods
 public:
-    // Constructors
+    // Constructor
     Panda();
-
-    // Accessors
-
-    // Manipulators
 
     // Methods
     void init();
     void updatePosition(double x, double y, double z);
-
-private:
-    // Methods
-
 };
 
 #endif

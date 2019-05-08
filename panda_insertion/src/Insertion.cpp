@@ -72,6 +72,27 @@ void Insertion::stateMachineRun()
         case InsertionWiggle:
         {
             ROS_DEBUG_ONCE("Insertion Wiggle");
+            insertion();
+            break;
+        }
+        case Straightening:
+        {
+            ROS_DEBUG_ONCE("Straightening");
+            straightening();
+            break;
+        }
+
+        case InternalDownMovement:
+        {
+            ROS_DEBUG_ONCE("Internal down movement");
+            internalDownMovement();
+            break;
+        }
+
+         case Finish:
+        {
+            ROS_DEBUG_ONCE("Finish state");
+            finish();
             break;
         }
 
@@ -147,4 +168,33 @@ void Insertion::spiralMotion()
     controller.spiralMotionState();
     ROS_DEBUG_ONCE("Spiral motion DONE.");
     activeState = InsertionWiggle;
+}
+
+void Insertion::insertion()
+{
+    ROS_DEBUG_ONCE("In insertion state");
+    controller.insertionWiggleState();
+    ROS_DEBUG_ONCE("Insertion DONE.");
+    activeState = Straightening;
+}
+
+void Insertion::straightening()
+{
+    ROS_DEBUG_ONCE("In straightening state");
+    controller.straighteningState();
+    ROS_DEBUG_ONCE("Straightening DONE.");
+    activeState = InternalDownMovement;
+}
+
+void Insertion::internalDownMovement()
+{
+    ROS_DEBUG_ONCE("In internal down movement state");
+    controller.internalDownMovementState();
+    ROS_DEBUG_ONCE("Internal down movement DONE.");
+    activeState = Finish;
+}
+
+void Insertion::finish()
+{
+    ROS_INFO("Insertion completed.");
 }

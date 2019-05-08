@@ -9,20 +9,21 @@ find_package(catkin REQUIRED COMPONENTS
   tf2_msgs
   trajectory_msgs
   roslib
+  eigen_conversions
 )
+
+find_package(Eigen3 REQUIRED)
 
 ## Declare a catkin package
 catkin_package(
+  CATKIN_DEPENDS roscpp eigen_conversions
   INCLUDE_DIRS include
   LIBRARIES panda_insertion
 )
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
-include_directories(
-  ${catkin_INCLUDE_DIRS}
-  include
-)
+include_directories(include ${catkin_INCLUDE_DIRS} ${EIGEN_INCLUDE_DIR})
 
 add_definitions(-std=c++11) 
 
@@ -38,5 +39,6 @@ add_executable(insertion
   src/Controller.cpp
   src/Panda.cpp
 )
+
 target_link_libraries(insertion ${catkin_LIBRARIES})
 add_dependencies(insertion ${catkin_EXPORTED_TARGETS})
