@@ -33,6 +33,7 @@
 #include <chrono>
 
 #include <rl_task_plugins/DesiredErrorDynamicsMsg.h>
+#include <rl_task_plugins/StateMsg.h>
 
 namespace hiqp
 {
@@ -69,14 +70,17 @@ namespace hiqp
       TDynAsyncPolicy& operator=(const TDynAsyncPolicy& other) = delete;
       TDynAsyncPolicy& operator=(TDynAsyncPolicy&& other) noexcept = delete;
 
-      double decay_rate_{1.0};
-      unsigned long repeated_action_{1};
-      unsigned long n_repeated_{0};
       std::string action_topic_;
+      std::string state_topic_;
+      float damping_{1.0};
+      unsigned int publish_rate_{10}; 
+      ros::Time last_publish_;
       Eigen::VectorXd desired_dynamics_;
       ros::Subscriber act_sub_;
+      ros::Publisher state_pub_;
     
       void handleActMessage(const rl_task_plugins::DesiredErrorDynamicsMsgConstPtr &act_msg);
+      void publishStateMessage(const Eigen::VectorXd &error);
 
       ros::NodeHandle nh_;
 

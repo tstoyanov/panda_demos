@@ -50,37 +50,27 @@ namespace hiqp
         return -1;
       }
 
-      decay_rate_ = std::stod(parameters.at(1));
-      repeated_action_ = std::stoul(parameters.at(2));
-      repeated_action_ = repeated_action_ > 255 ? 255 : repeated_action_;
-      action_topic_ = parameters.at(3);
+      damping_ = std::stod(parameters.at(1));
+      action_topic_ = parameters.at(2);
+      state_topic_ = parameters.at(3);
 
       act_sub_ = nh_.subscribe(action_topic_, 1, &TDynAsyncPolicy::handleActMessage, this);
+      state_pub_ = nh_.advertise<rl_task_plugins::StateMsg>(state_topic_, 1);
 
       e_ddot_star_.resize(e_initial.rows());
       desired_dynamics_ = Eigen::VectorXd::Zero(e_initial.rows());
-      performance_measures_.resize(e_initial.rows());
 
+      last_publish_ = ros::Time::now();
       return 0;
     }
 
     int TDynAsyncPolicy::update(const RobotStatePtr robot_state, 
                 const std::shared_ptr< TaskDefinition > def) {
 
-      /*
-      if(n_repeated_ == 0) {  
-          e_ddot_star_ = desired_dynamics_;
-      } 
-      else if(n_repeated_ < repeated_action_) {
-          e_ddot_star_ = decay_rate_*e_ddot_star_;
-      } else {
-          e_ddot_star_.setZero();
-      }
-      n_repeated_++;
-      */
-
       Eigen::VectorXd qdot=robot_state->kdl_jnt_array_vel_.qdot.data;
-      e_ddot_star_= desired_dynamics_ - 1000*def->getTaskDerivative();
+      e_ddot_star_= desired_dynamics_ - damping_*def->getTaskDerivative();
+
+      publishStateMessage(def->getTaskValue());
 
       return 0;
     }
@@ -102,9 +92,22 @@ namespace hiqp
         for(int i=0; i<act_msg->e_ddot_star.size(); ++i) {
             desired_dynamics_(i) = act_msg->e_ddot_star[i];
         }
-        n_repeated_ = 0;
     }
 
+    void TDynAsyncPolicy::publishStateMessage(const Eigen::VectorXd &error) {
+
+        ros::Time now = ros::Time::now();
+        ros::Duration d = now - last_publish_;
+        if(d.toSec() >= 1.0 / publish_rate_ ) {
+            rl_task_plugins::StateMsg msg;
+            for(int i=0; i<error.rows(); ++i) {
+                msg.e.push_back(error(i));
+            }
+            state_pub_.publish(msg);
+            last_publish_ = now;
+        }
+
+    }
 
 
 } // namespace tasks

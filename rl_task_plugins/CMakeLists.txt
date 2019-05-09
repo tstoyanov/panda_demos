@@ -17,7 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   message_generation
 )
-add_message_files(FILES DesiredErrorDynamicsMsg.msg)
+add_message_files(FILES DesiredErrorDynamicsMsg.msg StateMsg.msg)
 
 add_service_files(
         FILES
