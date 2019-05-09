@@ -109,7 +109,7 @@ bool Controller::externalDownMovementState()
     
     int i = 0;
     ros::Rate rate(loop_rate);
-    double z_coord = 0.72;
+    double z_coord = panda->initialPosition.z - 0.02;
     geometry_msgs::PoseStamped externalDownMovementPositionMessage = downMovementPoseMessage(z_coord);
     
     while (ros::ok() && i < 35)
@@ -214,7 +214,7 @@ bool Controller::internalDownMovementState()
     
     int i = 0;
     ros::Rate rate(loop_rate);
-    double z_coord = 0.70;
+    double z_coord = panda->initialPosition.z - 0.03;
     geometry_msgs::PoseStamped externalDownMovementPositionMessage = downMovementPoseMessage(z_coord);
     
     while (ros::ok() && i < 35)

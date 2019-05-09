@@ -203,6 +203,7 @@ void Insertion::init()
     activeState = Start;
 
     controller.init(&nodeHandler, &panda);
+    panda.init(&nodeHandler);
 
     periodicTimer = nodeHandler.createTimer(ros::Duration(0.1), &Insertion::periodicTimerCallback, this);
     tfSubscriber = nodeHandler.subscribe("/tf", 1, &Insertion::tfSubscriberCallback,this);

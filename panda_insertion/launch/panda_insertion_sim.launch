@@ -48,5 +48,9 @@
 
         <param name="impedanceController" type="str" value="impedance_controller"/>
         <param name="positionJointTrajectoryController" type="str" value="position_joint_trajectory_controller"/>
+
+        <param name="x_goal" type="double" value="0.475"/>
+        <param name="y_goal" type="double" value="0.105"/>
+        <param name="z_goal" type="double" value="0.74"/>
     </node>
 </launch>

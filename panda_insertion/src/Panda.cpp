@@ -5,15 +5,23 @@
 Panda::Panda() : holeDiameter(16.3), endEffectorDiameter(16.25)
 {
     ROS_DEBUG("Panda object created");
-    init();
 }
 
 // Public methods
-void Panda::init()
+void Panda::init(ros::NodeHandle* nodeHandler)
 {
-    initialPosition.x = 0.475;
-    initialPosition.y = 0.105;
-    initialPosition.z = 0.74;
+    this->nodeHandler = nodeHandler;
+    double xGoal, yGoal, zGoal;
+    nodeHandler->getParam("insertion/x_goal", xGoal);
+    nodeHandler->getParam("insertion/y_goal", yGoal);
+    nodeHandler->getParam("insertion/z_goal", zGoal);
+
+    ROS_DEBUG_STREAM("HEJ HEJ, xyz coming up: "<< xGoal <<", "<< yGoal << ", " << zGoal);
+
+
+    initialPosition.x = xGoal;
+    initialPosition.y = yGoal;
+    initialPosition.z = zGoal;
 
     initialOrientation.x = 1.0;
     initialOrientation.y = 0.0;

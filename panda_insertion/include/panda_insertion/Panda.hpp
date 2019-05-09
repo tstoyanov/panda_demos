@@ -2,6 +2,7 @@
 #define PANDA_H
 // #include "geometry_msgs/Point"
 #include "geometry_msgs/PoseStamped.h"
+#include "ros/ros.h"
 
 class Panda
 {
@@ -16,13 +17,15 @@ public:
     const double holeDiameter;
     const double endEffectorDiameter;
 
+    ros::NodeHandle* nodeHandler;
+
 // Methods
 public:
     // Constructor
     Panda();
 
     // Methods
-    void init();
+    void init(ros::NodeHandle* nodeHandler);
     void updatePosition(double x, double y, double z);
 };
 
