@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- arguments -->
+    <arg name="paused" default="false"/>
+    <arg name="use_sim_time" default="true"/>
+    <arg name="gui" default="false"/>
+    <arg name="headless" default="false"/>
+    <arg name="debug" default="false"/>
+    <arg name="start_moveit" default="false"/>
+    <arg name="load_gripper" default="false"/>
+
+    <!-- Load joint controller configurations from YAML file to parameter server -->
+    <rosparam file="$(find franka_control)/config/panda_gazebo_control.yaml" command="load"/>
+    <rosparam file="$(find force_controllers)/config/panda_impedance.yaml" command="load"/>
+
+    <!-- Load the controllers -->
+    <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="joint_state_controller position_joint_trajectory_controller" /> 
+
+    <!-- Custom console config for dubugging messages -->
+    <env name="ROSCONSOLE_CONFIG_FILE" value="$(find panda_insertion)/config/custom_rosconsole.conf"/>
+
+    <!-- Nodes -->
+    <node name="insertion" pkg="panda_insertion" type="insertion" output="screen">
+        <param name="jointTrajectoryTopic" type="str" value="panda/position_joint_trajectory_controller/command"/>
+        <param name="equilibriumPoseTopic" type="str" value="panda/impedance_controller/equilibrium_pose"/>
+
+        <param name="loadControllerService" type="str" value="panda/controller_manager/load_controller"/>
+        <param name="switchControllerService" type="str" value="panda/controller_manager/switch_controller"/>
+
+        <param name="impedanceController" type="str" value="panda/impedance_controller"/>
+        <param name="positionJointTrajectoryController" type="str" value="panda/position_joint_trajectory_controller"/>
+    </node>
+</launch>

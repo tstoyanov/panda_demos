@@ -18,11 +18,9 @@ int main(int argc, char **argv)
 
     Insertion insertion(nodeHandler);
 
-    // ros::Duration(4.0).sleep();
-
     ROS_INFO("Insertion node running");
 
-    ros::AsyncSpinner spinner(2); // Use 2 threads
+    ros::AsyncSpinner spinner(4);
 
     ROS_INFO_STREAM("Main loop in thread:" << boost::this_thread::get_id());
     spinner.start();

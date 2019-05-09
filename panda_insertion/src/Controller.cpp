@@ -50,28 +50,18 @@ void Controller::startState()
 
 bool Controller::moveToInitialPositionState()
 {
-    std::vector<int> translational_stiffness, rotational_stiffness,
-                     translational_damping, rotational_damping;
-    translational_stiffness = {5000, 5000, 5000};
-    const std::string param_translation_stiffness = "/impedance_controller/cartesian_stiffness/translation";
-    const std::string param_rotation_stiffness = "/impedance_controller/cartesian_stiffness/rotation";
-    const std::string param_translation_damping = "/impedance_controller/cartesian_damping/translation";
-    const std::string param_rotation_damping = "/impedance_controller/cartesian_damping/rotation";
-    nodeHandler->setParam(param_translation_stiffness, translational_stiffness); 
+    string fromController;
+    nodeHandler->getParam("insertion/positionJointTrajectoryController", fromController);
+
+    string toController;
+    nodeHandler->getParam("insertion/impedanceController", toController);
     
-    if (!nodeHandler->getParam(param_translation_stiffness, translational_stiffness))
-    {
-        ROS_ERROR_STREAM("Parameter " << param_translation_stiffness << " not retreived");
-    }
-    ROS_INFO_STREAM("Translation stiffness xyz: " << translational_stiffness.at(0) << translational_stiffness.at(1) << translational_stiffness.at(2) );
-
-
-    if (!loadController("impedance_controller"))
+    if (!loadController(toController))
     {
         return false;
     }
 
-    switchController("impedance_controller", "position_joint_trajectory_controller");
+    switchController(fromController, toController);
     ros::Duration(3.0).sleep();
 
     geometry_msgs::PoseStamped initialPositionMessage = initialPoseMessage();
@@ -114,8 +104,8 @@ bool Controller::externalDownMovementState()
     damping.rotational_y = 45;
     damping.rotational_z = 45;
 
-    setParameterStiffness(stiffness);
-    setParameterDamping(damping);    
+    // setParameterStiffness(stiffness);
+    // setParameterDamping(damping);    
     
     int i = 0;
     ros::Rate rate(loop_rate);
@@ -219,8 +209,8 @@ bool Controller::internalDownMovementState()
     damping.rotational_y = 45;
     damping.rotational_z = 45;
 
-    setParameterStiffness(stiffness);
-    setParameterDamping(damping);    
+    // setParameterStiffness(stiffness);
+    // setParameterDamping(damping);    
     
     int i = 0;
     ros::Rate rate(loop_rate);
@@ -239,23 +229,33 @@ bool Controller::internalDownMovementState()
 // Private methods
 void Controller::initJointTrajectoryPublisher()
 {
-    const string topic = "position_joint_trajectory_controller/command";
+    string topic;
     const int queueSize = 1000;
+
+    nodeHandler->getParam("insertion/jointTrajectoryTopic", topic);
+    ROS_DEBUG_STREAM("initJointTrajectoryPublisher topic: " << topic);
 
     jointTrajectoryPublisher = nodeHandler->advertise<trajectory_msgs::JointTrajectory>(topic, queueSize);
 }
 
 void Controller::initEquilibriumPosePublisher()
 {
-    const string topic = "impedance_controller/equilibrium_pose";
+
+    string topic;
     const int queueSize = 1000;
+
+    nodeHandler->getParam("insertion/equilibriumPoseTopic", topic);
+
+    ROS_DEBUG_STREAM("initEquilibriumPosePublisher topic: " << topic);
 
     equilibriumPosePublisher = nodeHandler->advertise<geometry_msgs::PoseStamped>(topic, queueSize);
 }
 
 bool Controller::loadController(string controller)
 {
-    const string serviceName = "controller_manager/load_controller";
+    string serviceName;
+    nodeHandler->getParam("insertion/loadControllerService", serviceName);
+
     ros::ServiceClient client = nodeHandler->serviceClient<controller_manager_msgs::LoadController>(serviceName);
 
     controller_manager_msgs::LoadController service;
@@ -273,13 +273,15 @@ bool Controller::loadController(string controller)
 
 bool Controller::switchController(string from, string to)
 {
-    const string serviceName = "controller_manager/switch_controller";
+    string serviceName;
+    nodeHandler->getParam("insertion/switchControllerService", serviceName);
+
     ros::ServiceClient client = nodeHandler->serviceClient<controller_manager_msgs::SwitchController>(serviceName);
 
     controller_manager_msgs::SwitchController service;
-    service.request.start_controllers = {from.c_str()};
-    service.request.stop_controllers = {to.c_str()};
-    service.request.strictness = 3; 
+    service.request.stop_controllers = {from.c_str()};
+    service.request.start_controllers = {to.c_str()};
+    service.request.strictness = 2;
 
     if (client.call(service))
     {

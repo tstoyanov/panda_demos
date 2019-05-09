@@ -24,6 +24,8 @@
   <build_depend>trajectory_msgs</build_depend>
   <build_depend>roslib</build_depend>
   <build_depend>eigen_conversions</build_depend>
+  <build_depend>state_srv</build_depend>
+  <build_depend>message_generation</build_depend>
   <!-- <build_depend>tf2_geometry_msgs</build_depend> -->
 
   <build_export_depend>roscpp</build_export_depend>
@@ -32,7 +34,8 @@
   <build_export_depend>tf2_msgs</build_export_depend>
   <build_export_depend>trajectory_msgs</build_export_depend>
   <build_export_depend>roslib</build_export_depend>
-    <build_export_depend>eigen_conversions</build_export_depend>
+  <build_export_depend>eigen_conversions</build_export_depend>
+  <build_export_depend>ChangeState</build_export_depend>
   <!-- <build_export_depend>tf2_geometry_msgs</build_export_depend> -->
 
   <exec_depend>roscpp</exec_depend>
@@ -41,7 +44,9 @@
   <exec_depend>tf2_msgs</exec_depend>
   <exec_depend>trajectory_msgs</exec_depend>
   <exec_depend>roslib</exec_depend>
-    <exec_depend>eigen_conversions</exec_depend>
+  <exec_depend>eigen_conversions</exec_depend>
+  <exec_depend>state_srv</exec_depend>
+  <exec_depend>message_runtime</exec_depend>
   <!-- <exec_depend>tf2_geometry_msgs</exec_depend> -->
 
 </package>

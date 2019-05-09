@@ -1,3 +1,4 @@
+<?xml version="1.0"?>
 <launch>
     <!-- arguments -->
     <arg name="paused" default="false"/>
@@ -37,5 +38,15 @@
 
     <!-- Nodes -->
     <node name="rviz" pkg="rviz" type="rviz" args="-d $(find panda_table_description)/launch/sim.rviz" />
-    <node name="insertion" pkg="panda_insertion" type="insertion" output="screen"/>
+
+    <node name="insertion" pkg="panda_insertion" type="insertion" output="screen">
+        <param name="jointTrajectoryTopic" type="str" value="position_joint_trajectory_controller/command"/>
+        <param name="equilibriumPoseTopic" type="str" value="impedance_controller/equilibrium_pose"/>
+
+        <param name="loadControllerService" type="str" value="controller_manager/load_controller"/>
+        <param name="switchControllerService" type="str" value="controller_manager/switch_controller"/>
+
+        <param name="impedanceController" type="str" value="impedance_controller"/>
+        <param name="positionJointTrajectoryController" type="str" value="position_joint_trajectory_controller"/>
+    </node>
 </launch>

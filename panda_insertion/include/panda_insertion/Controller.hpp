@@ -54,14 +54,8 @@ private:
     double loop_rate;
 
 public:
-    // Constructors
+    // Constructor
     Controller();
-
-    // Accessors
-
-
-    // Manipulators 
-
 
     // Public methods
     void init(ros::NodeHandle*, Panda* panda);

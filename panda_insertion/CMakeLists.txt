@@ -10,13 +10,23 @@ find_package(catkin REQUIRED COMPONENTS
   trajectory_msgs
   roslib
   eigen_conversions
+  message_generation
 )
 
 find_package(Eigen3 REQUIRED)
 
+add_service_files(
+  FILES
+  ChangeState.srv
+)
+
+generate_messages(
+  DEPENDENCIES
+)
+
 ## Declare a catkin package
 catkin_package(
-  CATKIN_DEPENDS roscpp eigen_conversions
+  CATKIN_DEPENDS roscpp std_msgs std_srvs tf2_msgs trajectory_msgs roslib eigen_conversions message_runtime
   INCLUDE_DIRS include
   LIBRARIES panda_insertion
 )
@@ -41,4 +51,5 @@ add_executable(insertion
 )
 
 target_link_libraries(insertion ${catkin_LIBRARIES})
-add_dependencies(insertion ${catkin_EXPORTED_TARGETS})
+add_dependencies(insertion ${${PROJECT_NAME}_EXPORT_TARGETS} ${catkin_EXPORTED_TARGETS})
+
