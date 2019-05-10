@@ -67,7 +67,7 @@ bool Controller::moveToInitialPositionState()
     geometry_msgs::PoseStamped initialPositionMessage = initialPoseMessage();
 
     int i = 0;
-    ros::Rate rate(loop_rate);
+    ros::Rate rate(loop_rate / 10);
     while (ros::ok() && i < 130)
     {
         equilibriumPosePublisher.publish(initialPositionMessage);

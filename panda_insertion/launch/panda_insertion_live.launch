@@ -30,8 +30,8 @@
         <param name="impedanceController" type="str" value="panda/impedance_controller"/>
         <param name="positionJointTrajectoryController" type="str" value="panda/position_joint_trajectory_controller"/>
 
-        <param name="x_goal" type="double" value="0.162"/>
-        <param name="y_goal" type="double" value="0.345"/>
-        <param name="z_goal" type="double" value="-0.009"/>
+        <param name="x_goal" type="double" value="0.0"/>
+        <param name="y_goal" type="double" value="0.0"/>
+        <param name="z_goal" type="double" value="0.9"/>
     </node>
 </launch>

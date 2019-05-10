@@ -218,8 +218,6 @@ void Insertion::start()
     changeState("idle");
 }
 
-
-
 void Insertion::moveToInitialPosition()
 {
     ROS_DEBUG_ONCE("In Move to Initial Position state");
