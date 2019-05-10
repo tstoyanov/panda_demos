@@ -22,8 +22,12 @@
 #include <math.h>
 #include <random>
 
+#include "velocity_profile_generator.cpp"
+
 #define MAX_PATH_GENERATION_ATTEMPTS 100
 #define MAX_NOISE_GENERATION_ATTEMPTS 100
+
+#define NUMBER_OF_SAMPLES 100
 
 #define NOISE_MEAN 0 // 1 will be converted to 1 cm for now
 #define NOISE_STDDEV 5 // 1 will be converted to 1 cm for now
@@ -75,10 +79,6 @@ int main(int argc, char **argv)
   {
     std::cout << "batch argument was not set" << std::endl;
   }
-
-  // return 0;
-  // char c;
-  // std::cin >> c;
 
   double radius = 0.3;
   double eqradius = 0.3;
@@ -227,7 +227,6 @@ int main(int argc, char **argv)
   KDL::JntArray last_joint_pos {nr_of_joints};
 
   int ret;
-  double number_of_samples = 100;
   double path_length;
   double ds;
   double start_joint_pos_array[] = {-0.448125769162, 0.32964587676, -0.621680615641, -1.82515059054, 0.269715026327, 2.11438395741, -1.94274845254};
@@ -324,7 +323,17 @@ int main(int argc, char **argv)
     starting_orientation = fk_current_eef_frame.M;
 
     path_length = path -> PathLength();
-    ds = path_length / number_of_samples;
+    ds = path_length / NUMBER_OF_SAMPLES;
+
+    std::vector<double> velocity_dist;
+    test(velocity_dist, NUMBER_OF_SAMPLES, 0.9*NUMBER_OF_SAMPLES, path_length, 0.9*path_length);
+    // for (unsigned i = 0; i < velocity_dist.size(); i++)
+    // {
+    //   std::cout << "velocity_dist[" << i << "] = " << velocity_dist[i] << std::endl;
+    // }
+    // char c;
+    // std::cin >> c;
+    return 0;
 
     // double euler_X;
     // double euler_Y;
@@ -369,7 +378,7 @@ int main(int argc, char **argv)
     // ====================END FK====================
 
     current_s = 0;
-    for (unsigned i = 0; i < number_of_samples; i++)
+    for (unsigned i = 0; i < NUMBER_OF_SAMPLES; i++)
     {
       current_s += ds;
       current_eef_frame = path -> Pos(current_s);
