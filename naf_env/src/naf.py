@@ -107,11 +107,8 @@ class NAF:
         self.model.train()
         mu = mu.data
         if action_noise is not None:
-            print("noise before: {}".format(action_noise.noise()[0]))
-            print("mu before: {}".format(mu))
             mu += torch.Tensor(action_noise.noise())
-            print("mu after: {}".format(mu))
-        return mu.clamp(-1, 1)
+        return mu.clamp(-300, 300)
 
     #@profile
     def update_parameters(self, batch):
@@ -123,7 +120,7 @@ class NAF:
         next_state_batch = Variable(torch.cat(batch.next_state))
 
         _, _, next_state_values = self.target_model((next_state_batch, None))
-        print("updated next state values")
+        #print("updated next state values")
         reward_batch = reward_batch.unsqueeze(1)
         mask_batch = mask_batch.unsqueeze(1)
 
@@ -132,7 +129,7 @@ class NAF:
         #######
 
         _, state_action_values, _ = self.model((state_batch, action_batch))
-        print("updated state action values")
+        #print("updated state action values")
         loss = MSELoss(state_action_values, expected_state_action_values)
 
         self.optimizer.zero_grad()
@@ -141,7 +138,7 @@ class NAF:
         self.optimizer.step()
 
         soft_update(self.target_model, self.model, self.tau)
-        print("soft update")
+        #print("soft update")
 
 
     def save_model(self, env_name, batch_size, suffix="", model_path=None):

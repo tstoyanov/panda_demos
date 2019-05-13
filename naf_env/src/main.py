@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import rospy
 from rl_task_plugins.msg import DesiredErrorDynamicsMsg
+from rl_task_plugins.msg import StateMsg
 
 import argparse
 import matplotlib.pyplot as plt
@@ -8,6 +9,7 @@ import gym
 import numpy as np
 import torch
 import time
+import subprocess
 
 #import files...
 from naf import NAF
@@ -20,7 +22,17 @@ subdata = []
 
 def callback(data):
     global subdata
-    subdata = data.e_ddot_star
+    subdata = data.e
+
+
+rospy.init_node('DRL_traffic', anonymous=True)
+
+
+def sim_reset():
+    rate = rospy.Rate(1)
+    subprocess.call("~/catkin_workspace/src/panda_demos/panda_table_launch/scripts/sim_reset_episode.sh", shell=True)
+    subprocess.call("~/catkin_workspace/src/panda_demos/panda_table_launch/scripts/sim_2drl_tasks.sh", shell=True)
+    time.sleep(1)
 
 
 def main():
@@ -35,25 +47,25 @@ def main():
     parser.add_argument('--tau', type=float, default=0.001,
                         help='discount factor for model (default: 0.001)')
     parser.add_argument('--ou_noise', type=bool, default=True)
-    parser.add_argument('--noise_scale', type=float, default=0.3, metavar='G',
+    parser.add_argument('--noise_scale', type=float, default=0.4, metavar='G',
                         help='initial noise scale (default: 0.3)')
     parser.add_argument('--final_noise_scale', type=float, default=0.3, metavar='G',
-                        help='final noise scale (default: 0.3)')
-    parser.add_argument('--exploration_end', type=int, default=100, metavar='N',
+                        help='final noise scale (default: 0.4)')
+    parser.add_argument('--exploration_end', type=int, default=20, metavar='N',
                         help='number of episodes with noise (default: 100)')
     parser.add_argument('--seed', type=int, default=4, metavar='N',
                         help='random seed (default: 4)')
     parser.add_argument('--batch_size', type=int, default=512, metavar='N',
                         help='batch size (default: 512)')
-    parser.add_argument('--num_steps', type=int, default=200, metavar='N',
+    parser.add_argument('--num_steps', type=int, default=300, metavar='N',
                         help='max episode length (default: 1000)')
-    parser.add_argument('--num_episodes', type=int, default=20, metavar='N',
+    parser.add_argument('--num_episodes', type=int, default=300, metavar='N',
                         help='number of episodes (default: 1000)')
     parser.add_argument('--hidden_size', type=int, default=128, metavar='N',
                         help='hidden size (default: 128)')
     parser.add_argument('--replay_size', type=int, default=1000000, metavar='N',
                         help='size of replay buffer (default: 1000000)')
-    parser.add_argument('--save_agent', type=bool, default=False,
+    parser.add_argument('--save_agent', type=bool, default=True,
                         help='save model to file')
     parser.add_argument('--load_agent', type=bool, default=False,
                         help='load model from file')
@@ -92,17 +104,16 @@ def main():
     upper_reward = []
     lower_reward = []
 
-    rospy.init_node('DRL_traffic', anonymous=True)
-    pub = rospy.Publisher('something', DesiredErrorDynamicsMsg, queue_size=10)
-    rospy.Subscriber("chatter", DesiredErrorDynamicsMsg, callback)
-    rate = rospy.Rate(1)
+    sim_reset()
+
+    pub = rospy.Publisher('/ee_rl/act', DesiredErrorDynamicsMsg, queue_size=10)
+    rospy.Subscriber("/ee_rl/state", StateMsg, callback)
+    rate = rospy.Rate(9)
     rate.sleep()
     for i_episode in range(args.num_episodes):
         # -- reset environment for every episode --
-        # call reset script!!!!!!!!!!!!!!
-        print("subdata: {}".format(subdata))
+        sim_reset()
         state = torch.Tensor(subdata).unsqueeze(0)
-        print("state tensor: {}".format(state))
 
         # -- initialize noise (random process N) --
         if args.ou_noise:
@@ -114,19 +125,15 @@ def main():
 
         while True:
             # -- action selection, observation and store transition --
-            #action = agent.select_action(state, ounoise)
-            print("state before action: {}".format(state))
+            #action = agent.select_action(state)
             action = agent.select_action(state, ounoise)
-            print("action: {}".format(action))
-            #pub.publish(action)
-            #next_state, reward, done, _ = env.step(action.numpy()[0])
+            print(action.numpy()[0] * 50)
+            pub.publish(action.numpy()[0] * 50)
             next_state = torch.Tensor(subdata).unsqueeze(0)
             reward, done = env.calc_shaped_reward(next_state)
-            print(reward)
-            print(done)
+
             total_numsteps += 1
             episode_reward += reward
-
 
             action = torch.Tensor(action)
             mask = torch.Tensor([not done])
@@ -135,21 +142,23 @@ def main():
             memory.push(state, action, mask, next_state, reward)
 
             state = next_state
-            print("state = next_state: {}".format(state))
-            print("numstep: {}".format(total_numsteps))
+
+            # -- training --
+            # print("len(memory): {}".format(len(memory)))
+            if len(memory) > args.batch_size and args.train_model:
+                for _ in range(20):
+                    transitions = memory.sample(args.batch_size)
+                    batch = Transition(*zip(*transitions))
+
+                    agent.update_parameters(batch)
+            else:
+                time.sleep(0.1)
+            rate.sleep()
 
             if done or total_numsteps % args.num_steps == 0:
                 break
 
-        # -- training --
-        print("len(memory): {}".format(len(memory)))
-        if len(memory) > args.batch_size and args.train_model:
-            print("inside training")
-            transitions = memory.sample(args.batch_size)
-            batch = Transition(*zip(*transitions))
-
-            agent.update_parameters(batch)
-
+        pub.publish([0, 0])
         rewards.append(episode_reward)
 
         if args.train_model:
@@ -158,35 +167,37 @@ def main():
             greedy_episode = 10
         greedy_range = min(args.greedy_steps, greedy_episode)
 
-        # -- calculates episode without noise --
-        if i_episode % greedy_episode == 0:
-            for _ in range(0, greedy_range):
-                # -- reset environment for every episode --
-                # call reset script!!!!!!!!!!!!!!
-                state = torch.Tensor(subdata).unsqueeze(0)
-                episode_reward = 0
-                steps = 0
+        #-- calculates episode without noise --
+        # if i_episode % greedy_episode == 0:
+        #     for _ in range(0, greedy_range):
+        #         # -- reset environment for every episode --
+        #         sim_reset()
+        #
+        #         state = torch.Tensor(subdata).unsqueeze(0)
+        #         episode_reward = 0
+        #         steps = 0
+        #
+        #         while True:
+        #             action = agent.select_action(state)
+        #             pub.publish(action.numpy()[0])
+        #             next_state = torch.Tensor(subdata).unsqueeze(0)
+        #             reward, done = env.calc_shaped_reward(next_state)
+        #             episode_reward += reward
+        #
+        #             state = next_state
+        #             steps += 1
+        #             if done or steps == args.num_steps:
+        #                 greedy_reward.append(episode_reward)
+        #                 break
+        #             rate.sleep()
+        #
+        #     upper_reward.append(np.max(rewards[-greedy_episode:]))
+        #     lower_reward.append(np.min(rewards[-greedy_episode:]))
+        #     avg_greedy_reward.append((np.mean(greedy_reward[-greedy_range:])))
+        #
+        #     print("Episode: {}, total numsteps: {}, avg_greedy_reward: {}, average reward: {}".format(
+        #        i_episode, total_numsteps, avg_greedy_reward[-1], np.mean(rewards[-greedy_episode:])))
 
-                while True:
-                    print("Vi er i greedy while")
-                    action = agent.select_action(state)
-                    pub.publish(action)
-                    #next_state, reward, done, _ = env.step(action.numpy()[0])
-                    next_state = torch.Tensor(subdata).unsqueeze(0)
-                    reward, done = env.calc_shaped_reward(next_state)
-                    episode_reward += reward
-
-                    state = next_state
-                    steps += 1
-                    if done or steps == args.num_steps:
-                        greedy_reward.append(episode_reward)
-                        break
-            upper_reward.append(np.max(rewards[-greedy_episode:]))
-            lower_reward.append(np.min(rewards[-greedy_episode:]))
-            avg_greedy_reward.append((np.mean(greedy_reward[-greedy_range:])))
-
-            print("Episode: {}, total numsteps: {}, avg_greedy_reward: {}, average reward: {}".format(
-                i_episode, total_numsteps, avg_greedy_reward[-1], np.mean(rewards[-greedy_episode:])))
 
     #-- saves model --greedy_episode
     if args.save_agent:
@@ -194,16 +205,20 @@ def main():
 
     print('Training ended after {} minutes'.format((time.time() - t_start)/60))
     print('Time per ep : {} s').format((time.time() - t_start) / args.num_episodes)
-    print('Mean greedy reward: {}'.format(np.mean(greedy_reward)))
+    #print('Mean greedy reward: {}'.format(np.mean(greedy_reward)))
 
     # -- plot learning curve --
     pos_greedy = []
-    for pos in range(0, len(lower_reward)):
-        pos_greedy.append(pos*greedy_episode)
-
-    plt.fill_between(pos_greedy, lower_reward, upper_reward, facecolor='red', alpha=0.3)
-    plt.plot(pos_greedy, avg_greedy_reward, 'r')
-    fname = 'plot_{}_{}'.format(args.batch_size, '.png')
+    # for pos in range(0, len(lower_reward)):
+    #     pos_greedy.append(pos*greedy_episode)
+    #
+    # plt.fill_between(pos_greedy, lower_reward, upper_reward, facecolor='red', alpha=0.3)
+    # plt.plot(pos_greedy, avg_greedy_reward, 'r')
+    print('Mean reward: {}'.format(np.mean(rewards)))
+    print('Max reward: {}'.format(np.max(rewards)))
+    print('Min reward: {}'.format(np.min(rewards)))
+    plt.plot(rewards, 'r')
+    fname = 'plot_{}_{}_{}'.format(args.env_name, args.batch_size, '.png')
     plt.savefig(fname)
 
 
