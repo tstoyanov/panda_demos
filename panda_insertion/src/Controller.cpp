@@ -55,6 +55,9 @@ bool Controller::moveToInitialPositionState()
 
     string toController;
     nodeHandler->getParam("insertion/impedanceController", toController);
+
+    ROS_DEBUG_STREAM("fromController:" << fromController );
+    ROS_DEBUG_STREAM("toController:" << toController );
     
     if (!loadController(toController))
     {
@@ -253,8 +256,12 @@ void Controller::initEquilibriumPosePublisher()
 
 bool Controller::loadController(string controller)
 {
+    ROS_DEBUG_STREAM("In loadController()");
+
     string serviceName;
     nodeHandler->getParam("insertion/loadControllerService", serviceName);
+
+    ROS_DEBUG_STREAM("Trying to load controller " << controller << " with service " << serviceName);
 
     ros::ServiceClient client = nodeHandler->serviceClient<controller_manager_msgs::LoadController>(serviceName);
 
@@ -263,16 +270,18 @@ bool Controller::loadController(string controller)
 
     if (client.call(service))
     {
-        ROS_DEBUG("Loaded controller %s", controller.c_str());
         return true;
     }
 
     ROS_ERROR("Could not load controller %s", controller.c_str());
+
     return false;
 }
 
 bool Controller::switchController(string from, string to)
 {
+    ROS_DEBUG_STREAM("In switchController()");
+
     string serviceName;
     nodeHandler->getParam("insertion/switchControllerService", serviceName);
 
@@ -282,6 +291,8 @@ bool Controller::switchController(string from, string to)
     service.request.stop_controllers = {from.c_str()};
     service.request.start_controllers = {to.c_str()};
     service.request.strictness = 2;
+
+    ROS_DEBUG_STREAM("Trying to switch controller from " << from << " to " << to << " with service " << serviceName);
 
     if (client.call(service))
     {
