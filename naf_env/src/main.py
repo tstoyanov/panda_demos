@@ -28,11 +28,13 @@ def callback(data):
 rospy.init_node('DRL_traffic', anonymous=True)
 
 
-def sim_reset():
-    rate = rospy.Rate(1)
+def sim_reset_start():
     subprocess.call("~/catkin_workspace/src/panda_demos/panda_table_launch/scripts/sim_reset_episode.sh", shell=True)
     subprocess.call("~/catkin_workspace/src/panda_demos/panda_table_launch/scripts/sim_2drl_tasks.sh", shell=True)
-    time.sleep(1)
+
+
+def sim_reset():
+    subprocess.call("~/catkin_workspace/src/panda_demos/panda_table_launch/scripts/sim_reset_episode_fast.sh", shell=True)
 
 
 def main():
@@ -59,7 +61,7 @@ def main():
                         help='batch size (default: 512)')
     parser.add_argument('--num_steps', type=int, default=300, metavar='N',
                         help='max episode length (default: 1000)')
-    parser.add_argument('--num_episodes', type=int, default=300, metavar='N',
+    parser.add_argument('--num_episodes', type=int, default=500, metavar='N',
                         help='number of episodes (default: 1000)')
     parser.add_argument('--hidden_size', type=int, default=128, metavar='N',
                         help='hidden size (default: 128)')
@@ -71,7 +73,7 @@ def main():
                         help='load model from file')
     parser.add_argument('--train_model', type=bool, default=True,
                         help='Training or run')
-    parser.add_argument('--greedy_steps', type=int, default=1, metavar='N',
+    parser.add_argument('--greedy_steps', type=int, default=5, metavar='N',
                         help='amount of times greedy goes (default: 100)')
 
     args = parser.parse_args()
@@ -92,7 +94,6 @@ def main():
         agent.load_model(args.env_name, args.batch_size, '.pth')
         print("agent: naf_{}_{}_{}, is loaded").format(args.env_name, args.batch_size, '.pth')
 
-
     # -- declare memory buffer and random process N
     memory = ReplayMemory(args.replay_size)
     ounoise = OUNoise(env.action_space.shape[0]) if args.ou_noise else None
@@ -104,7 +105,7 @@ def main():
     upper_reward = []
     lower_reward = []
 
-    sim_reset()
+    sim_reset_start()
 
     pub = rospy.Publisher('/ee_rl/act', DesiredErrorDynamicsMsg, queue_size=10)
     rospy.Subscriber("/ee_rl/state", StateMsg, callback)
@@ -127,8 +128,11 @@ def main():
             # -- action selection, observation and store transition --
             #action = agent.select_action(state)
             action = agent.select_action(state, ounoise)
-            print(action.numpy()[0] * 50)
-            pub.publish(action.numpy()[0] * 50)
+            a = action.numpy()[0] * 50
+            act_pub = [a[0], a[1]]
+            #print(action.numpy()[0] * 50)
+            print(act_pub)
+            pub.publish(act_pub)
             next_state = torch.Tensor(subdata).unsqueeze(0)
             reward, done = env.calc_shaped_reward(next_state)
 
@@ -167,36 +171,36 @@ def main():
             greedy_episode = 10
         greedy_range = min(args.greedy_steps, greedy_episode)
 
-        #-- calculates episode without noise --
-        # if i_episode % greedy_episode == 0:
-        #     for _ in range(0, greedy_range):
-        #         # -- reset environment for every episode --
-        #         sim_reset()
-        #
-        #         state = torch.Tensor(subdata).unsqueeze(0)
-        #         episode_reward = 0
-        #         steps = 0
-        #
-        #         while True:
-        #             action = agent.select_action(state)
-        #             pub.publish(action.numpy()[0])
-        #             next_state = torch.Tensor(subdata).unsqueeze(0)
-        #             reward, done = env.calc_shaped_reward(next_state)
-        #             episode_reward += reward
-        #
-        #             state = next_state
-        #             steps += 1
-        #             if done or steps == args.num_steps:
-        #                 greedy_reward.append(episode_reward)
-        #                 break
-        #             rate.sleep()
-        #
-        #     upper_reward.append(np.max(rewards[-greedy_episode:]))
-        #     lower_reward.append(np.min(rewards[-greedy_episode:]))
-        #     avg_greedy_reward.append((np.mean(greedy_reward[-greedy_range:])))
-        #
-        #     print("Episode: {}, total numsteps: {}, avg_greedy_reward: {}, average reward: {}".format(
-        #        i_episode, total_numsteps, avg_greedy_reward[-1], np.mean(rewards[-greedy_episode:])))
+        # -- calculates episode without noise --
+        if i_episode % greedy_episode == 0 and not i_episode == 0:
+            for _ in range(0, greedy_range):
+                # -- reset environment for every episode --
+                sim_reset()
+
+                state = torch.Tensor(subdata).unsqueeze(0)
+                episode_reward = 0
+                steps = 0
+
+                while True:
+                    action = agent.select_action(state)
+                    pub.publish(action.numpy()[0] * 50)
+                    next_state = torch.Tensor(subdata).unsqueeze(0)
+                    reward, done = env.calc_shaped_reward(next_state)
+                    episode_reward += reward
+
+                    state = next_state
+                    steps += 1
+                    if done or steps == args.num_steps:
+                        greedy_reward.append(episode_reward)
+                        break
+                    rate.sleep()
+
+            upper_reward.append(np.max(rewards[-greedy_episode:]))
+            lower_reward.append(np.min(rewards[-greedy_episode:]))
+            avg_greedy_reward.append((np.mean(greedy_reward[-greedy_range:])))
+
+            print("Episode: {}, total numsteps: {}, avg_greedy_reward: {}, average reward: {}".format(
+               i_episode, total_numsteps, avg_greedy_reward[-1], np.mean(rewards[-greedy_episode:])))
 
 
     #-- saves model --greedy_episode
@@ -205,15 +209,15 @@ def main():
 
     print('Training ended after {} minutes'.format((time.time() - t_start)/60))
     print('Time per ep : {} s').format((time.time() - t_start) / args.num_episodes)
-    #print('Mean greedy reward: {}'.format(np.mean(greedy_reward)))
+    print('Mean greedy reward: {}'.format(np.mean(greedy_reward)))
 
     # -- plot learning curve --
     pos_greedy = []
-    # for pos in range(0, len(lower_reward)):
-    #     pos_greedy.append(pos*greedy_episode)
-    #
-    # plt.fill_between(pos_greedy, lower_reward, upper_reward, facecolor='red', alpha=0.3)
-    # plt.plot(pos_greedy, avg_greedy_reward, 'r')
+    for pos in range(0, len(lower_reward)):
+        pos_greedy.append(pos*greedy_episode)
+
+    plt.fill_between(pos_greedy, lower_reward, upper_reward, facecolor='red', alpha=0.3)
+    plt.plot(pos_greedy, avg_greedy_reward, 'r')
     print('Mean reward: {}'.format(np.mean(rewards)))
     print('Max reward: {}'.format(np.max(rewards)))
     print('Min reward: {}'.format(np.min(rewards)))
