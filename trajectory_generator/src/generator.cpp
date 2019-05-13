@@ -28,10 +28,37 @@
 #define MAX_NOISE_GENERATION_ATTEMPTS 100
 
 #define NUMBER_OF_SAMPLES 100
+#define RELEASE_FRAME 0.9 * NUMBER_OF_SAMPLES
 
 #define NOISE_MEAN 0 // 1 will be converted to 1 cm for now
-#define NOISE_STDDEV 5 // 1 will be converted to 1 cm for now
-                          // 99% of the noise falls inside MEAN +/- 3*NOISE_STDDEV (1.66 = +/- 5m? => 5cm in the end)
+#define NOISE_STDDEV 5  // 1 will be converted to 1 cm for now
+                        // 99% of the noise falls inside MEAN +/- 3*NOISE_STDDEV (1.66 = +/- 5m? => 5cm in the end)
+
+#define BINARY_SEARCH_TRESHOLD 0.001 // meters
+
+double binary_search_treshold (KDL::Path_RoundedComposite &path, double lower_bound, double upper_bound, const double &x_value, const double &treshold)
+{
+  double mid = (upper_bound + lower_bound) / 2;
+  double mid_x_value = path.Pos(mid).p.x();
+  if (mid_x_value <= (x_value + treshold) && mid_x_value >= (x_value - treshold))
+  {
+    std::cout << "mid_x_value = " << mid_x_value << std::endl;
+    return mid;
+  }
+  else
+  {
+    if (mid_x_value < x_value)
+    {
+      std::cout << "upper" << std::endl;
+      return binary_search_treshold (path, mid, upper_bound, x_value, treshold);
+    }
+    else
+    {
+      std::cout << "lower" << std::endl;
+      return binary_search_treshold (path, lower_bound, mid, x_value, treshold);
+    }
+  }
+}
 
 std::string getExePath()
 {
@@ -173,13 +200,14 @@ int main(int argc, char **argv)
   KDL::ChainIkSolverVel_wdls chainIkSolverVel {my_chain};
   KDL::ChainIkSolverPos_NR_JL chainIkSolverPos {my_chain, q_min, q_max, chainFkSolverPos, chainIkSolverVel, max_iter, eps};
 
+  double realease_x_coordinate = 0.368281002938;
   // ========== WAYPOINTS ==========
   std::vector<std::vector<double>> starting_waypoints =
   {
     // good
     // {x, y, z}
     {-0.401718997062, 0.0892002648095, 0.986710060669},
-    {0.368281002938, 0.0892002648095, 0.886710060669},
+    {realease_x_coordinate, 0.0892002648095, 0.886710060669},
     {0.468281002938, 0.0892002648095, 0.986710060669}
     
     // collision test
@@ -212,8 +240,8 @@ int main(int argc, char **argv)
   std::normal_distribution<double> distribution(NOISE_MEAN, NOISE_STDDEV);
   int exception_count;
 
-  std::cout << "max_noise: " << max_noise/100 << std::endl;
-  std::cout << "min_noise: " << min_noise/100 << std::endl;
+  // std::cout << "max_noise: " << max_noise/100 << std::endl;
+  // std::cout << "min_noise: " << min_noise/100 << std::endl;
 
   double current_s;
   KDL::Frame current_eef_frame;
@@ -280,14 +308,14 @@ int main(int argc, char **argv)
                 std::cout << "PROGRAM ABORTED: 'Couldn't generate noise inside the interval: (" << min_noise / 100 << ", " << max_noise / 100 << ") after " << MAX_NOISE_GENERATION_ATTEMPTS << " attempts'" << std::endl;
                 return 0;
               }
-              std::cout << "Generating noise: " << noise_generation_counter << std::endl;
+              // std::cout << "Generating noise: " << noise_generation_counter << std::endl;
               noise = distribution(generator) / 100.0;
               noise_generation_counter++;
             }
             while (!(noise < max_noise / 100.0 && noise > min_noise / 100.0));
             noisy_waypoints[i][ii] += noise;
-            std::cout << "\nnoise: " << noise << std::endl;
-            std::cout << "noisy_waypoints[" << i << "][" << ii << "]: " << noisy_waypoints[i][ii] << std::endl;
+            // std::cout << "\nnoise: " << noise << std::endl;
+            // std::cout << "noisy_waypoints[" << i << "][" << ii << "]: " << noisy_waypoints[i][ii] << std::endl;
           }
             path -> Add(KDL::Frame(KDL::Vector(noisy_waypoints[i][0], noisy_waypoints[i][1], noisy_waypoints[i][2])));
         }
@@ -303,7 +331,7 @@ int main(int argc, char **argv)
       {
         exception_count++;
         path_error = true;
-        std::cout << "\nDEFAULT EXCEPTION\n";
+        std::cout << "\nPATH GENERATION ERROR, DEFAULT EXCEPTION, generating a new path...\n";
       }
       if (exception_count >= MAX_PATH_GENERATION_ATTEMPTS)
       {
@@ -319,21 +347,21 @@ int main(int argc, char **argv)
     }
 
     ret = chainFkSolverPos.JntToCart(last_joint_pos, fk_current_eef_frame);
-    std::cout << "FK RET: " << ret << std::endl;
+    // std::cout << "FK RET: " << ret << std::endl;
     starting_orientation = fk_current_eef_frame.M;
 
     path_length = path -> PathLength();
     ds = path_length / NUMBER_OF_SAMPLES;
 
-    std::vector<double> velocity_dist;
-    test(velocity_dist, NUMBER_OF_SAMPLES, 0.9*NUMBER_OF_SAMPLES, path_length, 0.9*path_length);
-    // for (unsigned i = 0; i < velocity_dist.size(); i++)
-    // {
-    //   std::cout << "velocity_dist[" << i << "] = " << velocity_dist[i] << std::endl;
-    // }
+    double treshold_length;
+    treshold_length = binary_search_treshold(*path, 0, path_length, realease_x_coordinate, BINARY_SEARCH_TRESHOLD);
+
     // char c;
     // std::cin >> c;
-    return 0;
+    // return 0;
+    
+    std::vector<double> velocity_dist(NUMBER_OF_SAMPLES, 0);
+    velocity_profile_generator(velocity_dist, NUMBER_OF_SAMPLES, RELEASE_FRAME, path_length, treshold_length);
 
     // double euler_X;
     // double euler_Y;
@@ -380,7 +408,8 @@ int main(int argc, char **argv)
     current_s = 0;
     for (unsigned i = 0; i < NUMBER_OF_SAMPLES; i++)
     {
-      current_s += ds;
+      // current_s += ds;
+      current_s += velocity_dist[i];
       current_eef_frame = path -> Pos(current_s);
       current_eef_frame.M = test_orientation;
       // current_eef_frame.M = starting_orientation;
