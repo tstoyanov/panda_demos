@@ -17,6 +17,8 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   message_generation
 )
+find_package(Boost REQUIRED COMPONENTS thread)
+
 add_message_files(FILES DesiredErrorDynamicsMsg.msg StateMsg.msg)
 
 add_service_files(
@@ -43,6 +45,7 @@ include_directories(
   include
   ${catkin_INCLUDE_DIRS}
   ${GUROBI_INCLUDE_DIR}
+  ${Boost_INCLUDE_DIRS}
 )
 
 link_directories(${GUROBI_LIB_DIR})
@@ -54,7 +57,7 @@ add_library(${PROJECT_NAME}_tdef
         src/tdyn_async_policy.cpp
         )
 add_dependencies(${PROJECT_NAME}_tdef ${catkin_EXPORTED_TARGETS})
-target_link_libraries(${PROJECT_NAME}_tdef ${catkin_LIBRARIES} ${GUROBI_LIBS})
+target_link_libraries(${PROJECT_NAME}_tdef ${catkin_LIBRARIES} ${GUROBI_LIBS} ${Boost_LIBRARIES})
 
 
 #############

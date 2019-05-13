@@ -50,6 +50,7 @@ namespace hiqp
         return -1;
       }
 
+      update_lock_.lock();
       damping_ = std::stod(parameters.at(1));
       action_topic_ = parameters.at(2);
       state_topic_ = parameters.at(3);
@@ -61,16 +62,21 @@ namespace hiqp
       desired_dynamics_ = Eigen::VectorXd::Zero(e_initial.rows());
 
       last_publish_ = ros::Time::now();
+      initialized_ = true;
+      update_lock_.unlock();
+
       return 0;
     }
 
     int TDynAsyncPolicy::update(const RobotStatePtr robot_state, 
                 const std::shared_ptr< TaskDefinition > def) {
 
+      update_lock_.lock();
       Eigen::VectorXd qdot=robot_state->kdl_jnt_array_vel_.qdot.data;
       e_ddot_star_= desired_dynamics_ - damping_*def->getTaskDerivative();
 
       publishStateMessage(def->getTaskValue());
+      update_lock_.unlock();
 
       return 0;
     }
@@ -82,16 +88,29 @@ namespace hiqp
     void TDynAsyncPolicy::handleActMessage(const rl_task_plugins::DesiredErrorDynamicsMsgConstPtr 
             &act_msg) {
 
-        if(act_msg->e_ddot_star.size() != desired_dynamics_.size()) {
-            printHiqpWarning("TDynAsyncPolicy: mismatch between dimensions of desired and available errors");
-            std::cerr<<"des "<<desired_dynamics_.size() <<" provided "
-                     <<act_msg->e_ddot_star.size()<<std::endl;
+        update_lock_.lock();
+        if(!initialized_) {
+            update_lock_.unlock();
             return;
+        }
+        if(act_msg->e_ddot_star.size() != e_ddot_star_.rows()) {
+            printHiqpWarning("TDynAsyncPolicy: mismatch between dimensions of eddot_star and dynamics provided in message");
+            std::cerr<<" eddot_star "<<e_ddot_star_.size() <<" provided "
+                     <<act_msg->e_ddot_star.size()<<std::endl;
+            update_lock_.unlock();
+            return;
+        }
+
+        if(act_msg->e_ddot_star.size() != desired_dynamics_.rows()) {
+            printHiqpWarning("TDynAsyncPolicy: mismatch between dimensions of desired and available errors, resizing");
+            desired_dynamics_ = Eigen::VectorXd::Zero(e_ddot_star_.rows());
         }
         
         for(int i=0; i<act_msg->e_ddot_star.size(); ++i) {
             desired_dynamics_(i) = act_msg->e_ddot_star[i];
         }
+        update_lock_.unlock();
+
     }
 
     void TDynAsyncPolicy::publishStateMessage(const Eigen::VectorXd &error) {

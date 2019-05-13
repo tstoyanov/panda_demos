@@ -35,6 +35,8 @@
 #include <rl_task_plugins/DesiredErrorDynamicsMsg.h>
 #include <rl_task_plugins/StateMsg.h>
 
+#include <boost/thread/mutex.hpp>
+
 namespace hiqp
 {
   namespace tasks
@@ -78,11 +80,14 @@ namespace hiqp
       Eigen::VectorXd desired_dynamics_;
       ros::Subscriber act_sub_;
       ros::Publisher state_pub_;
+      bool initialized_{false};
     
       void handleActMessage(const rl_task_plugins::DesiredErrorDynamicsMsgConstPtr &act_msg);
       void publishStateMessage(const Eigen::VectorXd &error);
 
       ros::NodeHandle nh_;
+
+      boost::mutex update_lock_;
 
     };
 
