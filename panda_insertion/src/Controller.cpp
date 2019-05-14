@@ -154,8 +154,8 @@ bool Controller::insertionWiggleState()
 
         equilibriumPosePublisher.publish(insertionWiggleMessage);
         rate.sleep();
-        ROS_DEBUG_STREAM("Panda ring: (xyz) " << panda->orientation.x << ", 
-                         "<< panda->orientation.y << ", "<< panda->orientation.z<< ", "<< panda->orientation.w);
+        ROS_DEBUG_STREAM("Panda ring: (xyz) " << panda->orientation.x << ", " <<
+                         panda->orientation.y << ", " << panda->orientation.z << ", " << panda->orientation.w);
         i++;
         if (!(i%3))
         {

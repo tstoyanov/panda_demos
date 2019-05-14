@@ -31,8 +31,13 @@ void Insertion::stateMachineRun()
 {
     ROS_DEBUG_STREAM_ONCE("State machine started");
 
+    State temporaryActiveState;
 
-    switch(activeState)
+    mutex.lock();
+    temporaryActiveState = activeState;
+    mutex.unlock();
+
+    switch(temporaryActiveState)
     {
         case Start:
         {
@@ -43,12 +48,6 @@ void Insertion::stateMachineRun()
         case MoveToInitialPosition:
         {
             moveToInitialPosition();
-            break;
-        }
-
-         case InitialPosition:
-        {
-            initialPosition();
             break;
         }
 
@@ -138,12 +137,6 @@ bool Insertion::changeStateCallback(panda_insertion::ChangeState::Request& reque
         activeState = MoveToInitialPosition;
         mutex.unlock();
     }
-    if (boost::iequals(state, "InitialPosition"))
-    {
-        mutex.lock();
-        activeState = InitialPosition;
-        mutex.unlock();
-    }
     if (boost::iequals(state, "ExternalDownMovement"))
     {
         mutex.lock();
@@ -222,13 +215,6 @@ void Insertion::moveToInitialPosition()
 {
     ROS_DEBUG_ONCE("In Move to Initial Position state");
     controller.moveToInitialPositionState();
-    changeState("idle");
-}
-
-void Insertion::initialPosition()
-{
-    ROS_DEBUG_ONCE("In Initial Position state");
-    controller.initialPositionState();
     changeState("idle");
 }
 

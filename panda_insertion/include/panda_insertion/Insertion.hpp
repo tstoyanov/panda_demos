@@ -13,8 +13,7 @@
 
 enum State {
     Start,
-    MoveToInitialPosition, 
-    InitialPosition,
+    MoveToInitialPosition,
     ExternalDownMovement,
     SpiralMotion,
     InternalDownMovement,
@@ -59,7 +58,6 @@ public:
 
     void start();
     void moveToInitialPosition();
-    void initialPosition();
     void externalDownMovement();
     void spiralMotion();
     void straightening();

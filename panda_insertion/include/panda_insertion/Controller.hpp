@@ -61,7 +61,6 @@ public:
     void init(ros::NodeHandle*, Panda* panda);
 
     void startState();
-    bool initialPositionState();
     bool moveToInitialPositionState();
     bool externalDownMovementState();
     bool spiralMotionState();
