@@ -198,17 +198,17 @@ void Insertion::changeState(string stateName)
 }
 
 void Insertion::init()
-{   
+{  
     ROS_DEBUG("In init()");
-    activeState = Start;
-
-    controller.init(&nodeHandler, &panda);
-    panda.init(&nodeHandler);
+    activeState = Idle;
 
     periodicTimer = nodeHandler.createTimer(ros::Duration(0.1), &Insertion::periodicTimerCallback, this);
     tfSubscriber = nodeHandler.subscribe("/tf", 1, &Insertion::tfSubscriberCallback,this);
     iterateStateServer = nodeHandler.advertiseService("change_state", &Insertion::changeStateCallback, this);
     stateClient = nodeHandler.serviceClient<panda_insertion::ChangeState>("change_state");
+
+    controller.init(&nodeHandler, &panda);
+    panda.init(&nodeHandler);
 }
 
 void Insertion::start()

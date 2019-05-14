@@ -31,7 +31,7 @@ Controller::Controller() {}
 // Public methods
 void Controller::init(ros::NodeHandle* nodeHandler, Panda* panda)
 {
-    loop_rate = 10;
+    loop_rate = 1;
     this->nodeHandler = nodeHandler;
     this->panda = panda;
 
@@ -41,11 +41,8 @@ void Controller::init(ros::NodeHandle* nodeHandler, Panda* panda)
 
 void Controller::startState()
 {
-    ros::Duration(2.0).sleep();
-    trajectory_msgs::JointTrajectory initialPoseMessage = initialJointTrajectoryMessage();
-    jointTrajectoryPublisher.publish(initialPoseMessage);
-
-    ros::Duration(5.0).sleep();
+    trajectory_msgs::JointTrajectory initialPoseMessageJoint = initialJointTrajectoryMessage();
+    jointTrajectoryPublisher.publish(initialPoseMessageJoint);
 }
 
 bool Controller::moveToInitialPositionState()
@@ -65,12 +62,11 @@ bool Controller::moveToInitialPositionState()
     }
 
     switchController(fromController, toController);
-    ros::Duration(3.0).sleep();
 
     geometry_msgs::PoseStamped initialPositionMessage = initialPoseMessage();
 
     int i = 0;
-    ros::Rate rate(loop_rate / 10);
+    ros::Rate rate(loop_rate);
     while (ros::ok() && i < 130)
     {
         equilibriumPosePublisher.publish(initialPositionMessage);
@@ -79,12 +75,6 @@ bool Controller::moveToInitialPositionState()
     }
 
     return true;
-}
-
-bool Controller::initialPositionState()
-{
-    ROS_DEBUG_ONCE("Initial position from controller");
-    ros::Duration(3).sleep();
 }
 
 bool Controller::externalDownMovementState()
@@ -164,7 +154,8 @@ bool Controller::insertionWiggleState()
 
         equilibriumPosePublisher.publish(insertionWiggleMessage);
         rate.sleep();
-        ROS_DEBUG_STREAM("Panda ring: (xyz) " << panda->orientation.x << ", "<< panda->orientation.y << ", "<< panda->orientation.z<< ", "<< panda->orientation.w);
+        ROS_DEBUG_STREAM("Panda ring: (xyz) " << panda->orientation.x << ", 
+                         "<< panda->orientation.y << ", "<< panda->orientation.z<< ", "<< panda->orientation.w);
         i++;
         if (!(i%3))
         {
@@ -330,6 +321,7 @@ trajectory_msgs::JointTrajectory Controller::initialJointTrajectoryMessage()
 
     // Points
     vector<double> initialPose {0.81, -0.78, -0.17, -2.35, -0.12, 1.60, 0.75};
+    //vector<double> initialPose {0.35, -0.07, -0.23, -2.35, -0.12, 2.28, 0.75};
     vector<double> effort {0, 0, 0, 0, 0, 0, 0};
     vector<double> accelerations {0, 0, 0, 0, 0, 0, 0};
     vector<double> velocities {0, 0, 0, 0, 0, 0, 0};

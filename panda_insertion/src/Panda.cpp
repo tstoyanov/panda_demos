@@ -16,7 +16,7 @@ void Panda::init(ros::NodeHandle* nodeHandler)
     nodeHandler->getParam("insertion/y_goal", yGoal);
     nodeHandler->getParam("insertion/z_goal", zGoal);
 
-    ROS_DEBUG_STREAM("HEJ HEJ, xyz coming up: "<< xGoal <<", "<< yGoal << ", " << zGoal);
+    ROS_DEBUG_STREAM("Initial goal xyz: "<< xGoal <<", "<< yGoal << ", " << zGoal);
 
 
     initialPosition.x = xGoal;
