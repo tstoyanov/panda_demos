@@ -28,7 +28,7 @@
 #define MAX_NOISE_GENERATION_ATTEMPTS 100
 
 #define NUMBER_OF_SAMPLES 100
-#define RELEASE_FRAME 0.9 * NUMBER_OF_SAMPLES
+#define RELEASE_FRAME 0.8 * NUMBER_OF_SAMPLES
 
 #define NOISE_MEAN 0 // 1 will be converted to 1 cm for now
 #define NOISE_STDDEV 5  // 1 will be converted to 1 cm for now
@@ -208,7 +208,8 @@ int main(int argc, char **argv)
     // {x, y, z}
     {-0.401718997062, 0.0892002648095, 0.986710060669},
     {realease_x_coordinate, 0.0892002648095, 0.886710060669},
-    {0.468281002938, 0.0892002648095, 0.986710060669}
+    // {0.608281002938, 0.0892002648095, 1.036710060669}
+    {0.568281002938, 0.0892002648095, 1.086710060669}
     
     // collision test
     // {x, y, z}
