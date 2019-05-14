@@ -4,6 +4,7 @@
 #include "ros/ros.h"
 #include "string"
 #include "geometry_msgs/PoseStamped.h"
+#include "panda_insertion/SwitchController.h"
 #include "trajectory_msgs/JointTrajectory.h"
 #include "ros/duration.h"
 #include "panda_insertion/Panda.hpp"
@@ -49,9 +50,15 @@ private:
     ros::NodeHandle* nodeHandler;
     Panda* panda;
 
+    double loop_rate;
+
+    // Publishers
     ros::Publisher jointTrajectoryPublisher;
     ros::Publisher equilibriumPosePublisher;
-    double loop_rate;
+
+    // Servers and clients
+    ros::ServiceServer switchControllerServer;
+    ros::ServiceClient switchControllerClient;
 
 public:
     // Constructor
@@ -73,7 +80,8 @@ private:
     void initEquilibriumPosePublisher();
 
     bool loadController(std::string controller);
-    bool switchController(std::string from, std::string to);
+    bool switchControllerCallback(panda_insertion::SwitchController::Request& request,
+                                  panda_insertion::SwitchController::Response& response);
 
     geometry_msgs::PoseStamped initialPoseMessage();
     trajectory_msgs::JointTrajectory initialJointTrajectoryMessage();
@@ -91,6 +99,8 @@ private:
     void writeTrajectoryToFile(Trajectory trajectory, const std::string& fileName, bool appendToFile = false);
 
     Eigen::Affine3d rotateMatrixRPY(Eigen::Affine3d tMatrix, double rollAngle, double pitchAngle, double yawAngle);
+
+    void sleepAndTell(double sleepTime);
 };
 
 #endif

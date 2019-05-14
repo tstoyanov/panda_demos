@@ -36,6 +36,7 @@
   <build_export_depend>roslib</build_export_depend>
   <build_export_depend>eigen_conversions</build_export_depend>
   <build_export_depend>ChangeState</build_export_depend>
+  <build_export_depend>SwitchController</build_export_depend>
   <!-- <build_export_depend>tf2_geometry_msgs</build_export_depend> -->
 
   <exec_depend>roscpp</exec_depend>

@@ -31,37 +31,35 @@ Controller::Controller() {}
 // Public methods
 void Controller::init(ros::NodeHandle* nodeHandler, Panda* panda)
 {
-    loop_rate = 1;
+    loop_rate = 10;
     this->nodeHandler = nodeHandler;
     this->panda = panda;
 
     initEquilibriumPosePublisher();
     initJointTrajectoryPublisher();
+
+    switchControllerServer = nodeHandler->advertiseService("switch_controller", &Controller::switchControllerCallback, this);
+    switchControllerClient = nodeHandler->serviceClient<panda_insertion::SwitchController>("switch_controller");
 }
 
 void Controller::startState()
 {
     trajectory_msgs::JointTrajectory initialPoseMessageJoint = initialJointTrajectoryMessage();
     jointTrajectoryPublisher.publish(initialPoseMessageJoint);
+
+    sleepAndTell(4.0);
 }
 
 bool Controller::moveToInitialPositionState()
 {
-    string fromController;
-    nodeHandler->getParam("insertion/positionJointTrajectoryController", fromController);
+    panda_insertion::SwitchController switchController;
+    nodeHandler->getParam("insertion/positionJointTrajectoryController", switchController.request.from);
+    nodeHandler->getParam("insertion/impedanceController", switchController.request.to);
 
-    string toController;
-    nodeHandler->getParam("insertion/impedanceController", toController);
+    ROS_DEBUG_STREAM("fromController:" << switchController.request.from );
+    ROS_DEBUG_STREAM("toController:" << switchController.request.to );
 
-    ROS_DEBUG_STREAM("fromController:" << fromController );
-    ROS_DEBUG_STREAM("toController:" << toController );
-    
-    if (!loadController(toController))
-    {
-        return false;
-    }
-
-    switchController(fromController, toController);
+    switchControllerClient.call(switchController);
 
     geometry_msgs::PoseStamped initialPositionMessage = initialPoseMessage();
 
@@ -269,9 +267,18 @@ bool Controller::loadController(string controller)
     return false;
 }
 
-bool Controller::switchController(string from, string to)
+bool Controller::switchControllerCallback(panda_insertion::SwitchController::Request& request,
+                                          panda_insertion::SwitchController::Response& response)
 {
-    ROS_DEBUG_STREAM("In switchController()");
+    ROS_DEBUG_STREAM("In switchController callback");
+
+    const string from = request.from;
+    const string to = request.to;
+
+    if (!loadController(to))
+    {
+        return false;
+    }
 
     string serviceName;
     nodeHandler->getParam("insertion/switchControllerService", serviceName);
@@ -287,12 +294,13 @@ bool Controller::switchController(string from, string to)
 
     if (client.call(service))
     {
-        ROS_DEBUG("Switched controller from %s to %s", from.c_str(), to.c_str());
+        ROS_DEBUG("Called service to switch controller from %s to %s", from.c_str(), to.c_str());
         return true;
     }
-    ROS_ERROR("Could not switch controller %s to %s", from.c_str(), to.c_str());
-    return false;
 
+    ROS_ERROR("Could not call service to switch controller %s to %s", from.c_str(), to.c_str());
+
+    return false;
 }
 
 geometry_msgs::PoseStamped Controller::initialPoseMessage()
@@ -551,4 +559,10 @@ Eigen::Affine3d Controller::rotateMatrixRPY(Eigen::Affine3d tMatrix, double roll
     Eigen::Affine3d rotated_tMatrix = tMatrix.rotate(quaternion);
 
     return rotated_tMatrix;
+}
+
+void Controller::sleepAndTell(double sleepTime)
+{
+    ROS_DEBUG("Sleeping for %lf seconds", sleepTime);
+    ros::Duration(sleepTime).sleep();
 }

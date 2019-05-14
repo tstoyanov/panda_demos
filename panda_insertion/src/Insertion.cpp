@@ -17,10 +17,6 @@ Insertion::Insertion() {}
 Insertion::Insertion(ros::NodeHandle nodeHandler)
 {
     ROS_DEBUG("In insertion constructor");
-
-    const double SLEEP_TIME = 4.0;
-    ROS_DEBUG("Sleeping for %lf seconds", SLEEP_TIME);
-    ros::Duration(SLEEP_TIME).sleep();
     
     this->nodeHandler = nodeHandler;
     init();
