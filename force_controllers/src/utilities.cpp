@@ -17,8 +17,8 @@ Stiffness getParameterStiffness(ros::NodeHandle* nodeHandle)
 
     ROS_DEBUG("get translation/rotation stiffness");
     const size_t X = 0, Y = 1, Z = 2;
-    const std::string param_translation_stiffness = "/impedance_controller/cartesian_stiffness/translation";
-    const std::string param_rotation_stiffness = "/impedance_controller/cartesian_stiffness/rotation";
+    const std::string param_translation_stiffness = "/panda/impedance_controller/cartesian_stiffness/translation";
+    const std::string param_rotation_stiffness = "/panda/impedance_controller/cartesian_stiffness/rotation";
 
     if (!nodeHandle->getParam(param_translation_stiffness, translational_stiffness))
     {
@@ -46,8 +46,8 @@ Damping getParameterDamping(ros::NodeHandle* nodeHandle)
     std::vector<int> translational_damping, rotational_damping;
 
     const size_t X = 0, Y = 1, Z = 2;
-    const std::string param_translation_damping = "/impedance_controller/cartesian_damping/translation";
-    const std::string param_rotation_damping = "/impedance_controller/cartesian_damping/rotation";
+    const std::string param_translation_damping = "/panda/impedance_controller/cartesian_damping/translation";
+    const std::string param_rotation_damping = "/panda/impedance_controller/cartesian_damping/rotation";
 
     if (!nodeHandle->getParam(param_translation_damping, translational_damping))
     {

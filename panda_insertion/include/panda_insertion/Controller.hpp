@@ -4,7 +4,7 @@
 #include "ros/ros.h"
 #include "string"
 #include "geometry_msgs/PoseStamped.h"
-#include "panda_insertion/SwitchController.h"
+#include "panda_insertion/SwapController.h"
 #include "trajectory_msgs/JointTrajectory.h"
 #include "ros/duration.h"
 #include "panda_insertion/Panda.hpp"
@@ -57,8 +57,8 @@ private:
     ros::Publisher equilibriumPosePublisher;
 
     // Servers and clients
-    ros::ServiceServer switchControllerServer;
-    ros::ServiceClient switchControllerClient;
+    ros::ServiceServer swapControllerServer;
+    ros::ServiceClient swapControllerClient;
 
 public:
     // Constructor
@@ -80,8 +80,8 @@ private:
     void initEquilibriumPosePublisher();
 
     bool loadController(std::string controller);
-    bool switchControllerCallback(panda_insertion::SwitchController::Request& request,
-                                  panda_insertion::SwitchController::Response& response);
+    bool swapControllerCallback(panda_insertion::SwapController::Request& request,
+                                  panda_insertion::SwapController::Response& response);
 
     geometry_msgs::PoseStamped initialPoseMessage();
     trajectory_msgs::JointTrajectory initialJointTrajectoryMessage();

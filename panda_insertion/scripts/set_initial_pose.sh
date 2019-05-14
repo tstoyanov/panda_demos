@@ -1,4 +1,4 @@
-rostopic pub -r 1 /impedance_controller/equilibrium_pose geometry_msgs/PoseStamped \
+rostopic pub -r 10 panda/impedance_controller/equilibrium_pose geometry_msgs/PoseStamped \
 "header:
   seq: 0
   stamp:

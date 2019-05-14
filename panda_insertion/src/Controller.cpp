@@ -38,8 +38,8 @@ void Controller::init(ros::NodeHandle* nodeHandler, Panda* panda)
     initEquilibriumPosePublisher();
     initJointTrajectoryPublisher();
 
-    switchControllerServer = nodeHandler->advertiseService("switch_controller", &Controller::switchControllerCallback, this);
-    switchControllerClient = nodeHandler->serviceClient<panda_insertion::SwitchController>("switch_controller");
+    swapControllerServer = nodeHandler->advertiseService("swap_controller", &Controller::swapControllerCallback, this);
+    swapControllerClient = nodeHandler->serviceClient<panda_insertion::SwapController>("swap_controller");
 }
 
 void Controller::startState()
@@ -52,14 +52,14 @@ void Controller::startState()
 
 bool Controller::moveToInitialPositionState()
 {
-    panda_insertion::SwitchController switchController;
-    nodeHandler->getParam("insertion/positionJointTrajectoryController", switchController.request.from);
-    nodeHandler->getParam("insertion/impedanceController", switchController.request.to);
+    panda_insertion::SwapController swapController;
+    nodeHandler->getParam("insertion/positionJointTrajectoryController", swapController.request.from);
+    nodeHandler->getParam("insertion/impedanceController", swapController.request.to);
 
-    ROS_DEBUG_STREAM("fromController:" << switchController.request.from );
-    ROS_DEBUG_STREAM("toController:" << switchController.request.to );
+    ROS_DEBUG_STREAM("fromController:" << swapController.request.from );
+    ROS_DEBUG_STREAM("toController:" << swapController.request.to );
 
-    switchControllerClient.call(switchController);
+    swapControllerClient.call(swapController);
 
     geometry_msgs::PoseStamped initialPositionMessage = initialPoseMessage();
 
@@ -267,10 +267,10 @@ bool Controller::loadController(string controller)
     return false;
 }
 
-bool Controller::switchControllerCallback(panda_insertion::SwitchController::Request& request,
-                                          panda_insertion::SwitchController::Response& response)
+bool Controller::swapControllerCallback(panda_insertion::SwapController::Request& request,
+                                          panda_insertion::SwapController::Response& response)
 {
-    ROS_DEBUG_STREAM("In switchController callback");
+    ROS_DEBUG_STREAM("In swapController callback");
 
     const string from = request.from;
     const string to = request.to;
@@ -290,15 +290,15 @@ bool Controller::switchControllerCallback(panda_insertion::SwitchController::Req
     service.request.start_controllers = {to.c_str()};
     service.request.strictness = 2;
 
-    ROS_DEBUG_STREAM("Trying to switch controller from " << from << " to " << to << " with service " << serviceName);
+    ROS_DEBUG_STREAM("Trying to swap controller from " << from << " to " << to << " with service " << serviceName);
 
     if (client.call(service))
     {
-        ROS_DEBUG("Called service to switch controller from %s to %s", from.c_str(), to.c_str());
+        ROS_DEBUG("Called service to swap controller from %s to %s", from.c_str(), to.c_str());
         return true;
     }
 
-    ROS_ERROR("Could not call service to switch controller %s to %s", from.c_str(), to.c_str());
+    ROS_ERROR("Could not call service to swap controller %s to %s", from.c_str(), to.c_str());
 
     return false;
 }

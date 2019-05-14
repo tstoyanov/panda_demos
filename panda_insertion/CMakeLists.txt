@@ -15,11 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 find_package(Eigen3 REQUIRED)
 
-add_service_files(
-  FILES
-  ChangeState.srv
-  SwitchController.srv
-)
+add_service_files(DIRECTORY srv FILES ChangeState.srv SwapController.srv)
 
 generate_messages(
   DEPENDENCIES
@@ -51,6 +47,6 @@ add_executable(insertion
   src/Panda.cpp
 )
 
-target_link_libraries(insertion ${catkin_LIBRARIES})
-add_dependencies(insertion ${${PROJECT_NAME}_EXPORT_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(insertion panda_insertion_generate_messages_cpp ${${PROJECT_NAME}_EXPORT_TARGETS} ${catkin_EXPORTED_TARGETS} )
 
+target_link_libraries(insertion ${catkin_LIBRARIES})
