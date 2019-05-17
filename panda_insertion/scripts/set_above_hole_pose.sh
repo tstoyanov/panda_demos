@@ -7,9 +7,9 @@ rostopic pub -r 1 equilibrium_pose geometry_msgs/PoseStamped \
   frame_id: 'link0'
 pose:
   position:
-    x: 0.275
-    y: 0.170
-    z: 0.269
+    x: 0.141
+    y: 0.348
+    z: 0.181
   orientation:
     x: 1.0
     y: 0.0

@@ -34,6 +34,7 @@ void Controller::init(ros::NodeHandle* nodeHandler, Panda* panda)
     loop_rate = 10;
     this->nodeHandler = nodeHandler;
     this->panda = panda;
+    string baseFrameId = "link0";
 
     initEquilibriumPosePublisher();
     initJointTrajectoryPublisher();
@@ -59,7 +60,7 @@ bool Controller::moveToInitialPositionState()
     ROS_DEBUG_STREAM("fromController:" << swapController.request.from );
     ROS_DEBUG_STREAM("toController:" << swapController.request.to );
 
-    swapControllerClient.call(swapController);
+    //swapControllerClient.call(swapController);
 
     geometry_msgs::PoseStamped initialPositionMessage = initialPoseMessage();
 
@@ -307,6 +308,7 @@ geometry_msgs::PoseStamped Controller::initialPoseMessage()
 {
     geometry_msgs::PoseStamped message = emptyPoseMessage();
 
+    message.header.frame_id = baseFrameId;
     message.pose.position = panda->initialPosition;
     message.pose.orientation = panda->initialOrientation;
 
@@ -362,6 +364,7 @@ geometry_msgs::PoseStamped Controller::downMovementPoseMessage(double z_coord)
 
     ROS_DEBUG_STREAM("Panda position z =" << panda->position.z);
 
+    message.header.frame_id = baseFrameId;
     message.pose.position = panda->position;
     message.pose.orientation = panda->orientation;
     
@@ -407,6 +410,7 @@ geometry_msgs::PoseStamped Controller::spiralPointPoseMessage(Point point)
 {
     geometry_msgs::PoseStamped message = emptyPoseMessage();
 
+    message.header.frame_id = baseFrameId;
     message.pose.position.x = point.x;
     message.pose.position.y = point.y;
     message.pose.position.z = point.z;
@@ -433,6 +437,7 @@ geometry_msgs::PoseStamped Controller::insertionWigglePoseMessage(double x_angle
     tf::poseEigenToMsg(rotated_tMatrix, message.pose);
 
     // Set new orientation
+    message.header.frame_id = baseFrameId;
     panda->orientation = message.pose.orientation;
 
     return message;
@@ -442,6 +447,7 @@ geometry_msgs::PoseStamped Controller::straighteningPoseMessage()
 {
     geometry_msgs::PoseStamped message = emptyPoseMessage();
 
+    message.header.frame_id = baseFrameId;
     message.pose.position = panda->position;
     message.pose.orientation = panda->orientation;
     message.pose.orientation.x = 1;

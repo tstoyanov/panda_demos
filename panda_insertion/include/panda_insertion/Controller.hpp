@@ -51,6 +51,7 @@ private:
     Panda* panda;
 
     double loop_rate;
+    std::string baseFrameId;
 
     // Publishers
     ros::Publisher jointTrajectoryPublisher;
