@@ -96,6 +96,7 @@ private:
     void setParameterDamping(Damping damping);
 
     Trajectory generateArchimedeanSpiral(double a, double b, int nrOfPoints);
+    Trajectory generateInitialPositionTrajectory(int nrOfPoints);
 
     void writeTrajectoryToFile(Trajectory trajectory, const std::string& fileName, bool appendToFile = false);
 

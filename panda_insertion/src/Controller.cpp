@@ -41,6 +41,8 @@ void Controller::init(ros::NodeHandle* nodeHandler, Panda* panda)
 
     swapControllerServer = nodeHandler->advertiseService("swap_controller", &Controller::swapControllerCallback, this);
     swapControllerClient = nodeHandler->serviceClient<panda_insertion::SwapController>("swap_controller");
+
+    generateInitialPositionTrajectory(100);
 }
 
 void Controller::startState()
@@ -487,6 +489,41 @@ Trajectory Controller::generateArchimedeanSpiral(double a, double b, int nrOfPoi
         spiral.push_back(point);
     }
     return spiral;
+}
+
+Trajectory Controller::generateInitialPositionTrajectory(int nrOfPoints)
+{
+    Trajectory trajectory;
+
+    Point startPoint;
+    startPoint.x = 0.275;
+    startPoint.y = 0.170;
+    startPoint.z = 0.289;
+
+    Point goalPoint;
+    goalPoint.x = 0.160;
+    goalPoint.y = 0.345;
+    goalPoint.z = 0.050;
+
+    Point pointSteps;
+    pointSteps.x = (goalPoint.x - startPoint.x) / nrOfPoints;
+    pointSteps.y = (goalPoint.y - startPoint.y) / nrOfPoints;
+    pointSteps.z = (goalPoint.z - startPoint.z) / nrOfPoints;
+
+
+
+    for (auto i = 0; i <= nrOfPoints; i++)
+    {
+        Point point;
+
+        point.x = startPoint.x + (pointSteps.x * i);
+        point.y = startPoint.y + (pointSteps.y * i);
+        point.z = startPoint.z + (pointSteps.z * i);
+
+        trajectory.push_back(point);
+    }
+    writeTrajectoryToFile(trajectory, "initalmovementtrajectory.csv");
+    return trajectory;
 }
 
 void Controller::setParameterStiffness(Stiffness stiffness)
