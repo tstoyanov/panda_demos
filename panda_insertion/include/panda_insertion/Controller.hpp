@@ -84,7 +84,7 @@ private:
     bool swapControllerCallback(panda_insertion::SwapController::Request& request,
                                   panda_insertion::SwapController::Response& response);
 
-    geometry_msgs::PoseStamped initialPoseMessage();
+    geometry_msgs::PoseStamped initialPoseMessage(Point point);
     trajectory_msgs::JointTrajectory initialJointTrajectoryMessage();
     geometry_msgs::PoseStamped downMovementPoseMessage(double z_coord);
     geometry_msgs::PoseStamped emptyPoseMessage();

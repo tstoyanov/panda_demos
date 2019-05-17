@@ -41,8 +41,6 @@ void Controller::init(ros::NodeHandle* nodeHandler, Panda* panda)
 
     swapControllerServer = nodeHandler->advertiseService("swap_controller", &Controller::swapControllerCallback, this);
     swapControllerClient = nodeHandler->serviceClient<panda_insertion::SwapController>("swap_controller");
-
-    generateInitialPositionTrajectory(100);
 }
 
 void Controller::startState()
@@ -62,17 +60,18 @@ bool Controller::moveToInitialPositionState()
     ROS_DEBUG_STREAM("fromController:" << swapController.request.from );
     ROS_DEBUG_STREAM("toController:" << swapController.request.to );
 
+    ros::Rate rate(loop_rate);
+
     //swapControllerClient.call(swapController);
 
-    geometry_msgs::PoseStamped initialPositionMessage = initialPoseMessage();
+    Trajectory initialTrajectory = generateInitialPositionTrajectory(100);
+    geometry_msgs::PoseStamped initialPositionMessage = emptyPoseMessage();
 
-    int i = 0;
-    ros::Rate rate(loop_rate);
-    while (ros::ok() && i < 130)
+    for (auto point : initialTrajectory)
     {
+        initialPositionMessage = initialPoseMessage(point);
         equilibriumPosePublisher.publish(initialPositionMessage);
         rate.sleep();
-        i++;
     }
 
     return true;
@@ -125,7 +124,7 @@ bool Controller::spiralMotionState()
     Trajectory spiralTrajectory = generateArchimedeanSpiral((panda->holeDiameter / 2) * 0.001, 0.0002, 150);
 
     // Write to file
-    writeTrajectoryToFile(spiralTrajectory, "spiral.csv");
+    //writeTrajectoryToFile(spiralTrajectory, "spiral.csv");
 
     geometry_msgs::PoseStamped spiralMotionMessage = emptyPoseMessage();
 
@@ -306,12 +305,16 @@ bool Controller::swapControllerCallback(panda_insertion::SwapController::Request
     return false;
 }
 
-geometry_msgs::PoseStamped Controller::initialPoseMessage()
+geometry_msgs::PoseStamped Controller::initialPoseMessage(Point point)
 {
     geometry_msgs::PoseStamped message = emptyPoseMessage();
 
     message.header.frame_id = baseFrameId;
-    message.pose.position = panda->initialPosition;
+    
+    message.pose.position.x = point.x;
+    message.pose.position.y = point.y;
+    message.pose.position.z = point.z;
+
     message.pose.orientation = panda->initialOrientation;
 
     return message;
@@ -522,7 +525,7 @@ Trajectory Controller::generateInitialPositionTrajectory(int nrOfPoints)
 
         trajectory.push_back(point);
     }
-    writeTrajectoryToFile(trajectory, "initalmovementtrajectory.csv");
+
     return trajectory;
 }
 
