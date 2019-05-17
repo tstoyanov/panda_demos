@@ -31,8 +31,8 @@ int velocity_profile_generator (std::vector<double> &result, int total_frames, i
     {
         result[i] = static_cast<double>(i + 1 - starting_frame) / (treshold_frame - starting_frame) * release_velocity;
         computed_total_distance += result[i];
-        std::cout << i << std::endl;
-        std::cout << "result[" << i << "] = " << result[i] << std::endl;
+        // std::cout << i << std::endl;
+        // std::cout << "result[" << i << "] = " << result[i] << std::endl;
     }
     for (unsigned i = treshold_frame; i < total_frames; i++)
     {

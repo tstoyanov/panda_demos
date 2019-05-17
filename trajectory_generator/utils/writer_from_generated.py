@@ -12,7 +12,7 @@ import getopt
 import os
 
 input_folder = "latest"
-tot_time_nsecs = 3000000000  # total execution time for the trajectory in nanoseconds
+tot_time_nsecs = 2000000000  # total execution time for the trajectory in nanoseconds
 
 try:
     opts, args = getopt.getopt(sys.argv[1:],"i:t:",["input=", "nanoseconds="])

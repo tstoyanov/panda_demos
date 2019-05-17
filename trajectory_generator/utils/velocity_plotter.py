@@ -10,6 +10,30 @@ filter_alpha = 0.9
 # if len(sys.arvg) == 2:
 #     input_folder = sys.argv[1]
 
+def set_axes_radius(ax, origin, radius):
+    ax.set_xlim3d([origin[0] - radius, origin[0] + radius])
+    ax.set_ylim3d([origin[1] - radius, origin[1] + radius])
+    ax.set_zlim3d([origin[2] - radius, origin[2] + radius])
+
+def set_axes_equal(ax):
+    '''Make axes of 3D plot have equal scale so that spheres appear as spheres,
+    cubes as cubes, etc..  This is one possible solution to Matplotlib's
+    ax.set_aspect('equal') and ax.axis('equal') not working for 3D.
+
+    Input
+      ax: a matplotlib axis, e.g., as output from plt.gca().
+    '''
+
+    limits = np.array([
+        ax.get_xlim3d(),
+        ax.get_ylim3d(),
+        ax.get_zlim3d(),
+    ])
+
+    origin = np.mean(limits, axis=1)
+    radius = 0.5 * np.max(np.abs(limits[:, 1] - limits[:, 0]))
+    set_axes_radius(ax, origin, radius)
+
 try:
     opts, args = getopt.getopt(sys.argv[1:],"i:",["input="])
 except getopt.GetoptError:
@@ -73,6 +97,7 @@ eef_distances = {
 # eef_distances["euclidean_distances"]["y"].append(trajectories["eef_trajectory"][1]["origin"]["y"] - trajectories["eef_trajectory"][0]["origin"]["y"])
 # eef_distances["euclidean_distances"]["z"].append(trajectories["eef_trajectory"][1]["origin"]["z"] - trajectories["eef_trajectory"][0]["origin"]["z"])
 
+# *100 converts the distances in centimeters
 eef_distances["euclidean_distances"]["x"].append((trajectories["eef_trajectory"][1]["origin"]["x"] - trajectories["eef_trajectory"][0]["origin"]["x"]) * 100)
 eef_distances["euclidean_distances"]["y"].append((trajectories["eef_trajectory"][1]["origin"]["y"] - trajectories["eef_trajectory"][0]["origin"]["y"]) * 100)
 eef_distances["euclidean_distances"]["z"].append((trajectories["eef_trajectory"][1]["origin"]["z"] - trajectories["eef_trajectory"][0]["origin"]["z"]) * 100)
@@ -223,6 +248,7 @@ for axis in eef_distances["euclidean_distances"]:
     plt.figure(input_folder + " cartesian distances " + str(axis))
 
     plt.subplot(2, 1, 1)
+    # plt.subplot(1, 1, 1)
     plt.plot(steps, eef_distances["euclidean_distances"][axis], 'o-g', label= str(axis) + " axis")
     plt.ylabel(str(axis) + " [cm]")
     plt.xlabel("frame count")
@@ -240,14 +266,18 @@ for axis in eef_distances["euclidean_distances"]:
 # # ============================3D EEF POSE PLOT=================================
 from mpl_toolkits.mplot3d import Axes3D
 fig = plt.figure("eef_trajectory " + input_folder)
-ax = fig.add_subplot(111, projection='3d')
+
+ax = fig.gca(projection='3d')
+ax.set_aspect('equal')
+
+# ax = fig.add_subplot(111, projection='3d')
 ax.scatter3D(eef_pose["origin"]["x"], eef_pose["origin"]["y"], eef_pose["origin"]["z"], c=eef_pose["origin"]["z"], cmap='Greens', label="eef_trajectory")
 
 # fig = plt.figure("fk_eef_trajectory")
 # ax = fig.add_subplot(111, projection='3d')
 ax.scatter3D(fk_eef_pose["origin"]["x"], fk_eef_pose["origin"]["y"], fk_eef_pose["origin"]["z"], c=fk_eef_pose["origin"]["z"], marker='^', cmap='Reds', label="fk_eef_trajectory")
 plt.legend()
-ax.axis('equal')
+# ax.axis('equal')
 
 # # =============================================================================
 #     # plt.figure(input_folder + " " + str(n))
@@ -277,6 +307,7 @@ ax.axis('equal')
 #     # plt.ylabel('accelerations/efforts')
 #     # plt.legend()
 
+set_axes_equal(ax)
 print("processing completed")
 print("showing graphs")
 plt.show()
