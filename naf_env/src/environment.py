@@ -14,6 +14,7 @@ class Env:
     def calc_shaped_reward(self, state):
         reward = 0
         done = False
+        self.goal_reward = 300
         distx = self.goal[0] - state[0][0]
         disty = self.goal[1] - state[0][1]
         dist = math.sqrt(distx**2 + disty**2)
@@ -25,8 +26,9 @@ class Env:
             reward += -10
             #done = True
         else:
-            if dist < 0.01:
-                reward += 100000
+            if dist < 0.02:
+                reward += self.goal_reward
+                print("--- Goal reached!! ---")
                 done = True
             else:
                 reward += -dist
@@ -47,8 +49,9 @@ class Env:
             reward += -10
             #done = True
         else:
-            if dist < 0.01:
-                reward += 100000
+            if dist < 0.02:
+                reward += self.goal_reward
+                print("--- Goal reached!! ---")
                 done = True
             else:
                 reward += -0.1

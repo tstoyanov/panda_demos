@@ -5,11 +5,13 @@ from rl_task_plugins.msg import StateMsg
 
 import argparse
 import matplotlib.pyplot as plt
+from matplotlib.pyplot import cm
 import gym
 import numpy as np
 import torch
 import time
 import subprocess
+import pickle
 
 #import files...
 from naf import NAF
@@ -53,7 +55,7 @@ def main():
                         help='initial noise scale (default: 0.3)')
     parser.add_argument('--final_noise_scale', type=float, default=0.3, metavar='G',
                         help='final noise scale (default: 0.4)')
-    parser.add_argument('--exploration_end', type=int, default=20, metavar='N',
+    parser.add_argument('--exploration_end', type=int, default=100, metavar='N',
                         help='number of episodes with noise (default: 100)')
     parser.add_argument('--seed', type=int, default=4, metavar='N',
                         help='random seed (default: 4)')
@@ -61,7 +63,7 @@ def main():
                         help='batch size (default: 512)')
     parser.add_argument('--num_steps', type=int, default=300, metavar='N',
                         help='max episode length (default: 1000)')
-    parser.add_argument('--num_episodes', type=int, default=500, metavar='N',
+    parser.add_argument('--num_episodes', type=int, default=300, metavar='N',
                         help='number of episodes (default: 1000)')
     parser.add_argument('--hidden_size', type=int, default=128, metavar='N',
                         help='hidden size (default: 128)')
@@ -104,14 +106,15 @@ def main():
     avg_greedy_reward = []
     upper_reward = []
     lower_reward = []
-
+    steps_to_goal = []
+    state_plot = []
     sim_reset_start()
 
     pub = rospy.Publisher('/ee_rl/act', DesiredErrorDynamicsMsg, queue_size=10)
     rospy.Subscriber("/ee_rl/state", StateMsg, callback)
     rate = rospy.Rate(9)
     rate.sleep()
-    for i_episode in range(args.num_episodes):
+    for i_episode in range(args.num_episodes+1):
         # -- reset environment for every episode --
         sim_reset()
         state = torch.Tensor(subdata).unsqueeze(0)
@@ -131,7 +134,7 @@ def main():
             a = action.numpy()[0] * 50
             act_pub = [a[0], a[1]]
             #print(action.numpy()[0] * 50)
-            print(act_pub)
+            #print(act_pub)
             pub.publish(act_pub)
             next_state = torch.Tensor(subdata).unsqueeze(0)
             reward, done = env.calc_shaped_reward(next_state)
@@ -150,7 +153,7 @@ def main():
             # -- training --
             # print("len(memory): {}".format(len(memory)))
             if len(memory) > args.batch_size and args.train_model:
-                for _ in range(20):
+                for _ in range(10):
                     transitions = memory.sample(args.batch_size)
                     batch = Transition(*zip(*transitions))
 
@@ -166,7 +169,7 @@ def main():
         rewards.append(episode_reward)
 
         if args.train_model:
-            greedy_episode = max(args.num_episodes/100, 10)
+            greedy_episode = max(args.num_episodes/100, 5)
         else:
             greedy_episode = 10
         greedy_range = min(args.greedy_steps, greedy_episode)
@@ -181,23 +184,38 @@ def main():
                 episode_reward = 0
                 steps = 0
 
+                state_plot.append([])
+                st = state.numpy()[0]
+                sta = [st[0], st[1]]
+                state_plot[_].append(sta)
+
                 while True:
                     action = agent.select_action(state)
-                    pub.publish(action.numpy()[0] * 50)
+                    a = action.numpy()[0] * 50
+                    act_pub = [a[0], a[1]]
+                    pub.publish(act_pub)
                     next_state = torch.Tensor(subdata).unsqueeze(0)
                     reward, done = env.calc_shaped_reward(next_state)
                     episode_reward += reward
 
                     state = next_state
+
+                    st = state.numpy()[0]
+                    sta = [st[0], st[1]]
+                    state_plot[_].append(sta)
+
                     steps += 1
                     if done or steps == args.num_steps:
                         greedy_reward.append(episode_reward)
                         break
                     rate.sleep()
 
-            upper_reward.append(np.max(rewards[-greedy_episode:]))
-            lower_reward.append(np.min(rewards[-greedy_episode:]))
+                steps_to_goal.append(steps)
+
+            upper_reward.append((np.max(greedy_reward[-greedy_range:])))
+            lower_reward.append((np.min(greedy_reward[-greedy_range:])))
             avg_greedy_reward.append((np.mean(greedy_reward[-greedy_range:])))
+
 
             print("Episode: {}, total numsteps: {}, avg_greedy_reward: {}, average reward: {}".format(
                i_episode, total_numsteps, avg_greedy_reward[-1], np.mean(rewards[-greedy_episode:])))
@@ -206,24 +224,47 @@ def main():
     #-- saves model --greedy_episode
     if args.save_agent:
         agent.save_model(args.env_name, args.batch_size, '.pth')
+        with open('exp_replay.pk1', 'wb') as output:
+            pickle.dump(memory.memory, output, pickle.HIGHEST_PROTOCOL)
 
     print('Training ended after {} minutes'.format((time.time() - t_start)/60))
     print('Time per ep : {} s').format((time.time() - t_start) / args.num_episodes)
     print('Mean greedy reward: {}'.format(np.mean(greedy_reward)))
+    print('Mean reward: {}'.format(np.mean(rewards)))
+    print('Max reward: {}'.format(np.max(rewards)))
+    print('Min reward: {}'.format(np.min(rewards)))
 
     # -- plot learning curve --
     pos_greedy = []
     for pos in range(0, len(lower_reward)):
         pos_greedy.append(pos*greedy_episode)
 
+    plt.title('Greedy policy outcome')
     plt.fill_between(pos_greedy, lower_reward, upper_reward, facecolor='red', alpha=0.3)
     plt.plot(pos_greedy, avg_greedy_reward, 'r')
-    print('Mean reward: {}'.format(np.mean(rewards)))
-    print('Max reward: {}'.format(np.max(rewards)))
-    print('Min reward: {}'.format(np.min(rewards)))
-    plt.plot(rewards, 'r')
-    fname = 'plot_{}_{}_{}'.format(args.env_name, args.batch_size, '.png')
-    plt.savefig(fname)
+    plt.xlabel('Number of episodes')
+    plt.ylabel('Rewards')
+    fname1 = 'plot1_{}_{}_{}'.format(args.env_name, args.batch_size, '.png')
+    plt.savefig(fname1)
+    plt.close()
+
+    plt.title('Steps to reach goal')
+    plt.plot(steps_to_goal)
+    plt.ylabel('Number of steps')
+    plt.xlabel('Number of episodes')
+    fname2 = 'plot2_{}_{}_{}'.format(args.env_name, args.batch_size, '.png')
+    plt.savefig(fname2)
+    plt.close()
+
+    color = iter(cm.rainbow(np.linspace(0,1,len(state_plot))))
+    for i in range(0, len(state_plot)):
+        c = next(color)
+        plt.plot(state_plot[i][0], state_plot[i][1], c=c)
+    fname3 = 'plotPath_{}_{}_{}'.format(args.env_name, args.batch_size, '.png')
+    plt.savefig(fname3)
+    plt.close()
+
+
 
 
 if __name__ == '__main__':

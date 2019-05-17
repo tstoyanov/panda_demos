@@ -2,4 +2,7 @@
 /naf_env/src/runs/*
 /naf_env/src/saved_plots/*
 /naf_env/src/*.pyc
+/models/*
+/*.png
+/*.pk1
 /.idea/*
