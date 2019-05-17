@@ -23,10 +23,10 @@ void Panda::init(ros::NodeHandle* nodeHandler)
     initialPosition.y = yGoal;
     initialPosition.z = zGoal;
 
-    initialOrientation.x = 1.0;
-    initialOrientation.y = 0.0;
-    initialOrientation.z = 0.0;
-    initialOrientation.w = 0.0;
+    initialOrientation.x = 0.983;
+    initialOrientation.y = 0.186;
+    initialOrientation.z = 0.002;
+    initialOrientation.w = 0.001;
 
     position = initialPosition;
     orientation = initialOrientation;

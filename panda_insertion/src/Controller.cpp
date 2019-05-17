@@ -315,7 +315,11 @@ geometry_msgs::PoseStamped Controller::initialPoseMessage(Point point)
     message.pose.position.y = point.y;
     message.pose.position.z = point.z;
 
-    message.pose.orientation = panda->initialOrientation;
+   //  message.pose.orientation = panda->initialOrientation;
+   message.pose.orientation.x = 0.983;
+   message.pose.orientation.y = 0.186;
+   message.pose.orientation.z = 0.002;
+   message.pose.orientation.w = 0.001;
 
     return message;
 }
@@ -504,7 +508,7 @@ Trajectory Controller::generateInitialPositionTrajectory(int nrOfPoints)
     startPoint.z = 0.289;
 
     Point goalPoint;
-    goalPoint.x = 0.160;
+    goalPoint.x = 0.153;
     goalPoint.y = 0.345;
     goalPoint.z = 0.050;
 
