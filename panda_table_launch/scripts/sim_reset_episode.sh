@@ -9,6 +9,9 @@ rosservice call /hiqp_joint_effort_controller/remove_tasks \
 - 'ee_cage_right'
 - 'ee_cage_back'
 - 'ee_cage_front'
+- 'ee_obst1'
+- 'ee_obst2'
+- 'ee_obst3'
 - 'ee_rl'
 " 
 
