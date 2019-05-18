@@ -42,6 +42,7 @@ add_executable(insertion
   src/Controller.cpp
   src/Panda.cpp
   src/MessageHandler.cpp
+  src/TrajectoryHandler.cpp
 )
 
 target_link_libraries(insertion ${catkin_LIBRARIES})
