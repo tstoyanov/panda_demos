@@ -28,10 +28,10 @@ public:
 
     PoseStampedMsg initialPoseMessage(Point point);
     JointTrajectoryMsg initialJointTrajectoryMessage();
-    PoseStampedMsg downMovementPoseMessage(double z_coord);
+    PoseStampedMsg downMovementPoseMessage(double zCoordinate);
     PoseStampedMsg emptyPoseMessage();
     PoseStampedMsg spiralPointPoseMessage(Point point);
-    PoseStampedMsg insertionWigglePoseMessage(double x_angle);
+    PoseStampedMsg insertionWigglePoseMessage(double xAngle);
     PoseStampedMsg straighteningPoseMessage();
 
     Eigen::Affine3d rotateMatrixRPY(Eigen::Affine3d tMatrix, double rollAngle,

@@ -41,6 +41,7 @@ Controller::~Controller()
 void Controller::init(ros::NodeHandle* nodeHandler, Panda* panda)
 {
     loop_rate = 10;
+
     this->nodeHandler = nodeHandler;
     this->panda = panda;
     this->messageHandler = new MessageHandler(nodeHandler, panda);
@@ -65,20 +66,18 @@ void Controller::startState()
 
 bool Controller::moveToInitialPositionState()
 {
+    // Get controllers from parameter server
     panda_insertion::SwapController swapController;
     nodeHandler->getParam("insertion/positionJointTrajectoryController", swapController.request.from);
     nodeHandler->getParam("insertion/impedanceController", swapController.request.to);
-
-    ROS_DEBUG_STREAM("fromController:" << swapController.request.from );
-    ROS_DEBUG_STREAM("toController:" << swapController.request.to );
-
-    ros::Rate rate(loop_rate);
 
     //swapControllerClient.call(swapController);
 
     Trajectory initialTrajectory = trajectoryHandler->generateInitialPositionTrajectory(100);
     PoseStamped initialPositionMessage = messageHandler->emptyPoseMessage();
 
+    // Execute trajectory
+    ros::Rate rate(loop_rate);
     for (auto point : initialTrajectory)
     {
         initialPositionMessage = messageHandler->initialPoseMessage(point);
@@ -131,15 +130,16 @@ bool Controller::spiralMotionState()
 {
     ROS_DEBUG_ONCE("In spiral motion state from controller");
 
-    ros::Rate rate(loop_rate);
-    
-    Trajectory spiralTrajectory = trajectoryHandler->generateArchimedeanSpiral((panda->holeDiameter / 2) * 0.001, 0.0002, 150);
-
-    // Write to file
-    //trajectoryHandler.writeTrajectoryToFile(spiralTrajectory, "spiral.csv");
+    // Generate trajectory
+    int a = (panda->holeDiameter / 2) * 0.001;
+    int b = 0.0002;
+    int nrOfPoints = 150;
+    Trajectory spiralTrajectory = trajectoryHandler->generateArchimedeanSpiral(a, b, nrOfPoints);
 
     PoseStamped spiralMotionMessage = messageHandler->emptyPoseMessage();
 
+    // Execute trajectory
+    ros::Rate rate(loop_rate);
     for (auto point : spiralTrajectory)
     {
         spiralMotionMessage = messageHandler->spiralPointPoseMessage(point);
@@ -147,20 +147,21 @@ bool Controller::spiralMotionState()
         panda->updatePosition(spiralMotionMessage.pose.position.x, spiralMotionMessage.pose.position.y, spiralMotionMessage.pose.position.z);
         rate.sleep();
     }
+
     return true;
 }
 
 bool Controller::insertionWiggleState()
 {
     ROS_DEBUG_ONCE("In insertion wiggle state from controller");
-
+    
+    double xAngle = 0.0005;
     int i = 0;
     ros::Rate rate(loop_rate);
-    
-    double x_angle = 0.0005;
+
     while (ros::ok() && i < 60)
     {
-        PoseStamped insertionWiggleMessage = messageHandler->insertionWigglePoseMessage(x_angle);
+        PoseStamped insertionWiggleMessage = messageHandler->insertionWigglePoseMessage(xAngle);
 
         equilibriumPosePublisher.publish(insertionWiggleMessage);
         rate.sleep();
@@ -173,10 +174,10 @@ bool Controller::insertionWiggleState()
 
         i++;
 
-        if (!(i % 3))
+        if ((i % 3) == 0)
         {
-            ROS_DEBUG_STREAM("x_angle flipped: x_angle = " << x_angle);
-            x_angle = -(x_angle);
+            ROS_DEBUG_STREAM("x_angle flipped: xAngle = " << xAngle);
+            xAngle = -(xAngle);
         }
     }
 
@@ -235,6 +236,7 @@ bool Controller::internalDownMovementState()
         rate.sleep();
         i++;
     }
+
     return true;
 }
 
@@ -309,9 +311,8 @@ bool Controller::swapControllerCallback(panda_insertion::SwapController::Request
     service.request.start_controllers = {to.c_str()};
     service.request.strictness = 2;
 
-    ROS_DEBUG_STREAM("Trying to swap controller from " << from
-                     << " to " << to
-                     << " with service " << serviceName);
+    ROS_DEBUG_STREAM("Trying to swap controller from [" << from << "] "
+           << " to [" << to << "] with service [" << serviceName << "]");
 
     if (client.call(service))
     {
