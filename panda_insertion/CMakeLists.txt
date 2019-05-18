@@ -15,11 +15,14 @@ find_package(catkin REQUIRED COMPONENTS
 
 find_package(Eigen3 REQUIRED)
 
-add_service_files(DIRECTORY srv FILES ChangeState.srv SwapController.srv)
+add_definitions(-std=c++11) 
 
-generate_messages(
-  DEPENDENCIES
+add_service_files(FILES
+    ChangeState.srv
+    SwapController.srv
 )
+
+generate_messages()
 
 ## Declare a catkin package
 catkin_package(
@@ -32,21 +35,24 @@ catkin_package(
 ## Your package locations should be listed before other locations
 include_directories(include ${catkin_INCLUDE_DIRS} ${EIGEN_INCLUDE_DIR})
 
-add_definitions(-std=c++11) 
-
-add_library(panda_insertion
-  src/Insertion.cpp
-  src/Controller.cpp
-  src/Panda.cpp
-)
 
 add_executable(insertion
   src/insertion_main.cpp
   src/Insertion.cpp
   src/Controller.cpp
   src/Panda.cpp
+  src/MessageHandler.cpp
 )
 
-add_dependencies(insertion panda_insertion_generate_messages_cpp ${${PROJECT_NAME}_EXPORT_TARGETS} ${catkin_EXPORTED_TARGETS} )
-
 target_link_libraries(insertion ${catkin_LIBRARIES})
+
+#add_library(panda_insertion
+  #src/Insertion.cpp
+  #src/Controller.cpp
+  #src/Panda.cpp
+  #src/MessageHandler.cpp
+#)
+
+add_dependencies(insertion ${${PROJECT_NAME}_generate_messages_cpp} ${${PROJECT_NAME}_EXPORT_TARGETS} ${catkin_EXPORTED_TARGETS} )
+#add_dependencies(insertion ${PROJECT_NAME}_generate_messages_cpp)
+
