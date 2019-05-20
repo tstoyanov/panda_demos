@@ -76,6 +76,8 @@ bool Controller::moveToInitialPositionState()
     Trajectory initialTrajectory = trajectoryHandler->generateInitialPositionTrajectory(100);
     PoseStamped initialPositionMessage = messageHandler->emptyPoseMessage();
 
+    trajectoryHandler->writeTrajectoryToFile(initialTrajectory, "initTraj.csv");
+
     // Execute trajectory
     ros::Rate rate(loop_rate);
     for (auto point : initialTrajectory)
@@ -92,24 +94,6 @@ bool Controller::externalDownMovementState()
 {
     ROS_DEBUG_ONCE("In external down movement state from controller");
 
-    Stiffness stiffness;
-    Damping damping;
-    stiffness.translational_x = 5000;
-    stiffness.translational_y = 5000;
-    stiffness.translational_z = 5000;
-    stiffness.rotational_x = 5000;
-    stiffness.rotational_y = 5000;
-    stiffness.rotational_z = 5000;
-
-    damping.translational_x = 65;
-    damping.translational_y = 65;
-    damping.translational_z = 65;
-    damping.rotational_x = 45;
-    damping.rotational_y = 45;
-    damping.rotational_z = 45;
-
-    // setParameterStiffness(stiffness);
-    // setParameterDamping(damping);    
     
     int i = 0;
     ros::Rate rate(loop_rate);

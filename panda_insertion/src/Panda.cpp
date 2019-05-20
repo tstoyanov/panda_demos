@@ -39,4 +39,21 @@ void Panda::updatePosition(double x, double y, double z)
     position.z = z;
 }
 
+void Panda::updateWrenchForces(geometry_msgs::Wrench wrench)
+{
+    mutex.lock();
+    this->wrenchMsg.wrench = wrench;
+    mutex.unlock();
+}
+
+geometry_msgs::Wrench Panda::getWrench()
+{
+    return wrenchMsg.wrench;
+}
+
+void Panda::updateTransform(geometry_msgs::Transform transform)
+{
+    transformStamped.transform = transform;
+}
+
 // Private methods

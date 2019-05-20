@@ -7,6 +7,7 @@
 #include <ros/callback_queue.h>
 #include <string>
 #include <boost/thread.hpp>
+#include <ros/duration.h>
 #include <boost/algorithm/string.hpp>
 
 using namespace std;
@@ -20,6 +21,12 @@ Insertion::Insertion(ros::NodeHandle nodeHandler)
     
     this->nodeHandler = nodeHandler;
     init();
+}
+
+// Destructor
+Insertion::~Insertion()
+{
+    delete tfListener;
 }
 
 // Public methods
@@ -105,12 +112,56 @@ void Insertion::periodicTimerCallback(const ros::TimerEvent& event)
     ROS_DEBUG_STREAM_NAMED("thread_id" ,"Periodic timer callback in thread:" << boost::this_thread::get_id());
     stateMachineRun();
 }
+void Insertion::transformTimerCallback(const ros::TimerEvent& event)
+{
+    geometry_msgs::TransformStamped transformStamped;
+
+    try
+    {
+        transformStamped = tfBuffer.lookupTransform("panda_link0", "tool", ros::Time::now(),ros::Duration(1.0));
+    }
+    catch (tf2::TransformException &ex)
+    {
+        ROS_WARN("%s", ex.what());
+    }
+
+    mutex.lock();
+    panda.updateTransform(transformStamped.transform);
+    mutex.unlock();
+
+    ROS_DEBUG_STREAM_ONCE("transformStamped.transform.translation.z: " << transformStamped.transform.translation.z);
+}
 
 void Insertion::tfSubscriberCallback(const tf2_msgs::TFMessageConstPtr& message)
 {
     const unsigned int FREQUENCY_HZ = 5;
 
     ROS_DEBUG_STREAM_NAMED("thread_id", "tf subscriber callback in thread:" << boost::this_thread::get_id());
+
+    ros::Rate loop_rate(FREQUENCY_HZ);
+    loop_rate.sleep();
+}
+
+void Insertion::externalForceSubscriberCallback(const geometry_msgs::WrenchStamped::ConstPtr& message)
+{
+    //ROS_DEBUG_ONCE("externalForceSubscriberCallback triggered!");
+    const unsigned int FREQUENCY_HZ = 100;
+
+    //ROS_DEBUG_STREAM_NAMED("thread_id", "external force subscriber callback in thread:" << boost::this_thread::get_id());
+
+    //ROS_DEBUG_STREAM("force.x: " << message->wrench.force.x);
+
+    mutex.lock();
+    panda.updateWrenchForces(message->wrench);
+    mutex.unlock();
+
+    geometry_msgs::WrenchStamped fetchedWrench;
+
+    mutex.lock();
+    fetchedWrench.wrench = panda.getWrench();
+    mutex.unlock();
+
+    ROS_DEBUG_STREAM_ONCE("wrench.fetched.force.x: " << fetchedWrench.wrench.force.x);
 
     ros::Rate loop_rate(FREQUENCY_HZ);
     loop_rate.sleep();
@@ -192,7 +243,13 @@ void Insertion::init()
     activeState = Idle;
 
     periodicTimer = nodeHandler.createTimer(ros::Duration(0.1), &Insertion::periodicTimerCallback, this);
-    tfSubscriber = nodeHandler.subscribe("/tf", 1, &Insertion::tfSubscriberCallback,this);
+    transformTimer = nodeHandler.createTimer(ros::Duration(0.1), &Insertion::transformTimerCallback, this);
+
+    this->tfListener = new tf2_ros::TransformListener(tfBuffer);
+
+    tfSubscriber = nodeHandler.subscribe("/tf", 100, &Insertion::tfSubscriberCallback,this);
+    externalForceSubscriber = nodeHandler.subscribe("/panda/franka_state_controller/F_ext", 100, &Insertion::externalForceSubscriberCallback, this);
+
     iterateStateServer = nodeHandler.advertiseService("change_state", &Insertion::changeStateCallback, this);
     stateClient = nodeHandler.serviceClient<panda_insertion::ChangeState>("change_state");
 

@@ -50,12 +50,18 @@ Trajectory TrajectoryHandler::generateArchimedeanSpiral(double a, double b,
 Trajectory TrajectoryHandler::generateInitialPositionTrajectory(int nrOfPoints)
 {
     Trajectory trajectory;
+    geometry_msgs::Transform transform;
+
+    mutex.lock();
+    transform = panda->transformStamped.transform;
+    mutex.unlock();
 
     Point startPoint;
-    startPoint.x = 0.275;
-    startPoint.y = 0.170;
-    startPoint.z = 0.289;
+    startPoint.x = transform.translation.x;
+    startPoint.y = transform.translation.y;
+    startPoint.z = transform.translation.z;
 
+    ROS_DEBUG_STREAM_ONCE("Startpoint xyz: " << startPoint.x << ", " << startPoint.y << ", " << startPoint.z);
     Point goalPoint;
     goalPoint.x = 0.153;
     goalPoint.y = 0.345;

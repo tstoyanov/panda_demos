@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   roslib
   eigen_conversions
   message_generation
+  tf2_ros
 )
 
 find_package(Eigen3 REQUIRED)
@@ -26,7 +27,7 @@ generate_messages()
 
 ## Declare a catkin package
 catkin_package(
-  CATKIN_DEPENDS roscpp std_msgs std_srvs tf2_msgs trajectory_msgs roslib eigen_conversions message_runtime
+  CATKIN_DEPENDS roscpp std_msgs std_srvs tf2_msgs trajectory_msgs roslib eigen_conversions message_runtime tf2_ros
   INCLUDE_DIRS include
   LIBRARIES panda_insertion
 )

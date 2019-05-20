@@ -4,6 +4,7 @@
 #include "ros/ros.h"
 
 #include "panda_insertion/Panda.hpp"
+#include <boost/thread/mutex.hpp>
 
 #include "vector"
 #include "string"
@@ -20,6 +21,7 @@ class TrajectoryHandler
 private:
     ros::NodeHandle* nodeHandler;
     Panda* panda;
+    boost::mutex mutex;
 
 public:
     TrajectoryHandler();
