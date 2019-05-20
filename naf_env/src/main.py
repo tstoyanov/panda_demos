@@ -123,6 +123,8 @@ def main():
     rospy.Subscriber("/ee_rl/state", StateMsg, callback)
     rate = rospy.Rate(9)
     rate.sleep()
+
+
     for i_episode in range(args.num_episodes+1):
         # -- reset environment for every episode --
         sim_reset()
@@ -138,8 +140,10 @@ def main():
 
         while True:
             # -- action selection, observation and store transition --
-            #action = agent.select_action(state)
-            action = agent.select_action(state, ounoise)
+            #if args.train_model:    action = agent.select_action(state, ounoise)
+            #else:                   action = agent.select_action(state)
+            action = agent.select_action(state, ounoise) if args.train_model else agent.select_action(state)
+
             a = action.numpy()[0] * 50
             act_pub = [a[0], a[1]]
             #print(action.numpy()[0] * 50)
@@ -235,6 +239,7 @@ def main():
 
             print("Episode: {}, total numsteps: {}, avg_greedy_reward: {}, average reward: {}".format(
                i_episode, total_numsteps, avg_greedy_reward[-1], np.mean(rewards[-greedy_episode:])))
+
 
 
     #-- saves model --greedy_episode
