@@ -55,7 +55,7 @@ def main():
                         help='initial noise scale (default: 0.3)')
     parser.add_argument('--final_noise_scale', type=float, default=0.3, metavar='G',
                         help='final noise scale (default: 0.4)')
-    parser.add_argument('--exploration_end', type=int, default=100, metavar='N',
+    parser.add_argument('--exploration_end', type=int, default=23, metavar='N',
                         help='number of episodes with noise (default: 100)')
     parser.add_argument('--seed', type=int, default=4, metavar='N',
                         help='random seed (default: 4)')
@@ -63,18 +63,20 @@ def main():
                         help='batch size (default: 512)')
     parser.add_argument('--num_steps', type=int, default=300, metavar='N',
                         help='max episode length (default: 1000)')
-    parser.add_argument('--num_episodes', type=int, default=300, metavar='N',
+    parser.add_argument('--num_episodes', type=int, default=600, metavar='N',
                         help='number of episodes (default: 1000)')
     parser.add_argument('--hidden_size', type=int, default=128, metavar='N',
                         help='hidden size (default: 128)')
     parser.add_argument('--replay_size', type=int, default=1000000, metavar='N',
                         help='size of replay buffer (default: 1000000)')
-    parser.add_argument('--save_agent', type=bool, default=True,
+    parser.add_argument('--save_agent', type=bool, default=False,
                         help='save model to file')
-    parser.add_argument('--load_agent', type=bool, default=False,
+    parser.add_argument('--load_agent', type=bool, default=True,
                         help='load model from file')
-    parser.add_argument('--train_model', type=bool, default=True,
+    parser.add_argument('--train_model', type=bool, default=False,
                         help='Training or run')
+    parser.add_argument('--load_exp', type=bool, default=False,
+                        help='load saved experience')
     parser.add_argument('--greedy_steps', type=int, default=5, metavar='N',
                         help='amount of times greedy goes (default: 100)')
 
@@ -91,14 +93,20 @@ def main():
     agent = NAF(args.gamma, args.tau, args.hidden_size,
                 env.observation_space.shape[0], env.action_space)
 
+    # -- declare memory buffer and random process N
+    memory = ReplayMemory(args.replay_size)
+    ounoise = OUNoise(env.action_space.shape[0]) if args.ou_noise else None
+
     # -- load existing model --
     if args.load_agent:
         agent.load_model(args.env_name, args.batch_size, '.pth')
         print("agent: naf_{}_{}_{}, is loaded").format(args.env_name, args.batch_size, '.pth')
+    # -- load experience buffer --
+    if args.load_exp:
+        with open('/home/aass/catkin_workspace/src/panda_demos/exp_replay.pk1', 'rb') as input:
+            memory.memory = pickle.load(input)
+            memory.position = len(memory)
 
-    # -- declare memory buffer and random process N
-    memory = ReplayMemory(args.replay_size)
-    ounoise = OUNoise(env.action_space.shape[0]) if args.ou_noise else None
 
     rewards = []
     total_numsteps = 0
@@ -107,6 +115,7 @@ def main():
     upper_reward = []
     lower_reward = []
     steps_to_goal = []
+    avg_steps_to_goal = []
     state_plot = []
     sim_reset_start()
 
@@ -147,6 +156,12 @@ def main():
             reward = torch.Tensor([reward])
 
             memory.push(state, action, mask, next_state, reward)
+
+            # print(state, action, mask, next_state, reward)
+            # print(memory.memory[0])
+            # print(len(memory))
+            # print(memory.memory[len(memory)-2])
+            # print":)"
 
             state = next_state
 
@@ -215,6 +230,7 @@ def main():
             upper_reward.append((np.max(greedy_reward[-greedy_range:])))
             lower_reward.append((np.min(greedy_reward[-greedy_range:])))
             avg_greedy_reward.append((np.mean(greedy_reward[-greedy_range:])))
+            avg_steps_to_goal.append((np.mean(steps_to_goal[-greedy_range:])))
 
 
             print("Episode: {}, total numsteps: {}, avg_greedy_reward: {}, average reward: {}".format(
@@ -244,7 +260,7 @@ def main():
     plt.plot(pos_greedy, avg_greedy_reward, 'r')
     plt.xlabel('Number of episodes')
     plt.ylabel('Rewards')
-    fname1 = 'plot1_{}_{}_{}'.format(args.env_name, args.batch_size, '.png')
+    fname1 = 'plot1_obs_{}_{}_{}'.format(args.env_name, args.batch_size, '.png')
     plt.savefig(fname1)
     plt.close()
 
@@ -252,17 +268,17 @@ def main():
     plt.plot(steps_to_goal)
     plt.ylabel('Number of steps')
     plt.xlabel('Number of episodes')
-    fname2 = 'plot2_{}_{}_{}'.format(args.env_name, args.batch_size, '.png')
+    fname2 = 'plot2_obs_{}_{}_{}'.format(args.env_name, args.batch_size, '.png')
     plt.savefig(fname2)
     plt.close()
 
-    color = iter(cm.rainbow(np.linspace(0,1,len(state_plot))))
-    for i in range(0, len(state_plot)):
-        c = next(color)
-        plt.plot(state_plot[i][0], state_plot[i][1], c=c)
-    fname3 = 'plotPath_{}_{}_{}'.format(args.env_name, args.batch_size, '.png')
-    plt.savefig(fname3)
-    plt.close()
+    # color = iter(cm.rainbow(np.linspace(0,1,len(state_plot))))
+    # for i in range(0, len(state_plot)):
+    #     c = next(color)
+    #     plt.plot(state_plot[i][0], state_plot[i][1], c=c)
+    # fname3 = 'plotPath_obs_{}_{}_{}'.format(args.env_name, args.batch_size, '.png')
+    # plt.savefig(fname3)
+    # plt.close()
 
 
 

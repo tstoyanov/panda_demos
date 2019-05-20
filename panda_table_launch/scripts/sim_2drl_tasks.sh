@@ -149,7 +149,7 @@ rosservice call /hiqp_joint_effort_controller/set_tasks \
   priority: 2
   visible: 1
   active: 1
-  monitored: 0
+  monitored: 1
   def_params: ['TDefGeomProj', 'point', 'sphere', 'ee_point > obst1']
   dyn_params: ['TDynPD', '100.0', '30.0']
 - name: 'ee_obst2'

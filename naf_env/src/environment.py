@@ -9,29 +9,29 @@ class Env:
 
         self.action_space = spaces.Box(low=low, high=high, dtype=np.float32)
         self.observation_space = spaces.Box(low, high, dtype=np.float32)
-        self.goal = [-0.27, -0.17]
+        self.goal = [-0.3, -0.09]
 
     def calc_shaped_reward(self, state):
         reward = 0
         done = False
-        self.goal_reward = 300
+        self.goal_reward = 200
         distx = self.goal[0] - state[0][0]
         disty = self.goal[1] - state[0][1]
         dist = math.sqrt(distx**2 + disty**2)
 
-        if state[0][1] > 0.2 or state[0][1] < -0.24:
-            reward += -10
-            #done = True
-        elif state[0][0] > 0.075 or state[0][0] < -0.35:
-            reward += -10
-            #done = True
+        # if state[0][1] > 0.2 or state[0][1] < -0.24:
+        #     reward += -10
+        #     #done = True
+        # elif state[0][0] > 0.075 or state[0][0] < -0.35:
+        #     reward += -10
+        #     #done = True
+        # else:
+        if dist < 0.02:
+            reward += self.goal_reward
+            print("--- Goal reached!! ---")
+            done = True
         else:
-            if dist < 0.02:
-                reward += self.goal_reward
-                print("--- Goal reached!! ---")
-                done = True
-            else:
-                reward += -dist
+            reward += -dist
 
         return reward, done
 
