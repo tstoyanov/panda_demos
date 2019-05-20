@@ -108,7 +108,7 @@ class NAF:
         mu = mu.data
         if action_noise is not None:
             mu += torch.Tensor(action_noise.noise())
-        return mu.clamp(-300, 300)
+        return mu.clamp(-1, 1)
 
     #@profile
     def update_parameters(self, batch):
