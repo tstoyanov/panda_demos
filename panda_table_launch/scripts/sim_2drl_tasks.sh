@@ -67,23 +67,23 @@ rosservice call /hiqp_joint_effort_controller/set_primitives \
   color: [0.2, 0.5, 0.2, 0.21]
   parameters: [1.0, 0.0, 0.0, -0.4]
 - name: 'obst1'  
-  type: 'sphere'
+  type: 'cylinder'
   frame_id: 'world'
   visible: true
   color: [1.0, 0.0, 0.0, 1.0]
-  parameters: [-0.1, 0.1, 0.77, 0.02]
+  parameters: [0,0,1, -0.1, 0.1, 0.77, 0.02, 0.05]
 - name: 'obst2'  
-  type: 'sphere'
+  type: 'cylinder'
   frame_id: 'world'
   visible: true
   color: [1.0, 0.0, 0.0, 1.0]
-  parameters: [-0.25, 0.0, 0.77, 0.03]
+  parameters: [0,0,1, -0.25, 0.0, 0.77, 0.03, 0.05]
 - name: 'obst3'  
-  type: 'sphere'
+  type: 'cylinder'
   frame_id: 'world'
   visible: true
   color: [1.0, 0.0, 0.0, 1.0]
-  parameters: [-0.2, -0.1, 0.77, 0.04]
+  parameters: [0,0,1, -0.15, -0.13, 0.77, 0.035, 0.05]
 - name: 'goal'  
   type: 'sphere'
   frame_id: 'world'
@@ -97,7 +97,7 @@ rosservice call /hiqp_joint_effort_controller/set_primitives \
 rosservice call /hiqp_joint_effort_controller/set_tasks \
 "tasks:
 - name: 'full_pose'
-  priority: 4
+  priority: 5
   visible: 1
   active: 1
   monitored: 0
@@ -114,7 +114,7 @@ rosservice call /hiqp_joint_effort_controller/set_tasks \
   priority: 1
   visible: 1
   active: 1
-  monitored: 1
+  monitored: 0
   def_params: ['TDefGeomAlign', 'line', 'line', 'ee_z_axis = table_z_axis', '0.2']
   dyn_params: ['TDynPD', '400.0', '150.0']
 - name: 'ee_cage_front'
@@ -146,28 +146,28 @@ rosservice call /hiqp_joint_effort_controller/set_tasks \
   def_params: ['TDefGeomProj', 'point', 'plane', 'ee_point > right_plane']
   dyn_params: ['TDynPD', '100.0', '30.0']
 - name: 'ee_obst1'
-  priority: 2
+  priority: 3
   visible: 1
   active: 1
-  monitored: 0
-  def_params: ['TDefGeomProj', 'point', 'sphere', 'ee_point > obst1']
+  monitored: 1
+  def_params: ['TDefGeomProj', 'point', 'cylinder', 'ee_point > obst1']
   dyn_params: ['TDynPD', '100.0', '30.0']
 - name: 'ee_obst2'
-  priority: 2
+  priority: 3
   visible: 1
   active: 1
-  monitored: 0
-  def_params: ['TDefGeomProj', 'point', 'sphere', 'ee_point > obst2']
+  monitored: 1
+  def_params: ['TDefGeomProj', 'point', 'cylinder', 'ee_point > obst2']
   dyn_params: ['TDynPD', '100.0', '30.0']
 - name: 'ee_obst3'
-  priority: 2
+  priority: 3
   visible: 1
   active: 1
-  monitored: 0
-  def_params: ['TDefGeomProj', 'point', 'sphere', 'ee_point > obst3']
+  monitored: 1
+  def_params: ['TDefGeomProj', 'point', 'cylinder', 'ee_point > obst3']
   dyn_params: ['TDynPD', '100.0', '30.0']
 - name: 'ee_rl'
-  priority: 3
+  priority: 4
   visible: 1
   active: 1
   monitored: 0
