@@ -15,7 +15,7 @@ MessageHandler::MessageHandler(ros::NodeHandle* nodeHandler, Panda* panda)
     this->panda = panda;
 }
 
-PoseStampedMsg MessageHandler::initialPoseMessage(Point point)
+PoseStampedMsg MessageHandler::pointPoseMessage(Point point)
 {
     PoseStampedMsg message = emptyPoseMessage();
 
@@ -25,13 +25,13 @@ PoseStampedMsg MessageHandler::initialPoseMessage(Point point)
     message.pose.position.y = point.y;
     message.pose.position.z = point.z;
 
-   // message.pose.orientation = panda->initialOrientation;
-   message.pose.orientation.x = 0.983;
-   message.pose.orientation.y = 0.186;
-   message.pose.orientation.z = 0.002;
-   message.pose.orientation.w = 0.001;
+    // message.pose.orientation = panda->initialOrientation;
+    message.pose.orientation.x = 0.983;
+    message.pose.orientation.y = 0.186;
+    message.pose.orientation.z = 0.002;
+    message.pose.orientation.w = 0.001;
 
-   return message;
+    return message;
 }
 
 JointTrajectoryMsg MessageHandler::initialJointTrajectoryMessage()

@@ -39,11 +39,12 @@
   <node name="insertion" pkg="panda_insertion" type="insertion" output="screen">
       <param name="jointTrajectoryTopic" type="str" value="panda/position_joint_trajectory_controller/command"/>
       <param name="equilibriumPoseTopic" type="str" value="equilibrium_pose"/>
+      <param name="desiredStiffnessTopic" type="str" value="desired_stiffness"/>
 
       <param name="loadControllerService" type="str" value="panda/controller_manager/load_controller"/>
       <param name="switchControllerService" type="str" value="panda/controller_manager/switch_controller"/>
 
-      <param name="impedanceController" type="str" value="cartesian_impedance_controller"/>
+      <param name="impedanceController" type="str" value="cartesian_impedance_mod_controller"/>
       <param name="positionJointTrajectoryController" type="str" value="position_joint_trajectory_controller"/>
 
       <param name="x_goal" type="double" value="0.0"/>

@@ -51,6 +51,7 @@ void Controller::init(ros::NodeHandle* nodeHandler, Panda* panda)
 
     initEquilibriumPosePublisher();
     initJointTrajectoryPublisher();
+    initDesiredStiffnessPublisher();
 
     swapControllerServer = nodeHandler->advertiseService("swap_controller", &Controller::swapControllerCallback, this);
     swapControllerClient = nodeHandler->serviceClient<panda_insertion::SwapController>("swap_controller");
@@ -73,6 +74,18 @@ bool Controller::moveToInitialPositionState()
 
     //swapControllerClient.call(swapController);
 
+    // Set stiffness
+    geometry_msgs::Twist twist;
+    double linearStiffness = 400.0;
+    double angularStiffness = 30.0;
+    twist.linear.x = linearStiffness;
+    twist.linear.y = linearStiffness;
+    twist.linear.z = linearStiffness;
+    twist.angular.x = angularStiffness;
+    twist.angular.y = angularStiffness;
+    twist.angular.z = angularStiffness;
+    setStiffness(twist);
+
     Trajectory initialTrajectory = trajectoryHandler->generateInitialPositionTrajectory(100);
     PoseStamped initialPositionMessage = messageHandler->emptyPoseMessage();
 
@@ -82,7 +95,7 @@ bool Controller::moveToInitialPositionState()
     ros::Rate rate(loop_rate);
     for (auto point : initialTrajectory)
     {
-        initialPositionMessage = messageHandler->initialPoseMessage(point);
+        initialPositionMessage = messageHandler->pointPoseMessage(point);
         equilibriumPosePublisher.publish(initialPositionMessage);
         rate.sleep();
     }
@@ -94,17 +107,22 @@ bool Controller::externalDownMovementState()
 {
     ROS_DEBUG_ONCE("In external down movement state from controller");
 
+    Trajectory downTrajectory = trajectoryHandler->generateExternalDownTrajectory(100);
+    trajectoryHandler->writeTrajectoryToFile(downTrajectory, "downTrajectory.csv");
+
+    PoseStamped downMovementMessage = messageHandler->emptyPoseMessage();
     
-    int i = 0;
+    // Execute trajectory
     ros::Rate rate(loop_rate);
-    double z_coord = panda->initialPosition.z - 0.02;
-    PoseStamped externalDownMovementPositionMessage = messageHandler->downMovementPoseMessage(z_coord);
-    
-    while (ros::ok() && i < 35)
+    for (auto point : downTrajectory)
     {
-        equilibriumPosePublisher.publish(externalDownMovementPositionMessage);
+        if (touchFloor())
+            break;
+
+        downMovementMessage = messageHandler->pointPoseMessage(point);
+        equilibriumPosePublisher.publish(downMovementMessage);
+
         rate.sleep();
-        i++;
     }
 
     return true;
@@ -248,6 +266,17 @@ void Controller::initEquilibriumPosePublisher()
     equilibriumPosePublisher = nodeHandler->advertise<geometry_msgs::PoseStamped>(topic, queueSize);
 }
 
+void Controller::initDesiredStiffnessPublisher()
+{
+    string topic;
+    const int queueSize = 100;
+
+    nodeHandler->getParam("insertion/desiredStiffnessTopic", topic);
+    ROS_DEBUG_STREAM("desiredStiffnessTopic: " << topic);
+
+    desiredStiffnessPublisher = nodeHandler->advertise<geometry_msgs::TwistStamped>(topic, queueSize);
+}
+
 bool Controller::loadController(string controller)
 {
     ROS_DEBUG_STREAM("In loadController()");
@@ -350,4 +379,41 @@ void Controller::sleepAndTell(double sleepTime)
 {
     ROS_DEBUG("Sleeping for %lf seconds", sleepTime);
     ros::Duration(sleepTime).sleep();
+}
+
+bool Controller::touchFloor()
+{
+    geometry_msgs::Wrench wrench;
+
+    mutex.lock();
+    wrench = panda->wrenchMsg.wrench;
+    mutex.unlock();
+
+    const double MAX_FORCE = 2.0;
+
+    if (wrench.force.z > MAX_FORCE)
+    {
+        ROS_DEBUG("Touch floor!");
+        return true;
+    }
+
+    return false;
+}
+
+void Controller::setStiffness(geometry_msgs::Twist twist)
+{
+    geometry_msgs::TwistStamped twistStamped;
+ 
+    // Set header
+    string frameId = "";
+    ros::Time stamp(0.0);
+    uint32_t seq = 0;
+    twistStamped.header.frame_id = frameId;
+    twistStamped.header.stamp = stamp;
+    twistStamped.header.seq = seq;
+
+    // Set stiffness
+    twistStamped.twist = twist;
+
+    desiredStiffnessPublisher.publish(twistStamped);
 }

@@ -86,6 +86,45 @@ Trajectory TrajectoryHandler::generateInitialPositionTrajectory(int nrOfPoints)
     return trajectory;
 }
 
+Trajectory TrajectoryHandler::generateExternalDownTrajectory(int nrOfPoints)
+{
+    Trajectory trajectory;
+    geometry_msgs::Transform transform;
+
+    mutex.lock();
+    transform = panda->transformStamped.transform;
+    mutex.unlock();
+
+    Point startPoint;
+    startPoint.x = transform.translation.x;
+    startPoint.y = transform.translation.y;
+    startPoint.z = transform.translation.z;
+
+    ROS_DEBUG_STREAM_ONCE("Startpoint xyz: " << startPoint.x << ", " << startPoint.y << ", " << startPoint.z);
+    Point goalPoint;
+    goalPoint.x = transform.translation.x;
+    goalPoint.y = transform.translation.y;
+    goalPoint.z = -0.009;
+
+    Point pointSteps;
+    pointSteps.x = (goalPoint.x - startPoint.x) / nrOfPoints;
+    pointSteps.y = (goalPoint.y - startPoint.y) / nrOfPoints;
+    pointSteps.z = (goalPoint.z - startPoint.z) / nrOfPoints;
+
+    for (auto i = 0; i <= nrOfPoints; i++)
+    {
+        Point point;
+
+        point.x = startPoint.x + (pointSteps.x * i);
+        point.y = startPoint.y + (pointSteps.y * i);
+        point.z = startPoint.z + (pointSteps.z * i);
+
+        trajectory.push_back(point);
+    }
+
+    return trajectory;
+}
+
 void TrajectoryHandler::writeTrajectoryToFile(Trajectory trajectory,
                                               const string& fileName,
                                               bool appendToFile)

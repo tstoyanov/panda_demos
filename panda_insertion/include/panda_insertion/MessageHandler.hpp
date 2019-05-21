@@ -26,7 +26,7 @@ public:
     MessageHandler();
     MessageHandler(ros::NodeHandle* nodeHandler, Panda* panda);
 
-    PoseStampedMsg initialPoseMessage(Point point);
+    PoseStampedMsg pointPoseMessage(Point point);
     JointTrajectoryMsg initialJointTrajectoryMessage();
     PoseStampedMsg downMovementPoseMessage(double zCoordinate);
     PoseStampedMsg emptyPoseMessage();

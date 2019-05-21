@@ -318,5 +318,6 @@ void Insertion::finish()
 
 void Insertion::idle()
 {
+    controller.touchFloor();
     ROS_DEBUG_ONCE("In idle state");
 }

@@ -9,8 +9,11 @@
 #include "panda_insertion/TrajectoryHandler.hpp"
 
 #include "geometry_msgs/PoseStamped.h"
+#include "geometry_msgs/TwistStamped.h"
 #include "panda_insertion/SwapController.h"
 #include "trajectory_msgs/JointTrajectory.h"
+
+#include <boost/thread/mutex.hpp>
 
 #include "string"
 
@@ -46,11 +49,13 @@ private:
     Panda* panda;
     MessageHandler* messageHandler;
     TrajectoryHandler* trajectoryHandler;
+    boost::mutex mutex;
 
     double loop_rate;
 
     ros::Publisher jointTrajectoryPublisher;
     ros::Publisher equilibriumPosePublisher;
+    ros::Publisher desiredStiffnessPublisher;
 
     ros::ServiceServer swapControllerServer;
     ros::ServiceClient swapControllerClient;
@@ -68,10 +73,12 @@ public:
     bool insertionWiggleState();
     bool straighteningState();
     bool internalDownMovementState();
+    bool touchFloor();
 
 private:
     void initJointTrajectoryPublisher();
     void initEquilibriumPosePublisher();
+    void initDesiredStiffnessPublisher();
 
     bool loadController(std::string controller);
     bool swapControllerCallback(panda_insertion::SwapController::Request& request,
@@ -81,6 +88,7 @@ private:
     void setParameterDamping(Damping damping);
 
     void sleepAndTell(double sleepTime);
+    void setStiffness(geometry_msgs::Twist twist);
 };
 
 #endif
