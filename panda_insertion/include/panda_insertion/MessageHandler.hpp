@@ -9,6 +9,7 @@
 #include "geometry_msgs/PoseStamped.h"
 #include "trajectory_msgs/JointTrajectory.h"
 
+#include <boost/thread/mutex.hpp>
 #include <Eigen/Geometry>
 
 typedef geometry_msgs::PoseStamped PoseStampedMsg;
@@ -21,6 +22,7 @@ private:
     Panda* panda;
 
     std::string baseFrameId;
+    boost::mutex mutex;
 
 public:
     MessageHandler();
@@ -32,7 +34,7 @@ public:
     PoseStampedMsg emptyPoseMessage();
     PoseStampedMsg spiralPointPoseMessage(Point point);
     PoseStampedMsg insertionWigglePoseMessage(double xAngle);
-    PoseStampedMsg straighteningPoseMessage();
+    PoseStampedMsg straighteningPoseMessage(double xAng, double yAng);
 
     Eigen::Affine3d rotateMatrixRPY(Eigen::Affine3d tMatrix, double rollAngle,
                                     double pitchAngle, double yawAngle);

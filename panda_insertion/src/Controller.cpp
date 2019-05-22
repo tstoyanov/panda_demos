@@ -116,7 +116,7 @@ bool Controller::moveToInitialPositionState()
     PoseStamped initialPositionMessage = messageHandler->emptyPoseMessage();
 
     // Execute trajectory
-    ros::Rate rate(loop_rate);
+    ros::Rate rate(20);
     for (auto point : initialTrajectory)
     {
         initialPositionMessage = messageHandler->pointPoseMessage(point);
@@ -152,7 +152,7 @@ bool Controller::externalDownMovementState()
     Trajectory downTrajectory;
     try
     {
-        downTrajectory = trajectoryHandler->generateExternalDownTrajectory(100);
+        downTrajectory = trajectoryHandler->generateExternalDownTrajectory(75);
         //trajectoryHandler->writeTrajectoryToFile(downTrajectory, "downTrajectory.csv");
     }
     catch (runtime_error e)
@@ -236,7 +236,7 @@ bool Controller::spiralMotionState()
     // Generate trajectory
     double a = (panda->holeDiameter / 2) * 0.001;
     double b = 0.0002;
-    int nrOfPoints = 150;
+    int nrOfPoints = 75;
     Trajectory spiralTrajectory = trajectoryHandler->generateArchimedeanSpiral(a, b, nrOfPoints);
     //trajectoryHandler->writeTrajectoryToFile(spiralTrajectory, "spiralMotion.csv");
 
@@ -246,7 +246,7 @@ bool Controller::spiralMotionState()
     ros::Rate rate(loop_rate);
     for (auto point : spiralTrajectory)
     {
-        //if (inHole()) break;
+        if (inHole()) break;
 
         spiralMotionMessage = messageHandler->pointPoseMessage(point);
         equilibriumPosePublisher.publish(spiralMotionMessage);
@@ -293,15 +293,96 @@ bool Controller::straighteningState()
 {
     ROS_DEBUG_ONCE("In straightening state from controller");
 
+    // Get parameters from server
+    vector<double> translationalStiffness;
+    const string translationalParameter = "/wiggle/stiffness/translational";
+    if (!nodeHandler->getParam(translationalParameter , translationalStiffness))
+    {
+        ROS_ERROR_STREAM("Could not get param: " << translationalParameter  << " from server");
+        return false;
+    }
+
+    vector<double> rotationalStiffness;
+    const string rotationalParameter = "/wiggle/stiffness/rotational";
+    if (!nodeHandler->getParam(rotationalParameter , rotationalStiffness))
+    {
+        ROS_ERROR_STREAM("Could not get param: " << rotationalParameter  << " from server");
+        return false;
+    }
+
+    // Set stiffness
+    geometry_msgs::Twist twist;
+    twist.linear.x = translationalStiffness.at(0);
+    twist.linear.y = translationalStiffness.at(1);
+    twist.linear.z = translationalStiffness.at(2);
+    twist.angular.x = rotationalStiffness.at(0);
+    twist.angular.y = rotationalStiffness.at(1);
+    twist.angular.z = rotationalStiffness.at(2);
+    setStiffness(twist);
+
+
+    double xAng = (1.0/42.0);
+    double yAng = (1.0/42.0);
+    
+
     int i = 0;
+    
     ros::Rate rate(loop_rate);
 
-    while (ros::ok() && i < 15)
+    while (ros::ok() && i < 256)
     {
-        PoseStamped straighteningMessage = messageHandler->straighteningPoseMessage();
+        PoseStamped straighteningMessage = messageHandler->straighteningPoseMessage(xAng, yAng);
         equilibriumPosePublisher.publish(straighteningMessage);
         rate.sleep();
         i++;
+
+        if ((i % 9) == 0)
+        {
+            
+            ROS_DEBUG_STREAM("yAng flipped: yAng = " << yAng);
+            yAng = -(yAng);
+            ROS_DEBUG_STREAM("xAng flipped: xAng = " << xAng);
+            xAng = -(xAng);
+         
+            
+            /*
+            if (angleFlipFlag)
+            {
+            xAng = 0;
+            if (j < 3)
+            {
+            ROS_DEBUG_STREAM("yAng flipped: yAng = " << yAng);
+            yAng = -(yAng);
+            j++;
+            }
+            else
+            {
+            angleFlipFlag = false;
+            j = 0;
+            xAng = xAngOrig;
+            }
+            }
+
+            else
+            
+            {
+            yAng = 0;
+            if (j < 3)
+            {
+            ROS_DEBUG_STREAM("xAng flipped: xAng = " << xAng);
+            xAng = -(xAng);
+            j++;
+            }
+            
+            else
+            {
+            angleFlipFlag = true;
+            j = 0;
+            yAng = yAngOrig;
+            }
+            }
+            */
+        }
     }
 
     return true;
@@ -511,7 +592,7 @@ bool Controller::inHole()
     wrench = panda->wrenchMsg.wrench;
     mutex.unlock();
 
-    const double MAX_FORCE = 1.3;
+    const double MAX_FORCE = 1.1;
 
     if (wrench.force.z < MAX_FORCE || abs(wrench.force.x) > 4.0 || abs(wrench.force.y) > 4.0)
     {

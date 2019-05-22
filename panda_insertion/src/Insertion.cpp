@@ -261,7 +261,7 @@ void Insertion::start()
 {
     ROS_DEBUG_ONCE("In start state");
     controller.startState();
-    changeState("idle");
+    changeState("movetoinitialposition");
 }
 
 void Insertion::moveToInitialPosition()
