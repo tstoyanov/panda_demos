@@ -12,6 +12,9 @@
   <rosparam command="load" file="$(find panda_table_launch)/config/controllers.yaml" ns="$(arg robot_namespace)" />
   <rosparam command="load" file="$(find franka_control)/config/default_controllers.yaml" ns="$(arg robot_namespace)" />
   <rosparam command="load" file="$(find force_controllers)/config/panda_impedance.yaml" ns="$(arg robot_namespace)" />
+  <rosparam command="load" file="$(find panda_insertion)/config/spring_parameters.yaml" />
+  <!-- <rosparam command="load" file="$(find panda_insertion)/config/spring_parameters.yaml" ns="$(arg robot_namespace)"/> -->
+
   <!--    arm specific launch      -->
   <group ns="$(arg robot_namespace)" if="$(arg start_arm)">
      <param name="robot_description" if="$(arg load_description)" 

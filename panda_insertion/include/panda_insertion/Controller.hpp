@@ -74,6 +74,7 @@ public:
     bool straighteningState();
     bool internalDownMovementState();
     bool touchFloor();
+    bool inHole();
 
 private:
     void initJointTrajectoryPublisher();

@@ -1,0 +1,17 @@
+move_to_initial_position:
+  stiffness:
+    translational: [800.0, 800.0, 800.0]
+    rotational: [20.0, 20.0, 20.0]
+  goal: [0.148, 0.340, 0.050]
+
+external_down_movement:
+  stiffness:
+    translational: [800.0, 800.0, 200.0]
+    rotational: [20.0, 20.0, 20.0]
+  goal: [0.148, 0.340, -0.009]
+
+spiral:
+  stiffness:
+    translational: [800.0, 800.0, 200.0]
+    rotational: [20.0, 20.0, 20.0]
+  goal: [0.148, 0.340, -0.009]

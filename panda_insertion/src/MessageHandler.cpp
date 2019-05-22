@@ -26,10 +26,10 @@ PoseStampedMsg MessageHandler::pointPoseMessage(Point point)
     message.pose.position.z = point.z;
 
     // message.pose.orientation = panda->initialOrientation;
-    message.pose.orientation.x = 0.983;
-    message.pose.orientation.y = 0.186;
-    message.pose.orientation.z = 0.002;
-    message.pose.orientation.w = 0.001;
+    message.pose.orientation.x = 1.000;
+    message.pose.orientation.y = 0.000;
+    message.pose.orientation.z = 0.000;
+    message.pose.orientation.w = 0.000;
 
     return message;
 }

@@ -5,6 +5,7 @@
 #include <iostream>
 #include <fstream>
 #include <cmath>
+#include <stdexcept>
 
 using namespace std;
 
@@ -20,13 +21,30 @@ Trajectory TrajectoryHandler::generateArchimedeanSpiral(double a, double b,
                                                         int nrOfPoints)
 {
     Trajectory spiral;
+    geometry_msgs::Transform transform;
 
-    double initX = double(panda->position.x);
-    double initY = double(panda->position.y);
-    double initZ = double(panda->position.z);
+    // Get parameter from server
+    vector<double> goal;
+    const string goalParameter = "/spiral/goal";
+    if (!nodeHandler->getParam(goalParameter  , goal))
+    {
+        throw runtime_error("Could not get parameter from server");
+    }
+
+    mutex.lock();
+    transform = panda->transformStamped.transform;
+    mutex.unlock();
+
+    Point startPoint;
+    startPoint.x = transform.translation.x;
+    startPoint.y = transform.translation.y;
+    startPoint.z = goal.at(2);
+    
 
     const double RANGE = (12 * M_PI);
-    double x = initX, y = initY, z = initZ;
+    double x = startPoint.x;
+    double y = startPoint.y;
+    double z = startPoint.z;
 
     for (auto i = 0; i <= nrOfPoints; i++)
     {
@@ -35,8 +53,8 @@ Trajectory TrajectoryHandler::generateArchimedeanSpiral(double a, double b,
         double theta = i * (RANGE / nrOfPoints);
         double r = (a - b * theta);
 
-        x = initX + r * cos(theta);
-        y = initY + r * sin(theta);
+        x = startPoint.x + r * cos(theta);
+        y = startPoint.y + r * sin(theta);
 
         point.x = x;
         point.y = y;
@@ -44,6 +62,7 @@ Trajectory TrajectoryHandler::generateArchimedeanSpiral(double a, double b,
 
         spiral.push_back(point);
     }
+
     return spiral;
 }
 
@@ -51,6 +70,14 @@ Trajectory TrajectoryHandler::generateInitialPositionTrajectory(int nrOfPoints)
 {
     Trajectory trajectory;
     geometry_msgs::Transform transform;
+
+    // Get parameter from server
+    vector<double> goal;
+    const string goalParameter = "/move_to_initial_position/goal";
+    if (!nodeHandler->getParam(goalParameter  , goal))
+    {
+        throw runtime_error("Could not get parameter from server");
+    }
 
     mutex.lock();
     transform = panda->transformStamped.transform;
@@ -63,9 +90,9 @@ Trajectory TrajectoryHandler::generateInitialPositionTrajectory(int nrOfPoints)
 
     ROS_DEBUG_STREAM_ONCE("Startpoint xyz: " << startPoint.x << ", " << startPoint.y << ", " << startPoint.z);
     Point goalPoint;
-    goalPoint.x = 0.153;
-    goalPoint.y = 0.345;
-    goalPoint.z = 0.050;
+    goalPoint.x = goal.at(0);
+    goalPoint.y = goal.at(1);
+    goalPoint.z = goal.at(2);
 
     Point pointSteps;
     pointSteps.x = (goalPoint.x - startPoint.x) / nrOfPoints;
@@ -91,6 +118,14 @@ Trajectory TrajectoryHandler::generateExternalDownTrajectory(int nrOfPoints)
     Trajectory trajectory;
     geometry_msgs::Transform transform;
 
+    // Get parameter from server
+    vector<double> goal;
+    const string goalParameter = "/external_down_movement/goal";
+    if (!nodeHandler->getParam(goalParameter  , goal))
+    {
+        throw runtime_error("Could not get parameter from server");
+    }
+
     mutex.lock();
     transform = panda->transformStamped.transform;
     mutex.unlock();
@@ -104,7 +139,7 @@ Trajectory TrajectoryHandler::generateExternalDownTrajectory(int nrOfPoints)
     Point goalPoint;
     goalPoint.x = transform.translation.x;
     goalPoint.y = transform.translation.y;
-    goalPoint.z = -0.009;
+    goalPoint.z = goal.at(2);
 
     Point pointSteps;
     pointSteps.x = (goalPoint.x - startPoint.x) / nrOfPoints;
