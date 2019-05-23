@@ -63,6 +63,8 @@ Trajectory TrajectoryHandler::generateArchimedeanSpiral(double a, double b,
         spiral.push_back(point);
     }
 
+    //reverse(spiral.begin(), spiral.end());
+
     return spiral;
 }
 

@@ -102,6 +102,7 @@ void Insertion::stateMachineRun()
         default:
         {
             ROS_DEBUG("Default");
+            changeState("idle");
             break;
         }
     }
@@ -240,7 +241,7 @@ void Insertion::changeState(string stateName)
 void Insertion::init()
 {  
     ROS_DEBUG("In init()");
-    activeState = Idle;
+    activeState = Start;
 
     periodicTimer = nodeHandler.createTimer(ros::Duration(0.1), &Insertion::periodicTimerCallback, this);
     transformTimer = nodeHandler.createTimer(ros::Duration(0.1), &Insertion::transformTimerCallback, this);
@@ -268,7 +269,7 @@ void Insertion::moveToInitialPosition()
 {
     ROS_DEBUG_ONCE("In Move to Initial Position state");
     controller.moveToInitialPositionState();
-    changeState("idle");
+    changeState("externaldownmovement");
 }
 
 void Insertion::externalDownMovement()
@@ -276,15 +277,22 @@ void Insertion::externalDownMovement()
     ROS_DEBUG_ONCE("In external down movement state");
     controller.externalDownMovementState();
     ROS_DEBUG_ONCE("External down movement DONE.");
-    changeState("idle");
+    changeState("spiralmotion");
 }
 
 void Insertion::spiralMotion()
 {
     ROS_DEBUG_ONCE("In spiral motion state");
-    controller.spiralMotionState();
+    if (controller.spiralMotionState())
+    {
+        changeState("straightening");
+    }
+    else
+    {
+        ROS_ERROR("Spiral motion failed");
+        changeState("idle");
+    }
     ROS_DEBUG_ONCE("Spiral motion DONE.");
-    changeState("idle");
 }
 
 void Insertion::insertion()
@@ -300,7 +308,7 @@ void Insertion::straightening()
     ROS_DEBUG_ONCE("In straightening state");
     controller.straighteningState();
     ROS_DEBUG_ONCE("Straightening DONE.");
-    changeState("idle");
+    changeState("finish");
 }
 
 void Insertion::internalDownMovement()
@@ -308,12 +316,13 @@ void Insertion::internalDownMovement()
     ROS_DEBUG_ONCE("In internal down movement state");
     controller.internalDownMovementState();
     ROS_DEBUG_ONCE("Internal down movement DONE.");
-    changeState("idle");
+    changeState("finish");
 }
 
 void Insertion::finish()
 {
     ROS_INFO_ONCE("Insertion completed.");
+    changeState("idle");
 }
 
 void Insertion::idle()

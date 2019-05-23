@@ -60,10 +60,11 @@ void Controller::init(ros::NodeHandle* nodeHandler, Panda* panda)
 
 void Controller::startState()
 {
+    sleepAndTell(4.0);
     JointTrajectory initialPoseMessageJoint = messageHandler->initialJointTrajectoryMessage();
     jointTrajectoryPublisher.publish(initialPoseMessageJoint);
-
     sleepAndTell(4.0);
+
 }
 
 bool Controller::moveToInitialPositionState()
@@ -123,14 +124,13 @@ bool Controller::moveToInitialPositionState()
         equilibriumPosePublisher.publish(initialPositionMessage);
         rate.sleep();
     }
-
+    sleepAndTell(3.0);
     return true;
 }
 
 bool Controller::externalDownMovementState()
 {
     ROS_DEBUG_ONCE("In external down movement state from controller");
-
     // Get parameters from server
     vector<double> translationalStiffness;
     const string translationalParameter = "/move_to_initial_position/stiffness/translational";
@@ -184,7 +184,7 @@ bool Controller::externalDownMovementState()
 
         rate.sleep();
     }
-
+    sleepAndTell(1.0);
     return true;
 }
 
@@ -246,14 +246,17 @@ bool Controller::spiralMotionState()
     ros::Rate rate(loop_rate);
     for (auto point : spiralTrajectory)
     {
-        if (inHole()) break;
+        if (inHole()) 
+        {
+            return true;
+        }
 
         spiralMotionMessage = messageHandler->pointPoseMessage(point);
         equilibriumPosePublisher.publish(spiralMotionMessage);
         rate.sleep();
     }
-
-    return true;
+    sleepAndTell(1.0);
+    return false;
 }
 
 bool Controller::insertionWiggleState()
@@ -343,45 +346,6 @@ bool Controller::straighteningState()
             yAng = -(yAng);
             ROS_DEBUG_STREAM("xAng flipped: xAng = " << xAng);
             xAng = -(xAng);
-         
-            
-            /*
-            if (angleFlipFlag)
-            {
-            xAng = 0;
-            if (j < 3)
-            {
-            ROS_DEBUG_STREAM("yAng flipped: yAng = " << yAng);
-            yAng = -(yAng);
-            j++;
-            }
-            else
-            {
-            angleFlipFlag = false;
-            j = 0;
-            xAng = xAngOrig;
-            }
-            }
-
-            else
-            
-            {
-            yAng = 0;
-            if (j < 3)
-            {
-            ROS_DEBUG_STREAM("xAng flipped: xAng = " << xAng);
-            xAng = -(xAng);
-            j++;
-            }
-            
-            else
-            {
-            angleFlipFlag = true;
-            j = 0;
-            yAng = yAngOrig;
-            }
-            }
-            */
         }
     }
 
