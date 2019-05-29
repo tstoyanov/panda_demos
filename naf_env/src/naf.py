@@ -4,6 +4,10 @@ import torch
 import torch.nn as nn
 from torch.optim import Adam
 from torch.autograd import Variable
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.colors as colors
+import matplotlib.cm as cmx
 
 #@profile
 def MSELoss(input, target):
@@ -120,16 +124,14 @@ class NAF:
         next_state_batch = Variable(torch.cat(batch.next_state))
 
         _, _, next_state_values = self.target_model((next_state_batch, None))
-        #print("updated next state values")
+
         reward_batch = reward_batch.unsqueeze(1)
         mask_batch = mask_batch.unsqueeze(1)
 
-        ####### switched mask_batch * next_state_values from mask_batch + next_state_values
         expected_state_action_values = reward_batch + (self.gamma * mask_batch * next_state_values)
-        #######
 
         _, state_action_values, _ = self.model((state_batch, action_batch))
-        #print("updated state action values")
+
         loss = MSELoss(state_action_values, expected_state_action_values)
 
         self.optimizer.zero_grad()
@@ -138,15 +140,14 @@ class NAF:
         self.optimizer.step()
 
         soft_update(self.target_model, self.model, self.tau)
-        #print("soft update")
 
 
-    def save_model(self, env_name, batch_size, suffix="", model_path=None):
+    def save_model(self, env_name, batch_size, episode,  suffix="", model_path=None):
         if not os.path.exists('models/'):
             os.makedirs('models/')
 
         if model_path is None:
-            model_path = "models/naf_{}_{}_{}".format(env_name, batch_size, suffix)
+            model_path = "models/naf_{}_{}_{}_{}".format(env_name, batch_size, episode, suffix)
         print('Saving model to {}'.format(model_path))
         torch.save(self.model.state_dict(), model_path)
 
@@ -155,3 +156,26 @@ class NAF:
             model_path = "models/naf_{}_{}_{}".format(env_name, batch_size, suffix)
         print('Loading model from {}'.format(model_path))
         self.model.load_state_dict(torch.load(model_path))
+
+    def plot_path(self, state, action, ep):
+        self.model.eval()
+        _, Q, _ = self.model((Variable(torch.cat(state)), Variable(torch.cat(action))))
+        self.model.train()
+        sx, sy = torch.cat(state).numpy().T
+        ax, ay = torch.cat(action).numpy().T
+
+        qCat = []
+        for j in range(len(Q.data.numpy())):
+            qCat.append(Q.data.numpy()[j][0])
+
+        cmap = plt.cm.viridis
+        cNorm = colors.Normalize(vmin=np.min(qCat), vmax=np.max(qCat))
+        scalarMap = cmx.ScalarMappable(norm=cNorm, cmap=cmap)
+        plt.scatter(sx, sy)
+        for i in range(len(sx)):
+            colorVal = scalarMap.to_rgba(qCat[i])
+            plt.arrow(sx[i], sy[i], ax[i]/150, ay[i]/150, fc=colorVal, ec=colorVal, head_width=0.004, head_length=0.008)
+
+        figname= 'path_{}_{}'.format(ep, '.png')
+        plt.savefig(figname)
+        plt.close()
