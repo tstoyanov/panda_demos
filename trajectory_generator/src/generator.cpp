@@ -110,6 +110,7 @@ std::string getExePath()
 int main(int argc, char **argv)
 {
   bool is_batch = false;
+  bool is_simulation = false;
   int batch_count = 1;
   int generated_trajectories = 0;
   namespace po = boost::program_options;
@@ -117,7 +118,10 @@ int main(int argc, char **argv)
   po::options_description desc("Allowed options");
   desc.add_options()
     ("help", "produce help message")
-    ("batch,b", po::value<int>(&batch_count), "set the number of trajectories to generate");
+    ("batch,b", po::value<int>(&batch_count), "set the number of trajectories to generate")
+    ("sim,s", po::bool_switch()->default_value(false), "simulation flag");
+
+  ;
 
   po::variables_map vm;
   po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -146,6 +150,12 @@ int main(int argc, char **argv)
   {
     std::cout << "batch argument was not set, a single trajectory will be generated" << std::endl;
   }
+  
+  if (vm.count("sim"))
+  {
+    is_simulation = vm["sim"].as<bool>();
+    std::cout << "SIMULATION MODE" << std::endl;
+  }
 
   // if (argc > 1)
   // {
@@ -156,21 +166,31 @@ int main(int argc, char **argv)
   KDL::Tree my_tree {};
   ros::NodeHandle node;
   ros::Rate loop_rate(2);
+  
 
-  // ===== getting URDF model form param server =====
+  // ===== getting URDF model and joint names form param server =====
   std::string robot_desc_string;
-  // node.param("robot_description", robot_desc_string, std::string());
-  node.param("/panda/robot_description", robot_desc_string, std::string());
+  std::vector<std::string> joint_names;
+  if (is_simulation)
+  {
+    node.param("robot_description", robot_desc_string, std::string());
+    node.getParam("position_joint_trajectory_controller/joints", joint_names);
+  }
+  else
+  {
+    node.param("/panda/robot_description", robot_desc_string, std::string());
+    node.getParam("/panda/position_joint_trajectory_controller/joints", joint_names);
+  }
+  
   if (!kdl_parser::treeFromString(robot_desc_string, my_tree)){
     ROS_ERROR("Failed to construct kdl tree");
     return false;
   }
 
   // ===== getting joint names from param server =====
-  // std::string param_server_joints = "/position_joint_trajectory_controller/joints";
-  std::string param_server_joints = "/panda/position_joint_trajectory_controller/joints";
-  std::vector<std::string> joint_names;
-  node.getParam(param_server_joints, joint_names);
+  // std::string param_server_joints = "/panda/position_joint_trajectory_controller/joints";
+  // std::vector<std::string> joint_names;
+  // node.getParam(param_server_joints, joint_names);
 
   // ===== getting joint limits from URDF model =====
   double average;

@@ -11,16 +11,18 @@ import moveit_commander
 import getopt
 import os
 
-import time
-# from time import sleep
+import rospkg
+
+rospack = rospkg.RosPack()
 
 input_folder = "latest"
+is_simulation = False
 tot_time_nsecs = 2000000000  # total execution time for the trajectory in nanoseconds
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:],"i:t:",["input=", "nanoseconds="])
+    opts, args = getopt.getopt(sys.argv[1:],"i:t:s",["input=", "nanoseconds=", "simulation="])
 except getopt.GetoptError:
-    print("test.py -i <input_folder> -t <trajectory_execution_time>")
+    print("test.py -i <input_folder> -t <trajectory_execution_time> -s")
     sys.exit(2)
 for opt, arg in opts:
     if opt == '-h':
@@ -30,13 +32,21 @@ for opt, arg in opts:
         input_folder = arg
     elif opt in ("-t", "--nanoseconds"):
         tot_time_nsecs = int(arg)
+    elif opt in ("-s", "--simulation"):
+        is_simulation = True
 
 print("input_folder = " + str(input_folder))
 print("tot_time_nsecs = " + str(tot_time_nsecs))
 
 def talker():
-    pub = rospy.Publisher('/panda/position_joint_trajectory_controller/follow_joint_trajectory/goal',
-                          FollowJointTrajectoryActionGoal, queue_size=10)
+
+    if is_simulation:
+        print("SIMULATION MODE")
+        pub = rospy.Publisher('/position_joint_trajectory_controller/follow_joint_trajectory/goal',
+                            FollowJointTrajectoryActionGoal, queue_size=10)
+    else:
+        pub = rospy.Publisher('/panda/position_joint_trajectory_controller/follow_joint_trajectory/goal',
+                            FollowJointTrajectoryActionGoal, queue_size=10)
     rospy.init_node('myWriter', anonymous=True)
     rate = rospy.Rate(0.1)  # hz
 
@@ -55,12 +65,9 @@ def talker():
     # group.go(joint_goal, wait=True)
     # group.stop()
 
-    script_path = os.path.abspath(__file__)
-    main_dir = script_path[:script_path.rfind('/utils')]
-
     # getting the generated trajectory data
-    # with open(main_dir + "/generated_trajectories/cpp/" + input_folder + "/trajectories.txt", 'r') as f:
-    with open(input_folder, 'r') as f:
+    package_path = rospack.get_path("trajectory_generator")
+    with open(package_path + "/generated_trajectories/cpp/" + input_folder + "/trajectories.txt", 'r') as f:
         data = f.read()
     trajectories = json.loads(data)
     trajectories = ast.literal_eval(json.dumps(trajectories))
@@ -94,6 +101,18 @@ def talker():
     group.go(joint_goal, wait=True)
     group.stop()
 
+    dt = int(tot_time_nsecs / len(trajectories["joint_trajectory"]))
+    trajectories["joint_velocity"] = []
+    trajectories["ds"] = []
+    for i in range(len(trajectories["joint_trajectory"])-1):
+        trajectories["ds"].append(list(map(lambda s1, s2: s2 - s1, trajectories["joint_trajectory"][i], trajectories["joint_trajectory"][i+1])))
+        trajectories["joint_velocity"].append(list(map(lambda ds: ds*1000000000/dt, trajectories["ds"][i])))
+    trajectories["joint_velocity"].append([0]*len(trajectories["joint_trajectory"][0]))
+    
+    print ('trajectories["joint_velocity"] = ' + str(trajectories["joint_velocity"]))
+    for i in range(len(trajectories["joint_velocity"])):
+        print ('trajectories["joint_velocity"][' + str(i) + '] = ' + str(trajectories["joint_velocity"][i]))
+
     print("=== Press `Enter` to write ===")
     raw_input()
 
@@ -113,11 +132,11 @@ def talker():
     message_to_write.goal_id.id = "/myWriter-"+str(seq)+"-"+str(secs)+"."+str(nsecs)
     temp_points = []
     trajectory_point = JointTrajectoryPoint()
-    dt = int(tot_time_nsecs / len(trajectories["joint_trajectory"]))
     trajectory_point.time_from_start.secs = 0
     trajectory_point.time_from_start.nsecs = 0
     for i in range(len(trajectories["joint_trajectory"])):
         trajectory_point.positions = trajectories["joint_trajectory"][i]
+        trajectory_point.velocities = trajectories["joint_velocity"][i]
         temp_points.append(copy.deepcopy(trajectory_point))
         trajectory_point.time_from_start.nsecs += dt
         if trajectory_point.time_from_start.nsecs >= 1000000000:
@@ -127,8 +146,6 @@ def talker():
     message_to_write.goal.trajectory.points = temp_points
     rospy.loginfo(message_to_write)
     pub.publish(message_to_write)
-    # time.sleep(3)
-    True
 
 class my_point:
     def __init__(self, positions, velocities, accelerations, effort, time_from_start):
