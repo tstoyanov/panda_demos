@@ -11,6 +11,9 @@ import moveit_commander
 import getopt
 import os
 
+import time
+# from time import sleep
+
 input_folder = "latest"
 tot_time_nsecs = 2000000000  # total execution time for the trajectory in nanoseconds
 
@@ -36,8 +39,6 @@ def talker():
                           FollowJointTrajectoryActionGoal, queue_size=10)
     rospy.init_node('myWriter', anonymous=True)
     rate = rospy.Rate(0.1)  # hz
-
-# ==========================================================================
 
     moveit_commander.roscpp_initialize(sys.argv)
     group_name = "panda_arm"
@@ -69,22 +70,22 @@ def talker():
         for i in range(len(values)):
             joint_trajectories[i].append(values[i])
     joint_names = trajectories["joint_names"]
-    eef_pose = {
-        "origin":
-        {
-            "x": [],
-            "y": [],
-            "z": [],
-        },
-        "orientation":
-        {
-        }
-    }
-    for values in trajectories["eef_trajectory"]:
-        print ("values: ", values)
-        eef_pose["origin"]["x"].append(values["origin"]["x"])
-        eef_pose["origin"]["y"].append(values["origin"]["y"])
-        eef_pose["origin"]["z"].append(values["origin"]["z"])
+    # eef_pose = {
+    #     "origin":
+    #     {
+    #         "x": [],
+    #         "y": [],
+    #         "z": [],
+    #     },
+    #     "orientation":
+    #     {
+    #     }
+    # }
+    # for values in trajectories["eef_trajectory"]:
+    #     print ("values: ", values)
+    #     eef_pose["origin"]["x"].append(values["origin"]["x"])
+    #     eef_pose["origin"]["y"].append(values["origin"]["y"])
+    #     eef_pose["origin"]["z"].append(values["origin"]["z"])
 
     # go to the real initial point
     for i in range(len(joint_trajectories)):
@@ -125,6 +126,8 @@ def talker():
     message_to_write.goal.trajectory.points = temp_points
     rospy.loginfo(message_to_write)
     pub.publish(message_to_write)
+    # time.sleep(3)
+    True
 
 class my_point:
     def __init__(self, positions, velocities, accelerations, effort, time_from_start):

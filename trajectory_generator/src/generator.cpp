@@ -21,7 +21,6 @@
 
 #include <math.h>
 #include <random>
-#include <limits>
 
 #include "velocity_profile_generator.cpp"
 
@@ -78,7 +77,6 @@ double minima_search (KDL::Path_RoundedComposite &path, double ds, int max_numbe
   double current_z;
   double current_s = ds;
   double z_min = path.Pos(0).p.z();
-  // double z_min = std::numeric_limits<double>::infinity();
   while (current_s <= path.PathLength() && current_s >= 0)
   {
     current_z = path.Pos(current_s).p.z();
@@ -318,7 +316,7 @@ int main(int argc, char **argv)
   boost::filesystem::path dir;
   boost::filesystem::path remove_dir;
   pkg_path = ros::package::getPath("trajectory_generator");
-  std::cout << "pkg_path: " << pkg_path << std::endl;
+  // std::cout << "pkg_path: " << pkg_path << std::endl;
   remove_dir_path = pkg_path + "/generated_trajectories/cpp/latest_batch";
   remove_dir = boost::filesystem::path(remove_dir_path);
   
@@ -436,32 +434,32 @@ int main(int argc, char **argv)
     // std::cout << "euler_Y: " << euler_Y << std::endl;
     // std::cout << "euler_Z: " << euler_Z << std::endl;
 
-    // calculate the new joint coordinates for the starting point
-    current_eef_frame = path -> Pos(0);
-    current_eef_frame.M = test_orientation;
-    // current_eef_frame.M = starting_orientation;
-    ret = chainIkSolverPos.CartToJnt(last_joint_pos, current_eef_frame, last_joint_pos);
-    // std::cout << "New starting joint coordinates RET = " << ret << std::endl;
+    // // calculate the new joint coordinates for the starting point
+    // current_eef_frame = path -> Pos(0);
+    // current_eef_frame.M = test_orientation;
+    // // current_eef_frame.M = starting_orientation;
+    // ret = chainIkSolverPos.CartToJnt(last_joint_pos, current_eef_frame, last_joint_pos);
+    // // std::cout << "New starting joint coordinates RET = " << ret << std::endl;
 
-    // for (unsigned i = 0; i < last_joint_pos.rows(); i++)
-    // {
-    //   std::cout << "last_joint_pos(" << i << "): " << last_joint_pos(i) << std::endl;
-    // }
-    joint_trajectory.push_back(last_joint_pos);
-    eef_trajectory.push_back(path -> Pos(0));
+    // // for (unsigned i = 0; i < last_joint_pos.rows(); i++)
+    // // {
+    // //   std::cout << "last_joint_pos(" << i << "): " << last_joint_pos(i) << std::endl;
+    // // }
+    // joint_trajectory.push_back(last_joint_pos);
+    // eef_trajectory.push_back(path -> Pos(0));
 
-    // ====================FK====================
-    ret = chainFkSolverPos.JntToCart(last_joint_pos, fk_current_eef_frame);
-    // std::cout << "FK RET: " << ret << std::endl;
-    fk_current_eef_pos = fk_current_eef_frame.p;
-    fk_eef_trajectory.push_back(fk_current_eef_frame);
-    // std::cout << "------------------------------\n";
-    // std::cout << "FK EEF pos: " << std::endl;
-    // std::cout << "\tx: " << fk_current_eef_pos.x() << std::endl;
-    // std::cout << "\ty: " << fk_current_eef_pos.y() << std::endl;
-    // std::cout << "\tz: " << fk_current_eef_pos.z() << std::endl;
-    // std::cout << "------------------------------\n";
-    // ====================END FK====================
+    // // ====================FK====================
+    // ret = chainFkSolverPos.JntToCart(last_joint_pos, fk_current_eef_frame);
+    // // std::cout << "FK RET: " << ret << std::endl;
+    // fk_current_eef_pos = fk_current_eef_frame.p;
+    // fk_eef_trajectory.push_back(fk_current_eef_frame);
+    // // std::cout << "------------------------------\n";
+    // // std::cout << "FK EEF pos: " << std::endl;
+    // // std::cout << "\tx: " << fk_current_eef_pos.x() << std::endl;
+    // // std::cout << "\ty: " << fk_current_eef_pos.y() << std::endl;
+    // // std::cout << "\tz: " << fk_current_eef_pos.z() << std::endl;
+    // // std::cout << "------------------------------\n";
+    // // ====================END FK====================
 
     current_s = 0;
     for (unsigned i = 0; i < NUMBER_OF_SAMPLES; i++)
@@ -473,7 +471,7 @@ int main(int argc, char **argv)
       // current_eef_frame.M = starting_orientation;
       eef_trajectory.push_back(current_eef_frame);
 
-      current_eef_frame.M.GetEulerZYX(Z, Y, X);
+      // current_eef_frame.M.GetEulerZYX(Z, Y, X);
       // std::cout << "EEF frame orientation" << std::endl;
       // std::cout << "\t\t\tX: " << X << std::endl;
       // std::cout << "\t\t\tY: " << Y << std::endl;

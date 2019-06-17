@@ -110,7 +110,7 @@ pkg_check_modules(JSONCPP jsoncpp)
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
- INCLUDE_DIRS include
+#  INCLUDE_DIRS include
 #  LIBRARIES trajectory_generator
  CATKIN_DEPENDS roscpp roslib
  DEPENDS system_lib TinyXML
