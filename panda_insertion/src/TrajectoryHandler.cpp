@@ -41,17 +41,17 @@ Trajectory TrajectoryHandler::generateArchimedeanSpiral(double a, double b,
     startPoint.z = goal.at(2);
     
 
-    const double RANGE = (12 * M_PI);
+    const double ROTATIONS = 5;
     double x = startPoint.x;
     double y = startPoint.y;
     double z = startPoint.z;
 
-    for (auto i = 0; i <= nrOfPoints; i++)
+    for (double n = 0.0; n <= nrOfPoints; n += 1.0)
     {
         Point point;
 
-        double theta = i * (RANGE / nrOfPoints);
-        double r = (a - b * theta);
+        double theta = sqrt(n / nrOfPoints) * (ROTATIONS * 2 * M_PI);
+        double r = (a + b * theta);
 
         x = startPoint.x + r * cos(theta);
         y = startPoint.y + r * sin(theta);

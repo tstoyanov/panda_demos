@@ -139,45 +139,28 @@ PoseStampedMsg MessageHandler::spiralPointPoseMessage(Point point)
     return message;
 }
 
-PoseStampedMsg MessageHandler::insertionWigglePoseMessage(double xAngle)
-{
-    geometry_msgs::PoseStamped message = emptyPoseMessage();
-    message.pose.orientation = panda->orientation;
-    message.pose.position = panda->position;
-
-    // Convert to matrix
-    Eigen::Affine3d tMatrix;
-    tf::poseMsgToEigen(message.pose, tMatrix);
-
-    double roll = (xAngle * M_PI);
-    double pitch = (0.0 * M_PI);
-    double yaw = (0.0 * M_PI);
-    Eigen::Affine3d rotated_tMatrix = rotateMatrixRPY(tMatrix, roll, pitch, yaw);
-    ROS_DEBUG_STREAM("rotated_tMatrix: " << endl << rotated_tMatrix.rotation());
-
-    // Convert back to msg
-    tf::poseEigenToMsg(rotated_tMatrix, message.pose);
-
-    // Set new orientation
-    message.header.frame_id = baseFrameId;
-    panda->orientation = message.pose.orientation;
-
-    return message;
-}
-
-PoseStampedMsg MessageHandler::straighteningPoseMessage(double xAng, double yAng)
+PoseStampedMsg MessageHandler::insertionWigglePoseMessage(double xAng, double yAng)
 {
     geometry_msgs::PoseStamped message = emptyPoseMessage();
     message.header.frame_id = "panda_link0";
+
+    // Get goal parameter from server
+    vector<double> goal;
+    const string goalParameter = "/wiggle/goal";
+    if (!nodeHandler->getParam(goalParameter, goal))
+    {
+        throw runtime_error("Could not get parameter from server");
+    }
 
     mutex.lock();
     const geometry_msgs::Transform transMsg = panda->transformStamped.transform;
     mutex.unlock();
 
     // Read robot pose
-    message.pose.position.x = 0.155;
-    message.pose.position.y = 0.3455;
-    message.pose.position.z = -0.009;
+    message.pose.position.x = goal.at(0);
+    message.pose.position.y = goal.at(1);
+    message.pose.position.z = goal.at(2);
+    
     message.pose.orientation.x = transMsg.rotation.x;
     message.pose.orientation.y = transMsg.rotation.y;
     message.pose.orientation.z = transMsg.rotation.z;
@@ -192,29 +175,59 @@ PoseStampedMsg MessageHandler::straighteningPoseMessage(double xAng, double yAng
     Eigen::Affine3d tMatrix;
     tf::poseMsgToEigen(message.pose, tMatrix);
 
-    double xAngle = xAng;
-    double yAngle = yAng;
-    double zAngle = (0.0);
-    double roll = (xAngle * M_PI);
-    double pitch = (yAngle * M_PI);
-    double yaw = (zAngle * M_PI);
+    double roll = (xAng * M_PI);
+    double pitch = (yAng * M_PI);
+    double yaw = (0.0 * M_PI);
 
     ROS_DEBUG_STREAM("roll: " << roll << ", pitch: " << pitch << ", yaw: " << yaw);
 
     Eigen::Affine3d rotated_tMatrix = rotateMatrixRPY(tMatrix, roll, pitch, yaw);
-    ROS_DEBUG_STREAM("rotated_tMatrix: " << endl << rotated_tMatrix.translation().transpose());
+    ROS_DEBUG_STREAM("rotated_tMatrix: " << endl << rotated_tMatrix.rotation());
 
     // Convert back to msg
     tf::poseEigenToMsg(rotated_tMatrix, message.pose);
-
-  //  message.pose.position.x = initialPoseMsg.translation.x;
-   // message.pose.position.y = initialPoseMsg.translation.y;
-   // message.pose.position.z = initialPoseMsg.translation.z;
 
     ROS_DEBUG_STREAM("Translational xyz after rotation: " << 
             message.pose.position.x << ", " <<
             message.pose.position.y << ", " <<
             message.pose.position.z);
+
+    message.pose.position.x = 0.1550;
+    message.pose.position.y = 0.3455;
+    message.pose.position.z = 0.0500;
+
+    return message;
+}
+
+PoseStampedMsg MessageHandler::straighteningPoseMessage()
+{
+    geometry_msgs::PoseStamped message = emptyPoseMessage();
+    message.header.frame_id = "panda_link0";
+
+    // Get goal parameter from server
+    vector<double> goal;
+    const string goalParameter = "/straightening/goal";
+    if (!nodeHandler->getParam(goalParameter  , goal))
+    {
+        throw runtime_error("Could not get parameter from server");
+    }
+
+    mutex.lock();
+    const geometry_msgs::Transform transMsg = panda->transformStamped.transform;
+    mutex.unlock();
+
+    // Read robot pose
+    message.pose.position.x = transMsg.translation.x;
+    message.pose.position.y = transMsg.translation.y;
+    message.pose.position.z = goal.at(2);
+    //message.pose.orientation.x = -0.9992;
+    //message.pose.orientation.y = -0.3942;
+    //message.pose.orientation.z = -0.0020;
+    //message.pose.orientation.w = -0.0015;
+    message.pose.orientation.x = -0.9266;
+    message.pose.orientation.y = -0.3757;
+    message.pose.orientation.z = -0.0027;
+    message.pose.orientation.w = -0.0045;
 
     return message;
 }

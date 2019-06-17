@@ -77,7 +77,7 @@ public:
     void externalDownMovement();
     void spiralMotion();
     void straightening();
-    void insertion();
+    void insertionWiggle();
     void internalDownMovement();
     void finish();
     void idle();

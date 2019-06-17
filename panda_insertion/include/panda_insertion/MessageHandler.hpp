@@ -33,8 +33,8 @@ public:
     PoseStampedMsg downMovementPoseMessage(double zCoordinate);
     PoseStampedMsg emptyPoseMessage();
     PoseStampedMsg spiralPointPoseMessage(Point point);
-    PoseStampedMsg insertionWigglePoseMessage(double xAngle);
-    PoseStampedMsg straighteningPoseMessage(double xAng, double yAng);
+    PoseStampedMsg insertionWigglePoseMessage(double xAng, double yAng);
+    PoseStampedMsg straighteningPoseMessage();
 
     Eigen::Affine3d rotateMatrixRPY(Eigen::Affine3d tMatrix, double rollAngle,
                                     double pitchAngle, double yawAngle);
