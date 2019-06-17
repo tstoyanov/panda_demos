@@ -159,14 +159,16 @@ int main(int argc, char **argv)
 
   // ===== getting URDF model form param server =====
   std::string robot_desc_string;
-  node.param("robot_description", robot_desc_string, std::string());
+  // node.param("robot_description", robot_desc_string, std::string());
+  node.param("/panda/robot_description", robot_desc_string, std::string());
   if (!kdl_parser::treeFromString(robot_desc_string, my_tree)){
     ROS_ERROR("Failed to construct kdl tree");
     return false;
   }
 
   // ===== getting joint names from param server =====
-  std::string param_server_joints = "/position_joint_trajectory_controller/joints";
+  // std::string param_server_joints = "/position_joint_trajectory_controller/joints";
+  std::string param_server_joints = "/panda/position_joint_trajectory_controller/joints";
   std::vector<std::string> joint_names;
   node.getParam(param_server_joints, joint_names);
 
