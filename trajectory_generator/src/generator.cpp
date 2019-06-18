@@ -31,12 +31,14 @@
 #define MAX_NOISE_GENERATION_ATTEMPTS 100
 
 #define NUMBER_OF_SAMPLES 100
+// #define RELEASE_FRAME 0.6 * NUMBER_OF_SAMPLES
 #define RELEASE_FRAME 0.8 * NUMBER_OF_SAMPLES
 
 #define BINARY_SEARCH_TRESHOLD 0.0001 // meters
 #define MAX_NUMBER_OF_INVERSIONS 10
 
 std::vector<std::map<std::string, double>> NOISE_MATRIX = { // 1 will be converted to 1 cm for now
+  // good
   { // x                                                    // 99% of the noise falls inside MEAN +/- 3*NOISE_STDDEV (1.66 = +/- 5m? => 5cm in the end)
     {"noise_mean", 0}, {"noise_stddev", 3}
   },
@@ -111,6 +113,7 @@ int main(int argc, char **argv)
 {
   bool is_batch = false;
   bool is_simulation = false;
+  bool asd = false;
   int batch_count = 1;
   int generated_trajectories = 0;
   namespace po = boost::program_options;
@@ -119,7 +122,8 @@ int main(int argc, char **argv)
   desc.add_options()
     ("help", "produce help message")
     ("batch,b", po::value<int>(&batch_count), "set the number of trajectories to generate")
-    ("sim,s", po::bool_switch()->default_value(false), "simulation flag");
+    ("sim,s", po::bool_switch()->default_value(false), "simulation flag")
+    ("no-noise,n", po::bool_switch()->default_value(false), "simulation flag")
 
   ;
 
@@ -154,7 +158,11 @@ int main(int argc, char **argv)
   if (vm.count("sim"))
   {
     is_simulation = vm["sim"].as<bool>();
-    std::cout << "SIMULATION MODE" << std::endl;
+  }
+
+  if (vm.count("no-noise"))
+  {
+    asd = vm["no-noise"].as<bool>();
   }
 
   // if (argc > 1)
@@ -173,6 +181,7 @@ int main(int argc, char **argv)
   std::vector<std::string> joint_names;
   if (is_simulation)
   {
+    std::cout << "SIMULATION MODE" << std::endl;
     node.param("robot_description", robot_desc_string, std::string());
     node.getParam("position_joint_trajectory_controller/joints", joint_names);
   }
@@ -269,6 +278,12 @@ int main(int argc, char **argv)
     {-0.401718997062, 0.0892002648095, 0.986710060669},
     {release_x_coordinate, 0.0892002648095, 0.886710060669},
     {0.568281002938, 0.0892002648095, 1.086710060669}
+    
+    // real test
+    // {x, y, z}
+    // {-0.401718997062, 0.0892002648095, 0.986710060669},
+    // {release_x_coordinate, 0.0892002648095, 0.986610060669},
+    // {0.508281002938, 0.0892002648095, 0.986710060669}
 
     // {-0.401718997062, 0.0892002648095, 0.916710060669},
     // {release_x_coordinate, 0.0892002648095, 0.866710060669},
@@ -385,7 +400,10 @@ int main(int argc, char **argv)
                 noise_generation_counter++;
               }
               while (!(noise < max_noise / 100.0 && noise > min_noise / 100.0));
-              noisy_waypoints[i][ii] += noise;
+              if (asd == false)
+              {
+                noisy_waypoints[i][ii] += noise;
+              }
               if (i == 1 && ii == 0)  //  x coordinate of the second waypoint -> noisy_release_x_coordinate
               {
                 noisy_release_x_coordinate = noisy_waypoints[i][ii];
@@ -396,6 +414,7 @@ int main(int argc, char **argv)
           }
           path -> Add(KDL::Frame(KDL::Vector(noisy_waypoints[i][0], noisy_waypoints[i][1], noisy_waypoints[i][2])));
         }
+        noisy_release_x_coordinate = noisy_waypoints[1][0];
         path -> Finish();
       }
       catch(std::exception& e)
@@ -429,7 +448,6 @@ int main(int argc, char **argv)
 
     path_length = path -> PathLength();
     ds = path_length / NUMBER_OF_SAMPLES;
-
     double treshold_length;
     // treshold_length = binary_search_treshold(*path, 0, path_length, noisy_release_x_coordinate, BINARY_SEARCH_TRESHOLD);
     treshold_length = minima_search(*path, ds, MAX_NUMBER_OF_INVERSIONS);
@@ -439,8 +457,8 @@ int main(int argc, char **argv)
     // return 0;
     
     std::vector<double> velocity_dist(NUMBER_OF_SAMPLES, 0);
-    velocity_profile_generator(velocity_dist, NUMBER_OF_SAMPLES, RELEASE_FRAME, path_length, treshold_length);
 
+    velocity_profile_generator(velocity_dist, NUMBER_OF_SAMPLES, RELEASE_FRAME, path_length, treshold_length);
     // double euler_X;
     // double euler_Y;
     // double euler_Z;
@@ -482,7 +500,7 @@ int main(int argc, char **argv)
     // // std::cout << "\tz: " << fk_current_eef_pos.z() << std::endl;
     // // std::cout << "------------------------------\n";
     // // ====================END FK====================
-
+    
     current_s = 0;
     for (unsigned i = 0; i < NUMBER_OF_SAMPLES; i++)
     {
