@@ -4,6 +4,10 @@ import matplotlib.pyplot as plt
 
 import json, ast, collections, sys, getopt, os
 
+import rospkg
+
+rospack = rospkg.RosPack()
+
 scale = 1
 input_folder = "latest"
 # if len(sys.arvg) == 2:
@@ -24,8 +28,10 @@ for opt, arg in opts:
 script_path = os.path.abspath(__file__)
 main_dir = script_path[:script_path.rfind('/utils')]
 
+package_path = rospack.get_path("trajectory_generator")
 # with open("/home/ilbetzy/orebro/trajectory_generation_ws/generated_trajectories/" + input_folder + "/trajectories.txt", 'r') as f:
-with open(main_dir + "/generated_trajectories/cpp/" + input_folder + "/trajectories.txt", 'r') as f:
+# with open(main_dir + "/generated_trajectories/cpp/" + input_folder + "/trajectories.txt", 'r') as f:
+with open(package_path + "/generated_trajectories/cpp/" + input_folder + "/trajectories.txt", 'r') as f:
     data = f.read()
 trajectories = json.loads(data)
 trajectories = ast.literal_eval(json.dumps(trajectories))

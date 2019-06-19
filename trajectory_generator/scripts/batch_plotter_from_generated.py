@@ -46,7 +46,8 @@ for opt, arg in opts:
         input_folder = arg
 
 script_path = os.path.abspath(__file__)
-main_dir = script_path[:script_path.rfind('/utils')]
+# main_dir = script_path[:script_path.rfind('/utils')]
+main_dir = script_path[:script_path.rfind('/scripts')]
 batch_dir = main_dir + "/generated_trajectories/cpp/" + input_folder
 trajectory_files = [f for f in listdir(batch_dir) if isfile(join(batch_dir, f))]
 

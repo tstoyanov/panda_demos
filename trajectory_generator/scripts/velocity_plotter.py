@@ -62,7 +62,18 @@ for i in range(len(trajectories["joint_trajectory"][0])):
 for values in trajectories["joint_trajectory"]:
     for i in range(len(values)):
         joint_trajectories[i].append(values[i])
-
+    
+joint_velocities = {}
+for joint_index in range(len(trajectories["joint_trajectory"][0])):
+    joint_velocities[joint_index] = []
+for i in range(len(trajectories["joint_trajectory"])-1):
+    for joint_index in range(len(values)):
+        joint_velocities[joint_index].append(trajectories["joint_trajectory"][i+1][joint_index] - trajectories["joint_trajectory"][i][joint_index])
+# for i in range(len(trajectories["joint_trajectory"])-1):
+#     joint_velocities.append(list(map(lambda j1, j2: j2-j1, trajectories["joint_trajectory"][i], trajectories["joint_trajectory"][i+1])))
+for joint_index in range(len(values)):
+    joint_velocities[joint_index].append(0)
+    
 eef_pose = {
     "origin": {
         "x": [],
@@ -240,6 +251,15 @@ for i in range(len(trajectories["joint_trajectory"][0])):
     # plt.title(joint_name)
     # plt.legend()
 
+    plt.xlabel('steps')
+    plt.legend()
+
+
+    plt.figure(input_folder + " joint_velocity " + str(i))
+    plt.subplot(1, 1, 1)
+    plt.plot(steps, joint_velocities[i], 'o-g', label="joint_velocity " + str(i))
+    plt.ylabel(str(i))
+    plt.legend()
     plt.xlabel('steps')
     plt.legend()
 

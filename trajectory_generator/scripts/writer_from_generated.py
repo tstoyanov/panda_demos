@@ -150,9 +150,10 @@ def talker():
     # for i in range(int(trajectories["realease_frame"])+1):
         trajectory_point.positions = trajectories["joint_trajectory"][i]
         trajectory_point.velocities = trajectories["joint_velocity"][i]
-        # trajectory_point.accelerations = trajectories["joint_acceleration"][i]
+        trajectory_point.accelerations = trajectories["joint_acceleration"][i]
         # trajectory_point.accelerations = [0]*len(trajectories["joint_trajectory"][0])
-        temp_points.append(copy.deepcopy(trajectory_point))
+        if i % 5 == 4 or i == 99 or i == 0:
+            temp_points.append(copy.deepcopy(trajectory_point))
         trajectory_point.time_from_start.nsecs += dt
         if trajectory_point.time_from_start.nsecs >= 1000000000:
             trajectory_point.time_from_start.secs += int(trajectory_point.time_from_start.nsecs / 1000000000)
