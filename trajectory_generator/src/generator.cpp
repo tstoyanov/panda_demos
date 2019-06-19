@@ -270,7 +270,7 @@ int main(int argc, char **argv)
   KDL::ChainIkSolverVel_wdls chainIkSolverVel {my_chain};
   KDL::ChainIkSolverPos_NR_JL chainIkSolverPos {my_chain, q_min, q_max, chainFkSolverPos, chainIkSolverVel, max_iter, eps};
 
-  double release_x_coordinate = 0.36;
+  double release_x_coordinate = 0.368281002938;
   // double release_x_coordinate = 0.368281002938;
   double noisy_release_x_coordinate;
   // ========== WAYPOINTS ==========
