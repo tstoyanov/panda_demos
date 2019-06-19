@@ -52,7 +52,7 @@ if batch:
         trajectories = ast.literal_eval(json.dumps(trajectories))
 
         try:
-            realease_frame = trajectories["realease_frame"]
+            realease_frame = trajectories["realease_frame"] - 1
         except:
             realease_frame = 90 - 1
         

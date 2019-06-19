@@ -176,7 +176,7 @@ ax.scatter3D(eef_pose["origin"]["x"], eef_pose["origin"]["y"], eef_pose["origin"
 
 # fig = plt.figure("fk_eef_trajectory")
 # ax = fig.add_subplot(111, projection='3d')
-ax.scatter3D(fk_eef_pose["origin"]["x"], fk_eef_pose["origin"]["y"], fk_eef_pose["origin"]["z"], c=fk_eef_pose["origin"]["z"], marker='^', cmap='Reds', label="fk_eef_trajectory")
+ax.scatter3D(fk_eef_pose["origin"]["x"], fk_eef_pose ["origin"]["y"], fk_eef_pose["origin"]["z"], c=fk_eef_pose["origin"]["z"], marker='^', cmap='Reds', label="fk_eef_trajectory")
 plt.legend()
 ax.axis('equal')
 

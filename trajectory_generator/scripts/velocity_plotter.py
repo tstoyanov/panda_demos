@@ -47,7 +47,8 @@ for opt, arg in opts:
         input_folder = arg
 
 script_path = os.path.abspath(__file__)
-main_dir = script_path[:script_path.rfind('/utils')]
+# main_dir = script_path[:script_path.rfind('/utils')]
+main_dir = script_path[:script_path.rfind('/scripts')]
 
 # with open("/home/ilbetzy/orebro/trajectory_generation_ws/generated_trajectories/" + input_folder + "/trajectories.txt", 'r') as f:
 with open(main_dir + "/generated_trajectories/cpp/" + input_folder + "/trajectories.txt", 'r') as f:

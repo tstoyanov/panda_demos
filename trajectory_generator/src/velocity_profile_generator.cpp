@@ -49,9 +49,8 @@ int velocity_profile_generator (std::vector<double> &result, int total_frames, i
         }
     }
     return 1;
+    
     // ===============================================
-
-
     // slope_end_frame = distribution(generator);
     // // when slope_end_frame is an odd number the total length computation is better
     // if (slope_end_frame % 2 == 0)

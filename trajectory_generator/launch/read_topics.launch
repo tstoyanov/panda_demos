@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<launch>
+    <group ns="panda">
+        <node pkg="trajectory_generator" name="reader" type="reader.py" output="screen" args="-o /home/aass/workspace_shuffle/python_workspace/joints_check/logs/" />
+    </group>
+</launch>
