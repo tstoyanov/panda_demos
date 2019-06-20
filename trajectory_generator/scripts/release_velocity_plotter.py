@@ -11,9 +11,10 @@ scale = 1
 input_folder = "latest"
 batch = False
 filter_alpha = 0.9
+execution_time = False
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:],"i:b:",["input=", "batch="])
+    opts, args = getopt.getopt(sys.argv[1:],"i:b:t:",["input=", "batch=", "time="])
 except getopt.GetoptError:
     print("test.py -i <input_folder>")
     sys.exit(2)
@@ -26,9 +27,13 @@ for opt, arg in opts:
     elif opt in ("-b", "--batch"):
         input_folder = arg
         batch = True
+    elif opt in ("-t", "--time"):
+        execution_time = float(arg) / 1000000000 # converting from nano seconds to seconds
+
 
 script_path = os.path.abspath(__file__)
-main_dir = script_path[:script_path.rfind('/utils')]
+# main_dir = script_path[:script_path.rfind('/utils')]
+main_dir = script_path[:script_path.rfind('/scripts')]
 
 if batch:
     # =============================================================================
@@ -50,6 +55,9 @@ if batch:
             data = f.read()
         trajectories = json.loads(data)
         trajectories = ast.literal_eval(json.dumps(trajectories))
+
+        if execution_time != False:
+            dt = execution_time / len(trajectories["joint_trajectory"])
 
         try:
             realease_frame = trajectories["realease_frame"] - 1
@@ -84,11 +92,15 @@ if batch:
     for index, axis in enumerate(release_distances["euclidean_distances"]):
         plt.subplot(2, 2, index+1)
         num_bins = 100
-        n, bins, patches = plt.hist(release_distances["euclidean_distances"][axis], num_bins, edgecolor='blue')
+        if execution_time != False:
+            n, bins, patches = plt.hist([float(item) / dt for item in release_distances["euclidean_distances"][axis]], num_bins, edgecolor='blue')
+            plt.xlabel(str(axis) + " [cm/s]")
+        else:
+            n, bins, patches = plt.hist(release_distances["euclidean_distances"][axis], num_bins, edgecolor='blue')
+            plt.xlabel(str(axis) + " [cm/dt]")
         current_xlim = plt.xlim()
         final_xlim[0] = min(final_xlim[0], current_xlim[0])
         final_xlim[1] = max(final_xlim[1], current_xlim[1])
-        plt.xlabel(str(axis) + " [cm/dt]")
         plt.ylabel("frame count")
         plt.legend()
     
@@ -108,12 +120,37 @@ else:
     trajectories = json.loads(data)
     trajectories = ast.literal_eval(json.dumps(trajectories))
 
+    if execution_time != False:
+        dt = execution_time / len(trajectories["joint_trajectory"])
+
     joint_trajectories = {}
     for i in range(len(trajectories["joint_trajectory"][0])):
         joint_trajectories[i] = []
     for values in trajectories["joint_trajectory"]:
         for i in range(len(values)):
             joint_trajectories[i].append(values[i])
+
+    joint_velocities = {}
+    for joint_index in range(len(trajectories["joint_trajectory"][0])):
+        joint_velocities[joint_index] = []
+    for i in range(len(trajectories["joint_trajectory"])-1):
+        for joint_index in range(len(values)):
+            joint_velocities[joint_index].append(trajectories["joint_trajectory"][i+1][joint_index] - trajectories["joint_trajectory"][i][joint_index])
+    # for i in range(len(trajectories["joint_trajectory"])-1):
+    #     joint_velocities.append(list(map(lambda j1, j2: j2-j1, trajectories["joint_trajectory"][i], trajectories["joint_trajectory"][i+1])))
+    for joint_index in range(len(values)):
+        joint_velocities[joint_index].append(0)
+    
+    joint_accelerations = {}
+    for joint_index in range(len(trajectories["joint_trajectory"][0])):
+        joint_accelerations[joint_index] = []
+    for i in range(len(trajectories["joint_trajectory"])-1):
+        for joint_index in range(len(values)):
+            joint_accelerations[joint_index].append(trajectories["joint_trajectory"][i+1][joint_index] - trajectories["joint_trajectory"][i][joint_index])
+    # for i in range(len(trajectories["joint_trajectory"])-1):
+    #     joint_accelerations.append(list(map(lambda j1, j2: j2-j1, trajectories["joint_trajectory"][i], trajectories["joint_trajectory"][i+1])))
+    for joint_index in range(len(values)):
+        joint_accelerations[joint_index].append(0)
 
     eef_pose = {
         "origin": {
@@ -170,10 +207,19 @@ else:
     print("processing graphs")
     for i in range(len(trajectories["joint_trajectory"][0])):
         steps = range(len(trajectories["joint_trajectory"]))
-        plt.figure(input_folder + " joint_trajectory " + str(i))
-        plt.subplot(1, 1, 1)
-        plt.plot(steps, joint_trajectories[i], 'o-g', label="joint_trajectory " + str(i))
-        plt.ylabel(str(i))
+        plt.figure(input_folder + " - joint_" + str(i+1))
+        if execution_time != False:
+            plt.subplot(2, 1, 2)
+            plt.plot(steps, [float(item) / dt for item in joint_velocities[i]], 'o-g', label="joint_" + str(i+1) + " velocity")
+            plt.ylabel("v [rad/s]")
+            plt.legend()
+            plt.xlabel('steps')
+            plt.legend()
+            plt.subplot(2, 1, 1)
+        else:
+            plt.subplot(1, 1, 1)
+        plt.plot(steps, joint_trajectories[i], 'o-g', label="joint_" + str(i+1) + " trajectory")
+        plt.ylabel("pos [rad]")
         # plt.title(joint_name)
         plt.legend()
             
@@ -194,14 +240,22 @@ else:
         plt.figure(input_folder + " euclidean distances " + str(axis))
 
         plt.subplot(2, 1, 1)
-        plt.plot(steps, eef_distances["euclidean_distances"][axis], 'o-g', label= str(axis) + " axis")
-        plt.ylabel(str(axis) + " [cm]")
+        if execution_time != False:
+            plt.plot(steps, [float(item) / dt for item in eef_distances["euclidean_distances"][axis]], 'o-g', label= str(axis) + " axis")
+            plt.ylabel(str(axis) + " [cm/s]")
+        else:
+            plt.plot(steps, eef_distances["euclidean_distances"][axis], 'o-g', label= str(axis) + " axis")
+            plt.ylabel(str(axis) + " [cm/dt]")
         plt.xlabel("frame count")
 
         plt.subplot(2, 1, 2)
         num_bins = 10
-        n, bins, patches = plt.hist(eef_distances["euclidean_distances"][axis], num_bins)
-        plt.xlabel(str(axis) + " [cm]")
+        if execution_time != False:
+            n, bins, patches = plt.hist([float(item) / dt for item in eef_distances["euclidean_distances"][axis]], num_bins)
+            plt.xlabel(str(axis) + " [cm/s]")
+        else:
+            n, bins, patches = plt.hist(eef_distances["euclidean_distances"][axis], num_bins)
+            plt.xlabel(str(axis) + " [cm/dt]")
         plt.ylabel("frame count")
 
         # plt.title(joint_name)

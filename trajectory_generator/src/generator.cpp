@@ -24,8 +24,10 @@
 
 #include "velocity_profile_generator.cpp"
 
-#define RADIUS 0.3
-#define EQRADIUS 0.3
+// #define RADIUS 0.3
+// #define EQRADIUS 0.3
+#define RADIUS 1
+#define EQRADIUS 1
 
 #define MAX_PATH_GENERATION_ATTEMPTS 100
 #define MAX_NOISE_GENERATION_ATTEMPTS 100
@@ -49,6 +51,10 @@ std::vector<std::map<std::string, double>> NOISE_MATRIX = { // 1 will be convert
     {"noise_mean", 0}, {"noise_stddev", 1} // 2
   }
 };
+
+// std::vector<double> distance_from_release = {
+
+// }
 
 
 
@@ -284,9 +290,9 @@ int main(int argc, char **argv)
     
     // real test
     // {x, y, z}
-    {-0.401718997062, 0.0892002648095, 0.906710060669},
-    {release_x_coordinate, 0.0892002648095, 0.906710060669},
-    {0.658281002938, 0.0892002648095, 0.956710060669}
+    {-0.401718997062, -0.0112002648095, 0.906710060669},
+    {release_x_coordinate, -0.0112002648095, 0.906710060669},
+    {0.658281002938, -0.0112002648095, 0.926710060669}
 
     // {-0.401718997062, 0.0892002648095, 0.916710060669},
     // {release_x_coordinate, 0.0892002648095, 0.866710060669},
@@ -436,6 +442,7 @@ int main(int argc, char **argv)
           }
         }
         path -> Add(KDL::Frame(KDL::Vector(noisy_release_point[0], noisy_release_point[1], noisy_release_point[2])));
+        // path -> Add(KDL::Frame(KDL::Vector(noisy_release_point[0], noisy_release_point[1], noisy_release_point[2])));
         path -> Add(KDL::Frame(KDL::Vector(starting_waypoints[2][0], starting_waypoints[2][1], starting_waypoints[2][2])));
         noisy_release_x_coordinate = noisy_release_point[0];
         path -> Finish();
