@@ -243,7 +243,8 @@ print("processing graphs")
 for i in range(len(trajectories["joint_trajectory"][0])):
     steps = range(len(trajectories["joint_trajectory"]))
     plt.figure(input_folder + " joint_trajectory " + str(i))
-    plt.subplot(1, 1, 1)
+    plt.subplot(2, 1, 1)
+    # plt.subplot(1, 1, 1)
     plt.plot(steps, joint_trajectories[i], 'o-g', label="joint_trajectory " + str(i))
     plt.ylabel(str(i))
     # plt.title(joint_name)
@@ -261,8 +262,8 @@ for i in range(len(trajectories["joint_trajectory"][0])):
     plt.legend()
 
 
-    plt.figure(input_folder + " joint_velocity " + str(i))
-    plt.subplot(1, 1, 1)
+    # plt.figure(input_folder + " joint_velocity " + str(i))
+    plt.subplot(2, 1, 2)
     plt.plot(steps, joint_velocities[i], 'o-g', label="joint_velocity " + str(i))
     plt.ylabel(str(i))
     plt.legend()

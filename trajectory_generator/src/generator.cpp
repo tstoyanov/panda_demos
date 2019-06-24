@@ -24,20 +24,25 @@
 
 #include "velocity_profile_generator.cpp"
 
-// #define RADIUS 0.3
-// #define EQRADIUS 0.3
-#define RADIUS 1
-#define EQRADIUS 1
+#define RADIUS 0.2
+#define EQRADIUS 0.2
+// #define RADIUS 1
+// #define EQRADIUS 1
 
 #define MAX_PATH_GENERATION_ATTEMPTS 100
 #define MAX_NOISE_GENERATION_ATTEMPTS 100
 
+#define DECELERATION_OFFSET 5
+#define DECELERATION_TIME 0.25  // duration of the deceleration in seconds
+#define DECELERATION_FRAMES 5   // number of frames during deceleration
+
 #define NUMBER_OF_SAMPLES 100
-// #define RELEASE_FRAME 0.6 * NUMBER_OF_SAMPLES
-#define RELEASE_FRAME 0.8 * NUMBER_OF_SAMPLES
+#define RELEASE_FRAME NUMBER_OF_SAMPLES - DECELERATION_OFFSET
+// #define RELEASE_FRAME 0.8 * NUMBER_OF_SAMPLES
 
 #define BINARY_SEARCH_TRESHOLD 0.0001 // meters
 #define MAX_NUMBER_OF_INVERSIONS 10
+
 
 std::vector<std::map<std::string, double>> NOISE_MATRIX = { // 1 will be converted to 1 cm for now
   // good
@@ -55,7 +60,6 @@ std::vector<std::map<std::string, double>> NOISE_MATRIX = { // 1 will be convert
 // std::vector<double> distance_from_release = {
 
 // }
-
 
 
 double binary_search_treshold (KDL::Path_RoundedComposite &path, double lower_bound, double upper_bound, const double &x_value, const double &treshold)
@@ -276,7 +280,7 @@ int main(int argc, char **argv)
   KDL::ChainIkSolverVel_wdls chainIkSolverVel {my_chain};
   KDL::ChainIkSolverPos_NR_JL chainIkSolverPos {my_chain, q_min, q_max, chainFkSolverPos, chainIkSolverVel, max_iter, eps};
 
-  double release_x_coordinate = 0.368281002938;
+  double release_x_coordinate = 0.268281002938;
   // double release_x_coordinate = 0.368281002938;
   double noisy_release_x_coordinate;
   // ========== WAYPOINTS ==========
@@ -290,9 +294,9 @@ int main(int argc, char **argv)
     
     // real test
     // {x, y, z}
-    {-0.401718997062, -0.0112002648095, 0.906710060669},
+    {-0.501718997062, -0.0112002648095, 0.906710060669},
     {release_x_coordinate, -0.0112002648095, 0.906710060669},
-    {0.658281002938, -0.0112002648095, 0.926710060669}
+    {0.308281002938, -0.0112002648095, 0.916710060669}
 
     // {-0.401718997062, 0.0892002648095, 0.916710060669},
     // {release_x_coordinate, 0.0892002648095, 0.866710060669},
@@ -366,6 +370,10 @@ int main(int argc, char **argv)
   // std::cout << "pkg_path: " << pkg_path << std::endl;
   remove_dir_path = pkg_path + "/generated_trajectories/cpp/latest_batch";
   remove_dir = boost::filesystem::path(remove_dir_path);
+
+  std::vector<double> joints_release_ds;
+  std::vector<double> joints_current_ds;
+  std::vector<std::vector<double>> decelerating_frames;
   
   while (generated_trajectories < batch_count)
   {
@@ -488,7 +496,7 @@ int main(int argc, char **argv)
     
     std::vector<double> velocity_dist(NUMBER_OF_SAMPLES, 0);
 
-    velocity_profile_generator(velocity_dist, NUMBER_OF_SAMPLES, RELEASE_FRAME, path_length, treshold_length);
+    generate_velocity_profile(velocity_dist, NUMBER_OF_SAMPLES, RELEASE_FRAME, path_length, treshold_length);
     // double euler_X;
     // double euler_Y;
     // double euler_Z;
@@ -570,6 +578,21 @@ int main(int argc, char **argv)
       // std::cout << "------------------------------\n";
       last_joint_pos = q_out;
     }
+
+
+    // for (unsigned joint_index = 0; joint_index < joint_names.size(); joint_index++)
+    // {
+    //   joints_release_ds.push_back(joint_trajectory[joint_trajectory.size()].data[joint_index] - joint_trajectory[joint_trajectory.size()-1].data[joint_index]);
+    // }
+    
+    // for (unsigned i = 0; i < DECELERATION_FRAMES; i++)
+    // {
+    //   for (unsigned joint_index = 0; joint_index < joint_names.size(); joint_index++)
+    //   {
+    //     joints_current_ds.push_back(joints_release_ds[joint_index] * (DECELERATION_FRAMES - i+1) / DECELERATION_FRAMES);
+    //   }
+    //   decelerating_frames.push_back(joints_current_ds);
+    // }
 
     // ====================JSON====================
     data = Json::Value();

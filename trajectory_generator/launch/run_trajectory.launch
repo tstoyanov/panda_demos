@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <launch>
     <group ns="panda">
-        <node pkg="trajectory_generator" name="writer" type="writer_from_generated.py" output="screen" args="-t 15000000000 -i$(find trajectory_generator)/generated_trajectories/cpp/latest/trajectories.txt" />
+        <node pkg="trajectory_generator" name="writer" type="writer_from_generated.py" output="screen" args="-t 2500000000 -i$(find trajectory_generator)/generated_trajectories/cpp/latest/trajectories.txt" />
     </group>
 </launch>
