@@ -1,5 +1,21 @@
 # Panda Insertion
-Panda insertion is a ROS package for performing a peg-in-hole insertion with a [Franka Emika Panda](https://www.franka.de/panda/) robot arm.
+Panda insertion is a ROS package for performing a peg-in-hole insertion with a [Franka Emika Panda](https://www.franka.de/panda/) robot arm. The package is located at the [panda_insertion/](/panda_insertion) directory of this repository.
+
+## Table of Contents
+* [About The Project](#about-the-project)
+* [Installation](#installation)
+    * [ROS](#ros)
+    * [Clone](#clone)
+    * [Package Dependencies](#packages-dependencies)
+    * [Build](#build)
+* [Code Structure](#code-structure)
+* [Usage](#usage)
+    * [Launch Files](#launch-files)
+    * [Available Services](#available-services)
+    * [Parameters](#parameters)
+* [Authors](#authors)
+* [License](#license)
+* [Acknowledgement](#acknowledgement)
 
 ## About The Project
 This project is an exam work done for the Center for Applied Autonomous Sensor Systems (AASS) which is a research environment on autonomous systems, robotics and artificial intelligence at Örebro University. AASS was contacted by SAAB to investigate a solution for automation of drill assembly using a robotic arm with lower precision than the clearance of the hole would demand.
@@ -38,10 +54,12 @@ $ catkin_make
 ```
 
 ## Code Structure
+As shown in the image below, the `Insertion` class contains the three main components of the node, the `Panda`, `Controller` and `State Machine`. The `Panda` object is syncing the current state of the robot, this includes the pose and forces acted upon the end effector. The `Controller` object is performing all the computations such as generating trajectories, changing the robot pose and communicating wit other ROS nodes. Finally the `State Machine` is deciding on the order of execution of the controller.
 
+![](/meta/class_diagram_simple.png)
 
 ## Usage
-### Lanch Files
+### Launch Files
 There are two (launch files)[http://wiki.ros.org/roslaunch/XML] to run the `panda_insertion` package, one for running in simulation and one for running live on the robot. To execute the launch files, use the tool [roslaunch](http://wiki.ros.org/roslaunch). To see what nodes are being launch you can look at the content of the `.launch` files.
 
 Run the package in **simulation** with the following command:
