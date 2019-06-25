@@ -45,7 +45,7 @@ deceleration_time = 0.5    # deceleration time in seconds
 # deceleration_time = 0.25    # deceleration time in seconds
 deceleration_dt = float(deceleration_time) / deceleration_frames
 
-gripper_open_delay = 0.165    # delay in seconds between sending and executing the open command
+gripper_open_delay = 0.3    # delay in seconds between sending and executing the open command
 
 def talker():
 
@@ -297,7 +297,7 @@ def talker():
     while (secs < adjusted_release_time["secs"]):
         secs_waited += 1
         secs = rospy.get_rostime().secs
-    while (now.nsecs < adjusted_release_time["nsecs"] or now.secs > secs):
+    while (now.secs <= adjusted_release_time["secs"] and (now.secs < adjusted_release_time["secs"] or now.nsecs < adjusted_release_time["nsecs"])):
         now = rospy.get_rostime()
     gripper_move_pub.publish(gripper_move_message)
     print("secs_waited = " + str(secs_waited))

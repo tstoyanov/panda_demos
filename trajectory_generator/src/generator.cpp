@@ -135,7 +135,7 @@ int main(int argc, char **argv)
     ("help", "produce help message")
     ("batch,b", po::value<int>(&batch_count), "set the number of trajectories to generate")
     ("sim,s", po::bool_switch()->default_value(false), "simulation flag")
-    ("no-noise,n", po::bool_switch()->default_value(false), "simulation flag")
+    ("no-noise,n", po::bool_switch()->default_value(false), "no-noise flag")
 
   ;
 
@@ -294,9 +294,9 @@ int main(int argc, char **argv)
     
     // real test
     // {x, y, z}
-    {-0.501718997062, -0.0112002648095, 0.906710060669},
-    {release_x_coordinate, -0.0112002648095, 0.906710060669},
-    {0.308281002938, -0.0112002648095, 0.916710060669}
+    {-0.501718997062, -0.0112002648095, 0.866710060669},
+    {release_x_coordinate, -0.0112002648095, 0.866710060669},
+    {0.298281002938, -0.0112002648095, 0.871710060669}
 
     // {-0.401718997062, 0.0892002648095, 0.916710060669},
     // {release_x_coordinate, 0.0892002648095, 0.866710060669},
