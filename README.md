@@ -56,7 +56,7 @@ $ catkin_make
 ## Code Structure
 As shown in the image below, the `Insertion` class contains the three main components of the node, the `Panda`, `Controller` and `State Machine`. The `Panda` object is syncing the current state of the robot, this includes the pose and forces acted upon the end effector. The `Controller` object is performing all the computations such as generating trajectories, changing the robot pose and communicating wit other ROS nodes. Finally the `State Machine` is deciding on the order of execution of the controller.
 
-![](/meta/class_diagram_simple.png)
+![](/panda_insertion/meta/class_diagram_simple.png)
 
 ## Usage
 ### Launch Files
