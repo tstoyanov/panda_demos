@@ -13,6 +13,7 @@
 #include "panda_insertion/SwapController.h"
 #include "trajectory_msgs/JointTrajectory.h"
 
+#include <eigen_conversions/eigen_msg.h>
 #include <boost/thread/mutex.hpp>
 
 #include "string"
@@ -76,6 +77,8 @@ public:
     bool idleState();
     bool touchFloor();
     bool inHole();
+    void matrixDifference();
+    //void matrixDifference(Eigen::Affine3d currentPose, Eigen::Affine3d desiredPose);
 
 private:
     void initJointTrajectoryPublisher();

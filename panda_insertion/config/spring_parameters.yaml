@@ -1,7 +1,7 @@
 move_to_initial_position:
   stiffness:
-    translational: [500.0, 500.0, 500.0]
-    rotational: [40.0, 40.0, 40.0]
+    translational: [400.0, 400.0, 400.0]
+    rotational: [20.0, 30.0, 30.0]
   goal: [0.155, 0.3455, 0.050]
 
 external_down_movement:
@@ -19,11 +19,11 @@ spiral:
 straightening:
   stiffness:
     translational: [600.0, 600.0, 200.0]
-    rotational: [40.0, 40.0, 40.0]
+    rotational: [80.0, 100.0, 100.0]
   goal: [0.155, 0.3455, -0.009]
 
 wiggle:
   stiffness:
-    translational: [600.0, 600.0, 200.0]
+    translational: [600.0, 600.0, 400.0]
     rotational: [60.0, 60.0, 60.0]
   goal: [0.155, 0.3455, -0.009]

@@ -18,7 +18,6 @@ void Panda::init(ros::NodeHandle* nodeHandler)
 
     ROS_DEBUG_STREAM("Initial goal xyz: "<< xGoal <<", "<< yGoal << ", " << zGoal);
 
-
     initialPosition.x = xGoal;
     initialPosition.y = yGoal;
     initialPosition.z = zGoal;
@@ -30,6 +29,13 @@ void Panda::init(ros::NodeHandle* nodeHandler)
 
     position = initialPosition;
     orientation = initialOrientation;
+
+    // Compensation of error to desired pose
+    straightOrientation.x = -0.999726;
+    straightOrientation.y = 0.014363;
+    straightOrientation.z = -0.0171982;
+    straightOrientation.w = 0.00678687;
+
 }
 
 void Panda::updatePosition(double x, double y, double z)

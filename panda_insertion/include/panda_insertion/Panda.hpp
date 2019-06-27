@@ -17,6 +17,7 @@ public:
     geometry_msgs::Quaternion initialOrientation;
     geometry_msgs::Point position;
     geometry_msgs::Quaternion orientation;
+    geometry_msgs::Quaternion straightOrientation;
     geometry_msgs::WrenchStamped wrenchMsg;
     geometry_msgs::TransformStamped transformStamped;
     const double holeDiameter;

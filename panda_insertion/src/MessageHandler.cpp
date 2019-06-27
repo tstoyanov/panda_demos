@@ -13,6 +13,7 @@ MessageHandler::MessageHandler(ros::NodeHandle* nodeHandler, Panda* panda)
 {
     this->nodeHandler = nodeHandler;
     this->panda = panda;
+    this->baseFrameId = "panda_link0";
 }
 
 PoseStampedMsg MessageHandler::pointPoseMessage(Point point)
@@ -20,17 +21,14 @@ PoseStampedMsg MessageHandler::pointPoseMessage(Point point)
     PoseStampedMsg message = emptyPoseMessage();
 
     message.header.frame_id = baseFrameId;
+    ROS_DEBUG_STREAM("baseFrameId: " << baseFrameId);
     
     message.pose.position.x = point.x;
     message.pose.position.y = point.y;
     message.pose.position.z = point.z;
 
-    // message.pose.orientation = panda->initialOrientation;
-    message.pose.orientation.x = 1.000;
-    message.pose.orientation.y = 0.000;
-    message.pose.orientation.z = 0.000;
-    message.pose.orientation.w = 0.000;
-
+    message.pose.orientation = panda->straightOrientation;
+    
     return message;
 }
 
@@ -166,35 +164,21 @@ PoseStampedMsg MessageHandler::insertionWigglePoseMessage(double xAng, double yA
     message.pose.orientation.z = transMsg.rotation.z;
     message.pose.orientation.w = transMsg.rotation.w;
 
-    ROS_DEBUG_STREAM("Translational xyz before rotation: " << 
-            message.pose.position.x << ", " <<
-            message.pose.position.y << ", " <<
-            message.pose.position.z);
-
     // Convert to matrix
     Eigen::Affine3d tMatrix;
     tf::poseMsgToEigen(message.pose, tMatrix);
 
-    double roll = (xAng * M_PI);
-    double pitch = (yAng * M_PI);
+    double roll = (xAng * 1.01 * M_PI);
+    double pitch = (yAng * 1.05 * M_PI);
     double yaw = (0.0 * M_PI);
 
-    ROS_DEBUG_STREAM("roll: " << roll << ", pitch: " << pitch << ", yaw: " << yaw);
-
     Eigen::Affine3d rotated_tMatrix = rotateMatrixRPY(tMatrix, roll, pitch, yaw);
-    ROS_DEBUG_STREAM("rotated_tMatrix: " << endl << rotated_tMatrix.rotation());
+
+    //ROS_DEBUG_STREAM("roll: " << roll << ", pitch: " << pitch << ", yaw: " << yaw);
+    //ROS_DEBUG_STREAM("rotated_tMatrix: " << endl << rotated_tMatrix.rotation());
 
     // Convert back to msg
     tf::poseEigenToMsg(rotated_tMatrix, message.pose);
-
-    ROS_DEBUG_STREAM("Translational xyz after rotation: " << 
-            message.pose.position.x << ", " <<
-            message.pose.position.y << ", " <<
-            message.pose.position.z);
-
-    message.pose.position.x = 0.1550;
-    message.pose.position.y = 0.3455;
-    message.pose.position.z = 0.0500;
 
     return message;
 }
@@ -202,7 +186,7 @@ PoseStampedMsg MessageHandler::insertionWigglePoseMessage(double xAng, double yA
 PoseStampedMsg MessageHandler::straighteningPoseMessage()
 {
     geometry_msgs::PoseStamped message = emptyPoseMessage();
-    message.header.frame_id = "panda_link0";
+    message.header.frame_id = baseFrameId;
 
     // Get goal parameter from server
     vector<double> goal;
@@ -220,14 +204,8 @@ PoseStampedMsg MessageHandler::straighteningPoseMessage()
     message.pose.position.x = transMsg.translation.x;
     message.pose.position.y = transMsg.translation.y;
     message.pose.position.z = goal.at(2);
-    //message.pose.orientation.x = -0.9992;
-    //message.pose.orientation.y = -0.3942;
-    //message.pose.orientation.z = -0.0020;
-    //message.pose.orientation.w = -0.0015;
-    message.pose.orientation.x = -0.9266;
-    message.pose.orientation.y = -0.3757;
-    message.pose.orientation.z = -0.0027;
-    message.pose.orientation.w = -0.0045;
+
+    message.pose.orientation = panda->straightOrientation;
 
     return message;
 }
@@ -247,3 +225,58 @@ Eigen::Affine3d MessageHandler::rotateMatrixRPY(Eigen::Affine3d tMatrix, double 
     return rotated_tMatrix;
 }
 
+geometry_msgs::Pose MessageHandler::generateRobotPoseMessage()
+{
+    geometry_msgs::Pose poseMsg;
+
+    mutex.lock();
+    const geometry_msgs::Transform transMsg = panda->transformStamped.transform;
+    mutex.unlock();
+
+    // Read robot pose
+    poseMsg.position.x = transMsg.translation.x;
+    poseMsg.position.y = transMsg.translation.y;
+    poseMsg.position.z = transMsg.translation.z;
+    
+    poseMsg.orientation.x = transMsg.rotation.x;
+    poseMsg.orientation.y = transMsg.rotation.y;
+    poseMsg.orientation.z = transMsg.rotation.z;
+    poseMsg.orientation.w = transMsg.rotation.w;
+
+    return poseMsg;
+}
+
+geometry_msgs::Pose MessageHandler::generateRobotErrorPoseMessage()
+{
+    geometry_msgs::Pose poseMsg;
+
+    // Read robot pose
+    mutex.lock();
+    const geometry_msgs::Transform transMsg = panda->transformStamped.transform;
+    mutex.unlock();
+
+    // Apply translational error
+    poseMsg.position.x = transMsg.translation.x * 1.3;
+    poseMsg.position.y = transMsg.translation.y * 1.3;
+    poseMsg.position.z = transMsg.translation.z * 1.3;
+
+    // Apply rotation error
+    poseMsg.orientation.x = transMsg.rotation.x;
+    poseMsg.orientation.y = transMsg.rotation.y;
+    poseMsg.orientation.z = transMsg.rotation.z;
+    poseMsg.orientation.w = transMsg.rotation.w;
+
+    Eigen::Affine3d tMatrix;
+    tf::poseMsgToEigen(poseMsg, tMatrix);
+
+    double roll = (0.25 * M_PI);
+    double pitch = (0.25 * M_PI);
+    double yaw = (0.25 * M_PI);
+
+    Eigen::Affine3d rotated_tMatrix = rotateMatrixRPY(tMatrix, roll, pitch, yaw);
+
+    // Convert back to msg
+    tf::poseEigenToMsg(rotated_tMatrix, poseMsg);
+
+    return poseMsg;
+}

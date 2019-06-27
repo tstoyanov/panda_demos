@@ -293,8 +293,8 @@ bool Controller::insertionWiggleState()
     twist.angular.z = rotationalStiffness.at(2);
     setStiffness(twist);
 
-    double xAng = (1.0 / 100.0);
-    double yAng = (1.0 / 100.0);
+    double xAng = (1.0 / 70.0);
+    double yAng = (1.0 / 70.0);
 
     int i = 0;
     ros::Rate rate(loop_rate);
@@ -311,6 +311,9 @@ bool Controller::insertionWiggleState()
 
         if ((i % 10) == 0)
         {
+            xAng = xAng * 0.96;
+            yAng = yAng * 0.96;
+
             ROS_DEBUG_STREAM("yAng flipped: yAng = " << yAng);
             yAng = -(yAng);
             ROS_DEBUG_STREAM("xAng flipped: xAng = " << xAng);
@@ -352,10 +355,16 @@ bool Controller::straighteningState()
     twist.angular.z = rotationalStiffness.at(2);
     setStiffness(twist);
 
+    ros::Rate rate(loop_rate);
+    int i = 0;
     geometry_msgs::PoseStamped poseMessage = messageHandler->straighteningPoseMessage();
-    equilibriumPosePublisher.publish(poseMessage);
+    while (ros::ok() && i < 20)
+    {
+        equilibriumPosePublisher.publish(poseMessage);
+        rate.sleep();
+        i++;
+    }
 
-    sleepAndTell(2.0);
     return true;
 }
 
@@ -617,4 +626,48 @@ void Controller::setStiffness(geometry_msgs::Twist twist)
     twistStamped.twist = twist;
 
     desiredStiffnessPublisher.publish(twistStamped);
+}
+
+//void Controller::matrixDifference(Eigen::Affine3d currentPose, Eigen::Affine3d desiredPose)
+void Controller::matrixDifference()
+{
+    // Test case ---->
+    geometry_msgs::Pose robotPoseMsg = messageHandler->generateRobotPoseMessage();
+    geometry_msgs::Pose desiredPoseMsg = messageHandler->generateRobotErrorPoseMessage();
+
+    Eigen::Affine3d currentPoseMatrix;
+    Eigen::Affine3d desiredPoseMatrix;
+    // <-----
+
+    // Convert pose messages to transformation matrices
+    tf::poseMsgToEigen(robotPoseMsg, currentPoseMatrix);
+    tf::poseMsgToEigen(desiredPoseMsg, desiredPoseMatrix);
+
+    // Extract translation
+    Eigen::Vector3d currentTranslation = currentPoseMatrix.translation();
+    Eigen::Vector3d desiredTranslation = desiredPoseMatrix.translation();
+    
+    // Extract rotation
+    Eigen::Matrix3d currentRotation = currentPoseMatrix.rotation();
+    Eigen::Matrix3d desiredRotation = desiredPoseMatrix.rotation();
+
+    // Calculate difference in translation
+    Eigen::Vector3d errorTranslation = desiredTranslation - currentTranslation;
+    auto errorTranslationNorm = desiredTranslation.norm();
+
+    // Calculate difference in rotation
+    //Eigen::Matrix3d errorRotation = currentRotation.transpose() * desiredRotation;
+    Eigen::Matrix3d errorRotation = desiredRotation * currentRotation.transpose();
+
+    // Convert error rotation to angle-axis representation
+    Eigen::AngleAxisd angleAxisRotation(errorRotation);
+    auto angle = angleAxisRotation.angle();
+    auto axis = angleAxisRotation.axis();
+
+    ROS_DEBUG("\n----------------------\n");
+    ROS_DEBUG_STREAM("errorTranslation: " << endl << errorTranslation);
+    ROS_DEBUG_STREAM("errorTranslationNorm : " << errorTranslationNorm);
+    ROS_DEBUG_STREAM("errorRotation: " << endl << errorRotation);
+    ROS_DEBUG_STREAM("angle: " << endl << angle);
+    ROS_DEBUG_STREAM("axis: " << endl << axis << endl);
 }

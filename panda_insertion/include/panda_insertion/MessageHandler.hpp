@@ -38,6 +38,8 @@ public:
 
     Eigen::Affine3d rotateMatrixRPY(Eigen::Affine3d tMatrix, double rollAngle,
                                     double pitchAngle, double yawAngle);
+    geometry_msgs::Pose generateRobotPoseMessage();
+    geometry_msgs::Pose generateRobotErrorPoseMessage();
 };
 
 #endif

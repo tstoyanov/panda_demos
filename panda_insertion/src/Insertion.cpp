@@ -329,5 +329,6 @@ void Insertion::finish()
 void Insertion::idle()
 {
     ROS_DEBUG_ONCE("In idle state");
+    //controller.matrixDifference();
     controller.idleState();
 }
