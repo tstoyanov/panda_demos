@@ -60,7 +60,7 @@ As shown in the image below, the `Insertion` class contains the three main compo
 
 ## Usage
 ### Launch Files
-There are two (launch files)[http://wiki.ros.org/roslaunch/XML] to run the `panda_insertion` package, one for running in simulation and one for running live on the robot. To execute the launch files, use the tool [roslaunch](http://wiki.ros.org/roslaunch). To see what nodes are being launch you can look at the content of the `.launch` files.
+There are two [launch files](http://wiki.ros.org/roslaunch/XML) to run the `panda_insertion` package, one for running in simulation and one for running live on the robot. To execute the launch files, use the tool [roslaunch](http://wiki.ros.org/roslaunch). To see what nodes are being launch you can look at the content of the `.launch` files.
 
 Run the package in **simulation** with the following command:
 ```bash
