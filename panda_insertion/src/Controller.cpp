@@ -237,7 +237,7 @@ bool Controller::spiralMotionState()
     //double a = (panda->holeDiameter / 2) * 0.001;
 
     double a = 0.0;
-    double b = 0.5 * 0.001;
+    double b = 0.35 * 0.001;
     int nrOfPoints = 100;
 
     Trajectory spiralTrajectory = trajectoryHandler->generateArchimedeanSpiral(a, b, nrOfPoints);
@@ -299,7 +299,7 @@ bool Controller::insertionWiggleState()
     int i = 0;
     ros::Rate rate(loop_rate);
 
-    while (ros::ok() && i < 256)
+    while (ros::ok() && i < 150)
     {
         ROS_DEBUG_STREAM("i: " << i);
         ROS_DEBUG_STREAM("xAng: " << xAng << ", yAng: " << yAng);
@@ -311,8 +311,8 @@ bool Controller::insertionWiggleState()
 
         if ((i % 10) == 0)
         {
-            xAng = xAng * 0.96;
-            yAng = yAng * 0.96;
+            xAng = xAng * 0.97;
+            yAng = yAng * 0.97;
 
             ROS_DEBUG_STREAM("yAng flipped: yAng = " << yAng);
             yAng = -(yAng);
@@ -406,6 +406,64 @@ bool Controller::internalDownMovementState()
     return true;
 }
 
+bool Controller::internalUpMovementState()
+{
+    ROS_DEBUG_ONCE("In internal up movement state from controller");
+   // Get parameters from server
+        vector<double> translationalStiffness;
+    const string translationalParameter = "/internal_up_movement/stiffness/translational";
+    if (!nodeHandler->getParam(translationalParameter , translationalStiffness))
+    {
+        ROS_ERROR_STREAM("Could not get param: " << translationalParameter  << " from server");
+        return false;
+    }
+
+    vector<double> rotationalStiffness;
+    const string rotationalParameter = "/internal_up_movement/stiffness/rotational";
+    if (!nodeHandler->getParam(rotationalParameter , rotationalStiffness))
+    {
+        ROS_ERROR_STREAM("Could not get param: " << rotationalParameter  << " from server");
+        return false;
+    }
+
+    // Generate trajectory
+    Trajectory upTrajectory;
+    try
+    {
+        upTrajectory = trajectoryHandler->generateInternalUpTrajectory(100);
+        //trajectoryHandler->writeTrajectoryToFile(downTrajectory, "downTrajectory.csv");
+    }
+    catch (runtime_error e)
+    {
+        ROS_ERROR_STREAM(e.what());
+    }
+
+    // Set stiffness
+    geometry_msgs::Twist twist;
+    twist.linear.x = translationalStiffness.at(0);
+    twist.linear.y = translationalStiffness.at(1);
+    twist.linear.z = translationalStiffness.at(2);
+    twist.angular.x = rotationalStiffness.at(0);
+    twist.angular.y = rotationalStiffness.at(1);
+    twist.angular.z = rotationalStiffness.at(2);
+    setStiffness(twist);
+
+    PoseStamped upMovementMessage = messageHandler->emptyPoseMessage();
+
+    // Execute trajectory
+    ros::Rate rate(loop_rate);
+    for (auto point : upTrajectory)
+    {
+
+        upMovementMessage = messageHandler->pointPoseMessage(point);
+        equilibriumPosePublisher.publish(upMovementMessage);
+
+        rate.sleep();
+    }
+    sleepAndTell(1.0);
+    return true;
+}
+
 bool Controller::idleState()
 {
     geometry_msgs::Transform transform;
@@ -416,11 +474,17 @@ bool Controller::idleState()
         mutex.lock();
         transform = panda->transformStamped.transform;
         mutex.unlock();
-
+/*
         ROS_DEBUG_STREAM("orientation.x: " << transform.rotation.x << endl <<
                          "orientation.y: " << transform.rotation.y << endl <<  
                          "orientation.z: " << transform.rotation.z << endl <<  
                          "orientation.w: " << transform.rotation.w << endl);
+*/
+        ROS_DEBUG_STREAM("\ntranslation.x: " << transform.translation.x << endl <<
+                         "translation.y: " << transform.translation.y << endl <<  
+                         "translation.z: " << transform.translation.z << endl);
+
+    
 
         rate.sleep();
     }

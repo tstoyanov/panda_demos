@@ -74,6 +74,7 @@ public:
     bool insertionWiggleState();
     bool straighteningState();
     bool internalDownMovementState();
+    bool internalUpMovementState();
     bool idleState();
     bool touchFloor();
     bool inHole();

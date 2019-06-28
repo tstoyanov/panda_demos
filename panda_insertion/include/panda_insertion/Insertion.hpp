@@ -25,6 +25,7 @@ enum State {
     InternalDownMovement,
     Straightening,
     InsertionWiggle,
+    InternalUpMovement,
     Finish,
     Idle,
     END_OF_STATES
@@ -79,6 +80,7 @@ public:
     void straightening();
     void insertionWiggle();
     void internalDownMovement();
+    void internalUpMovement();
     void finish();
     void idle();
 

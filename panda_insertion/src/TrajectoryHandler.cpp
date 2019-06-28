@@ -162,6 +162,59 @@ Trajectory TrajectoryHandler::generateExternalDownTrajectory(int nrOfPoints)
     return trajectory;
 }
 
+Trajectory TrajectoryHandler::generateInternalUpTrajectory(int nrOfPoints)
+{
+    Trajectory trajectory;
+    geometry_msgs::Transform transform;
+
+    //Get parameter from server
+        vector<double> goal;
+    const string goalParameter = "/internal_up_movement/goal";
+    if (!nodeHandler->getParam(goalParameter  , goal))
+    {
+        throw runtime_error("Could not get parameter from server");
+    }
+
+    mutex.lock();
+    transform = panda->transformStamped.transform;
+    mutex.unlock();
+
+
+    Point startPoint;
+    startPoint.x = transform.translation.x;
+    startPoint.y = transform.translation.y;
+    startPoint.z = transform.translation.z;
+
+
+
+    ROS_DEBUG_STREAM_ONCE("Startpoint xyz: " << startPoint.x << ", " << startPoint.y << ", " << startPoint.z);
+    Point goalPoint;
+    goalPoint.x = transform.translation.x;
+    goalPoint.y = transform.translation.y;
+    goalPoint.z = goal.at(2);
+    
+    Point pointSteps;
+    pointSteps.x = (goalPoint.x - startPoint.x) / nrOfPoints;
+    pointSteps.y = (goalPoint.y - startPoint.y) / nrOfPoints;
+    pointSteps.z = (goalPoint.z - startPoint.z) / nrOfPoints;
+
+
+    for (auto i = 0; i <= nrOfPoints; i++)
+    {
+        Point point;
+
+        point.x = startPoint.x + (pointSteps.x * i);
+        point.y = startPoint.y + (pointSteps.y * i);
+        point.z = startPoint.z + (pointSteps.z * i);
+
+        trajectory.push_back(point);
+    }
+
+    return trajectory;
+} 
+
+
+
 void TrajectoryHandler::writeTrajectoryToFile(Trajectory trajectory,
                                               const string& fileName,
                                               bool appendToFile)

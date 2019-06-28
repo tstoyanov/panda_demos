@@ -86,7 +86,14 @@ void Insertion::stateMachineRun()
             internalDownMovement();
             break;
         }
-
+        
+        case InternalUpMovement:
+        {
+            ROS_DEBUG_ONCE("Internal up movement");
+            internalUpMovement();
+            break;
+        }
+        
         case Finish:
         {
             ROS_DEBUG_ONCE("Finish state");
@@ -215,6 +222,12 @@ bool Insertion::changeStateCallback(panda_insertion::ChangeState::Request& reque
         activeState = InsertionWiggle;
         mutex.unlock();
     }
+    if (boost::iequals(state, "InternalUpMovement"))
+    {
+        mutex.lock();
+        activeState = InternalUpMovement;
+        mutex.unlock();
+    }
     if (boost::iequals(state, "Finish"))
     {
         mutex.lock();
@@ -278,7 +291,7 @@ void Insertion::externalDownMovement()
     ROS_DEBUG_ONCE("In external down movement state");
     controller.externalDownMovementState();
     ROS_DEBUG_ONCE("External down movement DONE.");
-    changeState("spiralmotion");
+    changeState("spiralMotion");
 }
 
 void Insertion::spiralMotion()
@@ -291,7 +304,7 @@ void Insertion::spiralMotion()
     else
     {
         ROS_ERROR("Spiral motion failed");
-        changeState("idle");
+        changeState("internalUpMovement");
     }
     ROS_DEBUG_ONCE("Spiral motion DONE.");
 }
@@ -301,7 +314,7 @@ void Insertion::insertionWiggle()
     ROS_DEBUG_ONCE("In insertion wigglestate");
     controller.insertionWiggleState();
     ROS_DEBUG_ONCE("Insertion wiggle DONE.");
-    changeState("finish");
+    changeState("internalUpMovement");
 }
 
 void Insertion::straightening()
@@ -317,6 +330,14 @@ void Insertion::internalDownMovement()
     ROS_DEBUG_ONCE("In internal down movement state");
     controller.internalDownMovementState();
     ROS_DEBUG_ONCE("Internal down movement DONE.");
+    changeState("finish");
+}
+
+void Insertion::internalUpMovement()
+{
+    ROS_DEBUG_ONCE("In internal up movement state");
+    controller.internalUpMovementState();
+    ROS_DEBUG_ONCE("Internal up movement DONE.");
     changeState("finish");
 }
 

@@ -21,7 +21,7 @@ PoseStampedMsg MessageHandler::pointPoseMessage(Point point)
     PoseStampedMsg message = emptyPoseMessage();
 
     message.header.frame_id = baseFrameId;
-    ROS_DEBUG_STREAM("baseFrameId: " << baseFrameId);
+   // ROS_DEBUG_STREAM("baseFrameId: " << baseFrameId);
     
     message.pose.position.x = point.x;
     message.pose.position.y = point.y;

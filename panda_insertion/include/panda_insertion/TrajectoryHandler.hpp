@@ -30,6 +30,7 @@ public:
     Trajectory generateArchimedeanSpiral(double a, double b, int nrOfPoints);
     Trajectory generateInitialPositionTrajectory(int nrOfPoints);
     Trajectory generateExternalDownTrajectory(int nrOfPoints);
+    Trajectory generateInternalUpTrajectory(int nrOfPoints);
 
     void writeTrajectoryToFile(Trajectory trajectory,
                                const std::string& fileName,
