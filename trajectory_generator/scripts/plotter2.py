@@ -114,6 +114,31 @@ for message in list_message_joint_states:
         efforts_joint_states[joint_names_joint_states[i]].append(message.effort[i] / float(scale))
 
 # =============================================================================
+# goal processing
+joint_names_goal = list_message_goal[0].goal.trajectory.joint_names
+positions_goal = {}
+velocities_goal = {}
+accelerations_goal = {}
+
+for i in range(len(joint_names_goal)):
+    positions_goal[joint_names_goal[i]] = []
+    velocities_goal[joint_names_goal[i]] = []
+    accelerations_goal[joint_names_goal[i]] = []
+ts_goal = []
+
+for goal in list_message_goal:
+    for point in goal.goal.trajectory.points:
+        ts_goal.append((goal.header.stamp.secs * 1000000000) + goal.header.stamp.nsecs + (point.time_from_start.secs * 1000000000) + point.time_from_start.nsecs)
+        for i in range(len(joint_names_goal)):
+            positions_goal[joint_names_goal[i]].append(point.positions[i])
+            velocities_goal[joint_names_goal[i]].append(point.velocities[i])
+            # accelerations_goal[joint_names_goal[i]].append(point.accelerations[i])
+            if (len(point.accelerations) != 0):
+                accelerations_goal[joint_names_goal[i]].append(point.accelerations[i] / float(scale))
+            else:
+                accelerations_goal[joint_names_goal[i]].append([0] * len(joint_names_goal))
+
+# =============================================================================
 # computing diffs
 positions_diffs = {}
 velocities_diffs = {}
@@ -159,22 +184,35 @@ for joint_name in joint_names_feedback:
         r += 2
         
     plt.subplot(2, 2, 2)
-    plt.plot(ts_feedback, feedback["actual"]["positions"][joint_name], 'o-g', label="actual positions")
+    # plt.plot(ts_feedback, feedback["actual"]["positions"][joint_name], 'o-g', label="actual positions")
+    # plt.plot(ts_feedback, feedback["desired"]["positions"][joint_name], 'o-g', label="desired positions")
+    plt.plot(ts_goal, positions_goal[joint_name], 'o-g', label="goal positions")
     plt.plot(ts_joint_states, positions_joint_states[joint_name], 'x-r', label="joint_states positions")
-    plt.bar(ts_joint_states, positions_diffs[joint_name], color="red", edgecolor="red", label="positions diffs")
+    # plt.bar(ts_joint_states, positions_diffs[joint_name], color="black", edgecolor="black", label="positions diffs")
     plt.ylabel("positions")
     plt.title(joint_name)
     plt.legend()
     plt.subplot(2, 2, 4)
-    plt.plot(ts_feedback, feedback["actual"]["velocities"][joint_name], 'o-g', label="actual velocities")
+    # plt.plot(ts_feedback, feedback["actual"]["velocities"][joint_name], 'o-g', label="actual velocities")
+    # plt.plot(ts_feedback, feedback["desired"]["velocities"][joint_name], 'o-g', label="desired velocities")
+    plt.plot(ts_goal, velocities_goal[joint_name], 'o-g', label="goal velocities")
     plt.plot(ts_joint_states, velocities_joint_states[joint_name], 'x-r', label="joint_states velocities")
-    plt.bar(ts_joint_states, velocities_diffs[joint_name], color="red", edgecolor="red", label="velocities diffs")
+    plt.plot(ts_joint_states, efforts_joint_states[joint_name], 'x-b', label="joint_states efforts")
+    # plt.bar(ts_joint_states, velocities_diffs[joint_name], color="black", edgecolor="black", label="velocities diffs")
     plt.ylabel("velocities")
     plt.title(joint_name)
     plt.legend()
 
     plt.xlabel('time (ns)')
     plt.legend()
+
+    # plt.figure("efforts " + str(n))
+    # plt.subplot(1, 1, 1)
+    # plt.title(joint_name)
+    # plt.plot(ts_joint_states, efforts_joint_states[joint_name], 'x-b', label="joint_states efforts")
+    # plt.ylabel("efforts")
+    # plt.xlabel('time (ns)')
+    # plt.legend()
 
 # =============================================================================
     # plt.figure(folder_name + " " + str(n))

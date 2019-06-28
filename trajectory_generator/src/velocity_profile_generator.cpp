@@ -2,7 +2,7 @@
 #include <random>
 #include <cmath>
 
-int velocity_profile_generator (std::vector<double> &result, int total_frames, int treshold_frame, double total_length, double treshold_length)
+int generate_velocity_profile (std::vector<double> &result, int total_frames, int treshold_frame, double total_length, double treshold_length)
 {
     int slope_end_frame;
     double final_part_ds;
@@ -16,7 +16,10 @@ int velocity_profile_generator (std::vector<double> &result, int total_frames, i
     double release_velocity;
     int starting_frame;
     // std::uniform_real_distribution<> real_distribution(2 * treshold_length / treshold_frame, treshold_length / 4); 
-    std::uniform_real_distribution<> real_distribution(2 * treshold_length / treshold_frame, 4 * treshold_length / treshold_frame);
+    // std::uniform_real_distribution<> real_distribution(4 * treshold_length / treshold_frame, 4 * treshold_length / treshold_frame);
+    std::uniform_real_distribution<> real_distribution(2 * treshold_length / treshold_frame, 3 * treshold_length / treshold_frame);
+
+    // std::uniform_real_distribution<> real_distribution(2 * treshold_length / treshold_frame, 4 * treshold_length / treshold_frame);
 
     release_velocity = real_distribution(generator);
     starting_frame = treshold_frame - (2 * treshold_length / release_velocity);
@@ -36,17 +39,22 @@ int velocity_profile_generator (std::vector<double> &result, int total_frames, i
     }
     for (unsigned i = treshold_frame; i < total_frames; i++)
     {
-        result[i] = result[i-1] * (total_frames - i) / (total_frames - treshold_frame);
+        // result[i] = result[treshold_frame-1] * (total_frames - (i+1)) / (total_frames - treshold_frame);
+
+        result[i] = result[treshold_frame-1];
+        // result[i] = result[i-1] * (total_frames - i) / (total_frames - treshold_frame);
+        // result[i] = static_cast<double>(release_velocity * (total_frames - (i+1)) / (total_frames - treshold_frame));
         // result[i] = result[i-1] * 0.7;
         computed_total_distance += result[i];
-        if (computed_total_distance > total_length)
-        {
-            result[i] = 0;
-            for (; i < total_frames; i++)
-            {
-                result[i] = 0;
-            }
-        }
+        // if (computed_total_distance > total_length)
+        // {
+        //     std::cout << "CUT" << std::endl;
+        //     result[i] = 0;
+        //     for (; i < total_frames; i++)
+        //     {
+        //         result[i] = 0;
+        //     }
+        // }
     }
     return 1;
     
@@ -98,4 +106,9 @@ int velocity_profile_generator (std::vector<double> &result, int total_frames, i
     // }
 
     // return 1;
+}
+
+int decelerate_joints()
+{
+    return 37;
 }

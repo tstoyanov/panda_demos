@@ -62,7 +62,18 @@ for i in range(len(trajectories["joint_trajectory"][0])):
 for values in trajectories["joint_trajectory"]:
     for i in range(len(values)):
         joint_trajectories[i].append(values[i])
-
+    
+joint_velocities = {}
+for joint_index in range(len(trajectories["joint_trajectory"][0])):
+    joint_velocities[joint_index] = []
+for i in range(len(trajectories["joint_trajectory"])-1):
+    for joint_index in range(len(values)):
+        joint_velocities[joint_index].append(trajectories["joint_trajectory"][i+1][joint_index] - trajectories["joint_trajectory"][i][joint_index])
+# for i in range(len(trajectories["joint_trajectory"])-1):
+#     joint_velocities.append(list(map(lambda j1, j2: j2-j1, trajectories["joint_trajectory"][i], trajectories["joint_trajectory"][i+1])))
+for joint_index in range(len(values)):
+    joint_velocities[joint_index].append(0)
+    
 eef_pose = {
     "origin": {
         "x": [],
@@ -99,9 +110,12 @@ eef_distances = {
 # eef_distances["euclidean_distances"]["z"].append(trajectories["eef_trajectory"][1]["origin"]["z"] - trajectories["eef_trajectory"][0]["origin"]["z"])
 
 # *100 converts the distances in centimeters
-eef_distances["euclidean_distances"]["x"].append((trajectories["eef_trajectory"][1]["origin"]["x"] - trajectories["eef_trajectory"][0]["origin"]["x"]) * 100)
-eef_distances["euclidean_distances"]["y"].append((trajectories["eef_trajectory"][1]["origin"]["y"] - trajectories["eef_trajectory"][0]["origin"]["y"]) * 100)
-eef_distances["euclidean_distances"]["z"].append((trajectories["eef_trajectory"][1]["origin"]["z"] - trajectories["eef_trajectory"][0]["origin"]["z"]) * 100)
+# eef_distances["euclidean_distances"]["x"].append((trajectories["eef_trajectory"][1]["origin"]["x"] - trajectories["eef_trajectory"][0]["origin"]["x"]) * 100)
+# eef_distances["euclidean_distances"]["y"].append((trajectories["eef_trajectory"][1]["origin"]["y"] - trajectories["eef_trajectory"][0]["origin"]["y"]) * 100)
+# eef_distances["euclidean_distances"]["z"].append((trajectories["eef_trajectory"][1]["origin"]["z"] - trajectories["eef_trajectory"][0]["origin"]["z"]) * 100)
+eef_distances["euclidean_distances"]["x"].append(trajectories["eef_trajectory"][1]["origin"]["x"] - trajectories["eef_trajectory"][0]["origin"]["x"])
+eef_distances["euclidean_distances"]["y"].append(trajectories["eef_trajectory"][1]["origin"]["y"] - trajectories["eef_trajectory"][0]["origin"]["y"])
+eef_distances["euclidean_distances"]["z"].append(trajectories["eef_trajectory"][1]["origin"]["z"] - trajectories["eef_trajectory"][0]["origin"]["z"])
 eef_distances["euclidean_distances"]["magnitude"].append(math.sqrt(eef_distances["euclidean_distances"]["x"][0]**2 + eef_distances["euclidean_distances"]["y"][0]**2 + eef_distances["euclidean_distances"]["z"][0]**2))
 
 for index, values in enumerate(trajectories["eef_trajectory"]):
@@ -115,9 +129,12 @@ for index, values in enumerate(trajectories["eef_trajectory"]):
         # eef_distances["euclidean_distances"]["y"].append(((1 - filter_alpha) * eef_distances["euclidean_distances"]["y"][index - 1]) + (filter_alpha * (trajectories["eef_trajectory"][index]["origin"]["y"] - trajectories["eef_trajectory"][index -1]["origin"]["y"])))
         # eef_distances["euclidean_distances"]["z"].append(((1 - filter_alpha) * eef_distances["euclidean_distances"]["z"][index - 1]) + (filter_alpha * (trajectories["eef_trajectory"][index]["origin"]["z"] - trajectories["eef_trajectory"][index -1]["origin"]["z"])))
 
-        eef_distances["euclidean_distances"]["x"].append(((1 - filter_alpha) * eef_distances["euclidean_distances"]["x"][index - 1]) + (filter_alpha * ((trajectories["eef_trajectory"][index]["origin"]["x"] - trajectories["eef_trajectory"][index -1]["origin"]["x"])) * 100))
-        eef_distances["euclidean_distances"]["y"].append(((1 - filter_alpha) * eef_distances["euclidean_distances"]["y"][index - 1]) + (filter_alpha * ((trajectories["eef_trajectory"][index]["origin"]["y"] - trajectories["eef_trajectory"][index -1]["origin"]["y"])) * 100))
-        eef_distances["euclidean_distances"]["z"].append(((1 - filter_alpha) * eef_distances["euclidean_distances"]["z"][index - 1]) + (filter_alpha * ((trajectories["eef_trajectory"][index]["origin"]["z"] - trajectories["eef_trajectory"][index -1]["origin"]["z"])) * 100))
+        # eef_distances["euclidean_distances"]["x"].append(((1 - filter_alpha) * eef_distances["euclidean_distances"]["x"][index - 1]) + (filter_alpha * ((trajectories["eef_trajectory"][index]["origin"]["x"] - trajectories["eef_trajectory"][index -1]["origin"]["x"])) * 100))
+        # eef_distances["euclidean_distances"]["y"].append(((1 - filter_alpha) * eef_distances["euclidean_distances"]["y"][index - 1]) + (filter_alpha * ((trajectories["eef_trajectory"][index]["origin"]["y"] - trajectories["eef_trajectory"][index -1]["origin"]["y"])) * 100))
+        # eef_distances["euclidean_distances"]["z"].append(((1 - filter_alpha) * eef_distances["euclidean_distances"]["z"][index - 1]) + (filter_alpha * ((trajectories["eef_trajectory"][index]["origin"]["z"] - trajectories["eef_trajectory"][index -1]["origin"]["z"])) * 100))
+        eef_distances["euclidean_distances"]["x"].append(((1 - filter_alpha) * eef_distances["euclidean_distances"]["x"][index - 1]) + (filter_alpha * (trajectories["eef_trajectory"][index]["origin"]["x"] - trajectories["eef_trajectory"][index -1]["origin"]["x"])))
+        eef_distances["euclidean_distances"]["y"].append(((1 - filter_alpha) * eef_distances["euclidean_distances"]["y"][index - 1]) + (filter_alpha * (trajectories["eef_trajectory"][index]["origin"]["y"] - trajectories["eef_trajectory"][index -1]["origin"]["y"])))
+        eef_distances["euclidean_distances"]["z"].append(((1 - filter_alpha) * eef_distances["euclidean_distances"]["z"][index - 1]) + (filter_alpha * (trajectories["eef_trajectory"][index]["origin"]["z"] - trajectories["eef_trajectory"][index -1]["origin"]["z"])))
         eef_distances["euclidean_distances"]["magnitude"].append(math.sqrt(eef_distances["euclidean_distances"]["x"][index]**2 + eef_distances["euclidean_distances"]["y"][index]**2 + eef_distances["euclidean_distances"]["z"][index]**2))
 
         # eef_distances["euclidean_distances"]["x"][index] =  ((1 - filter_alpha) * eef_distances["euclidean_distances"]["x"][index - 1]) + (filter_alpha * (trajectories["eef_trajectory"][index]["origin"]["x"] - trajectories["eef_trajectory"][index -1]["origin"]["x"]))
@@ -226,7 +243,8 @@ print("processing graphs")
 for i in range(len(trajectories["joint_trajectory"][0])):
     steps = range(len(trajectories["joint_trajectory"]))
     plt.figure(input_folder + " joint_trajectory " + str(i))
-    plt.subplot(1, 1, 1)
+    plt.subplot(2, 1, 1)
+    # plt.subplot(1, 1, 1)
     plt.plot(steps, joint_trajectories[i], 'o-g', label="joint_trajectory " + str(i))
     plt.ylabel(str(i))
     # plt.title(joint_name)
@@ -244,6 +262,15 @@ for i in range(len(trajectories["joint_trajectory"][0])):
     plt.legend()
 
 
+    # plt.figure(input_folder + " joint_velocity " + str(i))
+    plt.subplot(2, 1, 2)
+    plt.plot(steps, joint_velocities[i], 'o-g', label="joint_velocity " + str(i))
+    plt.ylabel(str(i))
+    plt.legend()
+    plt.xlabel('steps')
+    plt.legend()
+
+
 for axis in eef_distances["euclidean_distances"]:
     steps = range(len(eef_distances["euclidean_distances"][axis]))
     plt.figure(input_folder + " cartesian distances " + str(axis))
@@ -251,13 +278,13 @@ for axis in eef_distances["euclidean_distances"]:
     plt.subplot(2, 1, 1)
     # plt.subplot(1, 1, 1)
     plt.plot(steps, eef_distances["euclidean_distances"][axis], 'o-g', label= str(axis) + " axis")
-    plt.ylabel(str(axis) + " [cm]")
+    plt.ylabel(str(axis) + " [m]")
     plt.xlabel("frame count")
 
     plt.subplot(2, 1, 2)
     num_bins = 10
     n, bins, patches = plt.hist(eef_distances["euclidean_distances"][axis], num_bins)
-    plt.xlabel(str(axis) + " [cm]")
+    plt.xlabel(str(axis) + " [m]")
     plt.ylabel("frame count")
 
     # plt.title(joint_name)

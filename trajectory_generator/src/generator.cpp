@@ -24,38 +24,50 @@
 
 #include "velocity_profile_generator.cpp"
 
-#define RADIUS 0.3
-#define EQRADIUS 0.3
+#define RADIUS 0.2
+#define EQRADIUS 0.2
+// #define RADIUS 1
+// #define EQRADIUS 1
 
 #define MAX_PATH_GENERATION_ATTEMPTS 100
 #define MAX_NOISE_GENERATION_ATTEMPTS 100
 
+#define DECELERATION_OFFSET 5
+#define DECELERATION_TIME 0.25  // duration of the deceleration in seconds
+#define DECELERATION_FRAMES 5   // number of frames during deceleration
+
 #define NUMBER_OF_SAMPLES 100
-// #define RELEASE_FRAME 0.6 * NUMBER_OF_SAMPLES
-#define RELEASE_FRAME 0.8 * NUMBER_OF_SAMPLES
+#define RELEASE_FRAME NUMBER_OF_SAMPLES - DECELERATION_OFFSET
+// #define RELEASE_FRAME 0.8 * NUMBER_OF_SAMPLES
 
 #define BINARY_SEARCH_TRESHOLD 0.0001 // meters
 #define MAX_NUMBER_OF_INVERSIONS 10
 
+
 std::vector<std::map<std::string, double>> NOISE_MATRIX = { // 1 will be converted to 1 cm for now
   // good
   { // x                                                    // 99% of the noise falls inside MEAN +/- 3*NOISE_STDDEV (1.66 = +/- 5m? => 5cm in the end)
-    {"noise_mean", 0}, {"noise_stddev", 3}
+    {"noise_mean", 0}, {"noise_stddev", 1} // 3
   },
   { // y
     {"noise_mean", 0}, {"noise_stddev", 0.3}
   },
   { // z
-    {"noise_mean", 0}, {"noise_stddev", 2}
+    {"noise_mean", 0}, {"noise_stddev", 1} // 2
   }
 };
+
+// std::vector<double> distance_from_release = {
+
+// }
 
 
 double binary_search_treshold (KDL::Path_RoundedComposite &path, double lower_bound, double upper_bound, const double &x_value, const double &treshold)
 {
   double mid = (upper_bound + lower_bound) / 2;
   double mid_x_value = path.Pos(mid).p.x();
-  if (mid_x_value <= (x_value + treshold) && mid_x_value >= (x_value - treshold))
+  // if (mid_x_value <= (x_value + treshold) && mid_x_value >= (x_value - treshold))
+  if (fabs(mid_x_value - x_value) <= treshold)
   {
     return mid;
   }
@@ -113,7 +125,7 @@ int main(int argc, char **argv)
 {
   bool is_batch = false;
   bool is_simulation = false;
-  bool asd = false;
+  bool no_noise = false;
   int batch_count = 1;
   int generated_trajectories = 0;
   namespace po = boost::program_options;
@@ -123,7 +135,7 @@ int main(int argc, char **argv)
     ("help", "produce help message")
     ("batch,b", po::value<int>(&batch_count), "set the number of trajectories to generate")
     ("sim,s", po::bool_switch()->default_value(false), "simulation flag")
-    ("no-noise,n", po::bool_switch()->default_value(false), "simulation flag")
+    ("no-noise,n", po::bool_switch()->default_value(false), "no-noise flag")
 
   ;
 
@@ -162,7 +174,7 @@ int main(int argc, char **argv)
 
   if (vm.count("no-noise"))
   {
-    asd = vm["no-noise"].as<bool>();
+    no_noise = vm["no-noise"].as<bool>();
   }
 
   // if (argc > 1)
@@ -268,22 +280,23 @@ int main(int argc, char **argv)
   KDL::ChainIkSolverVel_wdls chainIkSolverVel {my_chain};
   KDL::ChainIkSolverPos_NR_JL chainIkSolverPos {my_chain, q_min, q_max, chainFkSolverPos, chainIkSolverVel, max_iter, eps};
 
-  double release_x_coordinate = 0.368281002938;
+  double release_x_coordinate = 0.268281002938;
+  // double release_x_coordinate = 0.368281002938;
   double noisy_release_x_coordinate;
   // ========== WAYPOINTS ==========
   std::vector<std::vector<double>> starting_waypoints =
   {
     // good
     // {x, y, z}
-    {-0.401718997062, 0.0892002648095, 0.986710060669},
-    {release_x_coordinate, 0.0892002648095, 0.886710060669},
-    {0.568281002938, 0.0892002648095, 1.086710060669}
+    // {-0.401718997062, 0.0892002648095, 0.986710060669},
+    // {release_x_coordinate, 0.0892002648095, 0.886710060669},
+    // {0.568281002938, 0.0892002648095, 1.086710060669}
     
     // real test
     // {x, y, z}
-    // {-0.401718997062, 0.0892002648095, 0.986710060669},
-    // {release_x_coordinate, 0.0892002648095, 0.986610060669},
-    // {0.508281002938, 0.0892002648095, 0.986710060669}
+    {-0.501718997062, -0.0112002648095, 0.866710060669},
+    {release_x_coordinate, -0.0112002648095, 0.866710060669},
+    {0.298281002938, -0.0112002648095, 0.871710060669}
 
     // {-0.401718997062, 0.0892002648095, 0.916710060669},
     // {release_x_coordinate, 0.0892002648095, 0.866710060669},
@@ -310,6 +323,7 @@ int main(int argc, char **argv)
   bool path_error;
   double noise;
   int noise_generation_counter;
+  std::vector<double> noisy_release_point;
   std::vector<std::vector<double>> noisy_waypoints;
   double max_noise;
   double min_noise;
@@ -356,6 +370,10 @@ int main(int argc, char **argv)
   // std::cout << "pkg_path: " << pkg_path << std::endl;
   remove_dir_path = pkg_path + "/generated_trajectories/cpp/latest_batch";
   remove_dir = boost::filesystem::path(remove_dir_path);
+
+  std::vector<double> joints_release_ds;
+  std::vector<double> joints_current_ds;
+  std::vector<std::vector<double>> decelerating_frames;
   
   while (generated_trajectories < batch_count)
   {
@@ -368,53 +386,73 @@ int main(int argc, char **argv)
       try
       {
         path_error = false;
-        noisy_waypoints = starting_waypoints;
+        noisy_release_point = starting_waypoints[1];
+        // noisy_waypoints = starting_waypoints;
         path = new KDL::Path_RoundedComposite(RADIUS, EQRADIUS, orient, true);
-        for (unsigned i = 0; i < noisy_waypoints.size(); i++)
+
+        // ========== old noise generation ==========
+        // for (unsigned i = 0; i < noisy_waypoints.size(); i++)
+        // {
+        //   if (i != 0 && i != 2) //  we do not add noise to the starting waypoint (and ending)
+        //   {
+        //     for (unsigned ii = 0; ii < noisy_waypoints[i].size(); ii++)
+        //     {
+        //       max_noise = NOISE_MATRIX[ii]["noise_mean"] + 3*NOISE_MATRIX[ii]["noise_stddev"];
+        //       min_noise = NOISE_MATRIX[ii]["noise_mean"] - 3*NOISE_MATRIX[ii]["noise_stddev"];
+        //       if (i == 1 && ii == 2)
+        //       {
+        //         max_noise = abs(noisy_waypoints[0][2] - starting_waypoints[1][2]);
+        //       }
+        //       if (i == 2 && ii == 2)
+        //       {
+        //         min_noise = -abs(noisy_waypoints[1][2] - starting_waypoints[2][2]);
+        //       }
+        //       distribution = std::normal_distribution<double> (NOISE_MATRIX[ii]["noise_mean"], NOISE_MATRIX[ii]["noise_stddev"]);
+        //       noise_generation_counter = 0;
+        //       do
+        //       {
+        //         if (noise_generation_counter >= MAX_NOISE_GENERATION_ATTEMPTS)
+        //         {
+        //           std::cout << "PROGRAM ABORTED: 'Couldn't generate noise inside the interval: (" << min_noise / 100 << ", " << max_noise / 100 << ") after " << MAX_NOISE_GENERATION_ATTEMPTS << " attempts'" << std::endl;
+        //           return 0;
+        //         }
+        //         // std::cout << "Generating noise: " << noise_generation_counter << std::endl;
+        //         noise = distribution(generator) / 100.0;
+        //         noise_generation_counter++;
+        //       }
+        //       while (!(noise < max_noise / 100.0 && noise > min_noise / 100.0));
+        //       if (no_noise == false)
+        //       {
+        //         noisy_waypoints[i][ii] += noise;
+        //       }
+        //       if (i == 1 && ii == 0)  //  x coordinate of the second waypoint -> noisy_release_x_coordinate
+        //       {
+        //         noisy_release_x_coordinate = noisy_waypoints[i][ii];
+        //       }
+        //       // std::cout << "\nnoise: " << noise << std::endl;
+        //       // std::cout << "noisy_waypoints[" << i << "][" << ii << "]: " << noisy_waypoints[i][ii] << std::endl;
+        //     }
+        //   }
+        //   path -> Add(KDL::Frame(KDL::Vector(noisy_waypoints[i][0], noisy_waypoints[i][1], noisy_waypoints[i][2])));
+        // }
+        path -> Add(KDL::Frame(KDL::Vector(starting_waypoints[0][0], starting_waypoints[0][1], starting_waypoints[0][2])));
+        for (unsigned matrix_index = 0; matrix_index < NOISE_MATRIX.size(); matrix_index++)
         {
-          if (i != 0) //  we do not add noise to the starting waypoint
+          distribution = std::normal_distribution<double> (NOISE_MATRIX[matrix_index]["mean"], NOISE_MATRIX[matrix_index]["stddev"]);
+          noise = distribution(generator) / 100.0;
+          if (matrix_index != 2)
           {
-            for (unsigned ii = 0; ii < noisy_waypoints[i].size(); ii++)
-            {
-              max_noise = NOISE_MATRIX[ii]["noise_mean"] + 3*NOISE_MATRIX[ii]["noise_stddev"];
-              min_noise = NOISE_MATRIX[ii]["noise_mean"] - 3*NOISE_MATRIX[ii]["noise_stddev"];
-              if (i == 1 && ii == 2)
-              {
-                max_noise = abs(noisy_waypoints[0][2] - starting_waypoints[1][2]);
-              }
-              if (i == 2 && ii == 2)
-              {
-                min_noise = -abs(noisy_waypoints[1][2] - starting_waypoints[2][2]);
-              }
-              distribution = std::normal_distribution<double> (NOISE_MATRIX[ii]["noise_mean"], NOISE_MATRIX[ii]["noise_stddev"]);
-              noise_generation_counter = 0;
-              do
-              {
-                if (noise_generation_counter >= MAX_NOISE_GENERATION_ATTEMPTS)
-                {
-                  std::cout << "PROGRAM ABORTED: 'Couldn't generate noise inside the interval: (" << min_noise / 100 << ", " << max_noise / 100 << ") after " << MAX_NOISE_GENERATION_ATTEMPTS << " attempts'" << std::endl;
-                  return 0;
-                }
-                // std::cout << "Generating noise: " << noise_generation_counter << std::endl;
-                noise = distribution(generator) / 100.0;
-                noise_generation_counter++;
-              }
-              while (!(noise < max_noise / 100.0 && noise > min_noise / 100.0));
-              if (asd == false)
-              {
-                noisy_waypoints[i][ii] += noise;
-              }
-              if (i == 1 && ii == 0)  //  x coordinate of the second waypoint -> noisy_release_x_coordinate
-              {
-                noisy_release_x_coordinate = noisy_waypoints[i][ii];
-              }
-              // std::cout << "\nnoise: " << noise << std::endl;
-              // std::cout << "noisy_waypoints[" << i << "][" << ii << "]: " << noisy_waypoints[i][ii] << std::endl;
-            }
+            noisy_release_point[matrix_index] += noise;
           }
-          path -> Add(KDL::Frame(KDL::Vector(noisy_waypoints[i][0], noisy_waypoints[i][1], noisy_waypoints[i][2])));
+          else
+          { // we add only positive noise to the Z coordinate
+            noisy_release_point[matrix_index] += abs(noise);
+          }
         }
-        noisy_release_x_coordinate = noisy_waypoints[1][0];
+        path -> Add(KDL::Frame(KDL::Vector(noisy_release_point[0], noisy_release_point[1], noisy_release_point[2])));
+        // path -> Add(KDL::Frame(KDL::Vector(noisy_release_point[0], noisy_release_point[1], noisy_release_point[2])));
+        path -> Add(KDL::Frame(KDL::Vector(starting_waypoints[2][0], starting_waypoints[2][1], starting_waypoints[2][2])));
+        noisy_release_x_coordinate = noisy_release_point[0];
         path -> Finish();
       }
       catch(std::exception& e)
@@ -449,8 +487,8 @@ int main(int argc, char **argv)
     path_length = path -> PathLength();
     ds = path_length / NUMBER_OF_SAMPLES;
     double treshold_length;
-    // treshold_length = binary_search_treshold(*path, 0, path_length, noisy_release_x_coordinate, BINARY_SEARCH_TRESHOLD);
-    treshold_length = minima_search(*path, ds, MAX_NUMBER_OF_INVERSIONS);
+    treshold_length = binary_search_treshold(*path, 0, path_length, noisy_release_x_coordinate, BINARY_SEARCH_TRESHOLD);
+    // treshold_length = minima_search(*path, ds, MAX_NUMBER_OF_INVERSIONS);
 
     // char c;
     // std::cin >> c;
@@ -458,7 +496,7 @@ int main(int argc, char **argv)
     
     std::vector<double> velocity_dist(NUMBER_OF_SAMPLES, 0);
 
-    velocity_profile_generator(velocity_dist, NUMBER_OF_SAMPLES, RELEASE_FRAME, path_length, treshold_length);
+    generate_velocity_profile(velocity_dist, NUMBER_OF_SAMPLES, RELEASE_FRAME, path_length, treshold_length);
     // double euler_X;
     // double euler_Y;
     // double euler_Z;
@@ -540,6 +578,21 @@ int main(int argc, char **argv)
       // std::cout << "------------------------------\n";
       last_joint_pos = q_out;
     }
+
+
+    // for (unsigned joint_index = 0; joint_index < joint_names.size(); joint_index++)
+    // {
+    //   joints_release_ds.push_back(joint_trajectory[joint_trajectory.size()].data[joint_index] - joint_trajectory[joint_trajectory.size()-1].data[joint_index]);
+    // }
+    
+    // for (unsigned i = 0; i < DECELERATION_FRAMES; i++)
+    // {
+    //   for (unsigned joint_index = 0; joint_index < joint_names.size(); joint_index++)
+    //   {
+    //     joints_current_ds.push_back(joints_release_ds[joint_index] * (DECELERATION_FRAMES - i+1) / DECELERATION_FRAMES);
+    //   }
+    //   decelerating_frames.push_back(joints_current_ds);
+    // }
 
     // ====================JSON====================
     data = Json::Value();
