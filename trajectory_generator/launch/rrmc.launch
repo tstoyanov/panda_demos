@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<launch>
+    <group ns="panda">
+        <node pkg="trajectory_generator" name="rrmc" type="resolved_rate_motion_control.py" output="screen" />
+    </group>
+</launch>

@@ -1,5 +1,7 @@
+#!/usr/bin/env python
 import rospy
 import rospkg
+import kdl_parser_py.urdf as urdf
 
 import argparse
 
@@ -39,22 +41,29 @@ def main():
 
     # robot = URDF.from_parameter_server(param_name).get_chain("world", "panda_hand")
     # robot = URDF.from_xml_string(robot_description)
-    robot = URDF.from_xml_file(package_path+"/robot_description.xml")
-    for i in range(len(robot.joints)):
-        print (robot.joints[i].name)
-        print ("")
-    print ("len(robot.joints)")
-    print(len(robot.joints))
-    for i in range(len(robot.links)):
-        print (robot.links[i].name)
-        print ("")
-    print ("robot.links")
-    print(len(robot.links))
-    for i in range(len(list(robot.child_map))):
-        print (list(robot.child_map)[i])
-    my_chain = robot.get_chain("world", "panda_hand")
-    jnt_array = JntArray(7)
-    jacobian = Jacobian(7)
+    # robot = URDF.from_parameter_server(param_name)
+    # robot = URDF.from_xml_file(package_path+"/robot_description.xml")
+    # for i in range(len(robot.joints)):
+    #     print (robot.joints[i].name)
+    #     print ("")
+    # print ("len(robot.joints)")
+    # print(len(robot.joints))
+    # for i in range(len(robot.links)):
+    #     print (robot.links[i].name)
+    #     print ("")
+    # print ("robot.links")
+    # print(len(robot.links))
+    # for i in range(len(list(robot.child_map))):
+    #     print (list(robot.child_map)[i])
+    # my_chain = robot.get_chain("world", "panda_hand")
+    
+    # ret, my_tree = urdf.treeFromUrdfModel(URDF.from_parameter_server(param_name))
+    ret, my_tree = urdf.treeFromUrdfModel(URDF.from_xml_file(package_path+"/robot_description.xml"))
+    my_chain = my_tree.getChain("world", "panda_hand")
+    nr_of_joints = my_chain.getNrOfJoints()
+
+    jnt_array = JntArray(nr_of_joints)
+    jacobian = Jacobian(nr_of_joints)
     # ChainJntToJacSolver.JntToJac
 
     # print ("robot: ")
