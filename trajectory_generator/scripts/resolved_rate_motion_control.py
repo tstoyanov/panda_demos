@@ -64,7 +64,7 @@ def main():
 
     jnt_array = JntArray(nr_of_joints)
     jacobian = Jacobian(nr_of_joints)
-    # ChainJntToJacSolver.JntToJac
+    # ChainJntToJacSolver.JntToJac()
 
     # print ("robot: ")
     # print (robot)

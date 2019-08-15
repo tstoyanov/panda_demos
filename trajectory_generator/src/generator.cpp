@@ -280,8 +280,8 @@ int main(int argc, char **argv)
   KDL::ChainIkSolverVel_wdls chainIkSolverVel {my_chain};
   KDL::ChainIkSolverPos_NR_JL chainIkSolverPos {my_chain, q_min, q_max, chainFkSolverPos, chainIkSolverVel, max_iter, eps};
 
-  double release_x_coordinate = 0.268281002938;
-  // double release_x_coordinate = 0.368281002938;
+  double release_x_coordinate = 0.168281002938;
+  // double release_x_coordinate = 0.268281002938;
   double noisy_release_x_coordinate;
   // ========== WAYPOINTS ==========
   std::vector<std::vector<double>> starting_waypoints =
@@ -294,9 +294,10 @@ int main(int argc, char **argv)
     
     // real test
     // {x, y, z}
-    {-0.501718997062, -0.0112002648095, 0.866710060669},
-    {release_x_coordinate, -0.0112002648095, 0.866710060669},
-    {0.298281002938, -0.0112002648095, 0.871710060669}
+    {-0.501718997062, -0.0112002648095, 0.856710060669},
+    {release_x_coordinate, -0.0112002648095, 0.856710060669},
+    {0.198281002938, -0.0112002648095, 0.861710060669}
+    // {0.298281002938, -0.0112002648095, 0.861710060669}
 
     // {-0.401718997062, 0.0892002648095, 0.916710060669},
     // {release_x_coordinate, 0.0892002648095, 0.866710060669},

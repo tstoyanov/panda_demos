@@ -183,7 +183,7 @@ def talker():
     print("=== Press `Enter` to grasp ===")
     raw_input()
     grasp_message = GraspActionGoal()
-    grasp_message.goal.width = 0.07
+    grasp_message.goal.width = 0.02
     grasp_message.goal.epsilon.inner = 0.01
     grasp_message.goal.epsilon.outer = 0.01
     grasp_message.goal.speed = 0.05
@@ -285,6 +285,9 @@ def talker():
     print("adjusted_release_time:")
     print("\tadjusted_release_time['secs'] = " + str(adjusted_release_time["secs"]))
     print("\tadjusted_release_time['nsecs'] = " + str(adjusted_release_time["nsecs"]))
+    print("release_time_from_start:")
+    print("\trelease_time_from_start['secs'] = " + str(release_time_from_start["secs"]))
+    print("\trelease_time_from_start['nsecs'] = " + str(release_time_from_start["nsecs"]))
     gripper_move_message = MoveActionGoal()
     gripper_move_message.goal.width = 0.09
     gripper_move_message.goal.speed = 0.05
