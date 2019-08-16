@@ -180,17 +180,22 @@ def talker():
     for i in range(len(trajectories["joint_velocity"])):
         print ('trajectories["joint_velocity"][' + str(i) + '] = ' + str(trajectories["joint_velocity"][i]))
 
-    print("=== Press `Enter` to grasp ===")
+    # print("=== Press `Enter` to grasp ===")
+    print("=== Press `Enter` to position the gripper ===")
     raw_input()
-    grasp_message = GraspActionGoal()
-    grasp_message.goal.width = 0.02
-    grasp_message.goal.epsilon.inner = 0.01
-    grasp_message.goal.epsilon.outer = 0.01
-    grasp_message.goal.speed = 0.05
-    grasp_message.goal.force = 0.01
-    
+    # grasp_message = GraspActionGoal()
+    # grasp_message.goal.width = 0.02
+    # grasp_message.goal.epsilon.inner = 0.01
+    # grasp_message.goal.epsilon.outer = 0.01
+    # grasp_message.goal.speed = 0.05
+    # grasp_message.goal.force = 0.01
 
-    grasp_pub.publish(grasp_message)
+    # grasp_pub.publish(grasp_message)
+
+    gripper_move_message = MoveActionGoal()
+    gripper_move_message.goal.width = 0.01
+    gripper_move_message.goal.speed = 0.05
+    gripper_move_pub.publish(gripper_move_message)
 
     print("=== Press `Enter` to print trajectory ===")
     raw_input()
@@ -302,7 +307,7 @@ def talker():
         secs = rospy.get_rostime().secs
     while (now.secs <= adjusted_release_time["secs"] and (now.secs < adjusted_release_time["secs"] or now.nsecs < adjusted_release_time["nsecs"])):
         now = rospy.get_rostime()
-    gripper_move_pub.publish(gripper_move_message)
+    # gripper_move_pub.publish(gripper_move_message)
     print("secs_waited = " + str(secs_waited))
     print("secs = " + str(secs))
     print("Opening the gripper at:")

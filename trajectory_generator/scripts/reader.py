@@ -38,9 +38,9 @@ rospack = rospkg.RosPack()
 
 parser = argparse.ArgumentParser(description='rostopic reader')
 parser.add_argument('-s', '--sim', nargs='?', const=True, default=False,
-                    help='whether to show the trajectories with the worst, median and best loss or not')
+                    help='says whether we are in simulation or not')
 parser.add_argument('-o', '--output-dir', default=False,
-                    help='whether to write the generated trajectory to the rostopic or not')
+                    help='define the folder where to write the read data')
 
 # args = parser.parse_args()
 args, unknown = parser.parse_known_args()
@@ -63,10 +63,21 @@ def callback(data, args):
     #     rospy.loginfo(args[0] + "\n%s\n\n------------------\n", data.position)
     
     json_str = json_message_converter.convert_ros_message_to_json(data)
+    
+    
+    json_obj = json.loads(json_str)
+    secs = json_obj["header"]["stamp"]["secs"]
+    nsecs = json_obj["header"]["stamp"]["nsecs"]
+    pos =json_obj["position"][0]
+    new_data = (secs, nsecs, pos)
+    
+    
     if os.stat(args[4]).st_size == 0:
-        args[3].write(json_str)
+        # args[3].write(json_str)
+        args[3].write(json.dumps(new_data)+"\n")
     else:
-        args[3].write(","+json_str)
+        # args[3].write(","+json_str)
+        args[3].write(json.dumps(new_data)+"\n")
     args[1].write(str(data)+"\n\n------------------------------------\n\n")
 
     # json_string = json.dumps(str(data))
@@ -93,22 +104,25 @@ topics_to_read = [
     # ["/panda_arm_controller/follow_joint_trajectory/status", GoalStatusArray, None, None], #written by /gazebo
     # ["/panda_arm_controller/state", JointTrajectoryControllerState, None, None], #written by /gazebo
     # ["/panda_arm_controller/command", JointTrajectory, None, None], #written by unknown
-    ["/joint_states", JointState, None, None], #written by /gazebo
-    ["/move_group/goal", MoveGroupActionGoal, None, None], #written by /move_group_commander_wrappers_xxxxxxxxxxxxxxxxx
-    ["/trajectory_execution_event", String, None, None], #written by /move_group_commander_wrappers_xxxxxxxxxxxxxxxxx
-    ["/move_group/status", GoalStatusArray, None, None],
-    ["/move_group/motion_plan_request", MotionPlanRequest, None, None], #written by /move_group
-    ["/execute_trajectory/goal", ExecuteTrajectoryActionGoal, None, None], #written by /move_group_commander_wrappers_xxxxxxxxxxxxxxxxx
-    ["/execute_trajectory/result", ExecuteTrajectoryActionResult, None, None], #written by /move_group_commander_wrappers_xxxxxxxxxxxxxxxxx
-    ["/execute_trajectory/feedback", ExecuteTrajectoryActionFeedback, None, None], #written by /move_group_commander_wrappers_xxxxxxxxxxxxxxxxx
-    ["/execute_trajectory/status", GoalStatusArray, None, None], #written by /move_group_commander_wrappers_xxxxxxxxxxxxxxxxx
-    ["/execute_trajectory/cancel", GoalID, None, None], #written by /move_group_commander_wrappers_xxxxxxxxxxxxxxxxx
-    ["/move_group/fake_controller_joint_states", JointState, None, None], #written by /move_group_commander_wrappers_xxxxxxxxxxxxxxxxx
-    ["/position_joint_trajectory_controller/follow_joint_trajectory/goal", FollowJointTrajectoryActionGoal, None, None], #written by /move_group
-    ["/position_joint_trajectory_controller/follow_joint_trajectory/feedback", FollowJointTrajectoryActionFeedback, None, None], #written by /gazebo
-    ["/position_joint_trajectory_controller/follow_joint_trajectory/status", GoalStatusArray, None, None], #written by /gazebo
-    ["/position_joint_trajectory_controller/state", JointTrajectoryControllerState, None, None], #written by /gazebo
-    ["/position_joint_trajectory_controller/command", JointTrajectory, None, None], #written by unknown
+
+    # ["/joint_states", JointState, None, None], #written by /gazebo
+    # ["/move_group/goal", MoveGroupActionGoal, None, None], #written by /move_group_commander_wrappers_xxxxxxxxxxxxxxxxx
+    # ["/trajectory_execution_event", String, None, None], #written by /move_group_commander_wrappers_xxxxxxxxxxxxxxxxx
+    # ["/move_group/status", GoalStatusArray, None, None],
+    # ["/move_group/motion_plan_request", MotionPlanRequest, None, None], #written by /move_group
+    # ["/execute_trajectory/goal", ExecuteTrajectoryActionGoal, None, None], #written by /move_group_commander_wrappers_xxxxxxxxxxxxxxxxx
+    # ["/execute_trajectory/result", ExecuteTrajectoryActionResult, None, None], #written by /move_group_commander_wrappers_xxxxxxxxxxxxxxxxx
+    # ["/execute_trajectory/feedback", ExecuteTrajectoryActionFeedback, None, None], #written by /move_group_commander_wrappers_xxxxxxxxxxxxxxxxx
+    # ["/execute_trajectory/status", GoalStatusArray, None, None], #written by /move_group_commander_wrappers_xxxxxxxxxxxxxxxxx
+    # ["/execute_trajectory/cancel", GoalID, None, None], #written by /move_group_commander_wrappers_xxxxxxxxxxxxxxxxx
+    # ["/move_group/fake_controller_joint_states", JointState, None, None], #written by /move_group_commander_wrappers_xxxxxxxxxxxxxxxxx
+    # ["/position_joint_trajectory_controller/follow_joint_trajectory/goal", FollowJointTrajectoryActionGoal, None, None], #written by /move_group
+    # ["/position_joint_trajectory_controller/follow_joint_trajectory/feedback", FollowJointTrajectoryActionFeedback, None, None], #written by /gazebo
+    # ["/position_joint_trajectory_controller/follow_joint_trajectory/status", GoalStatusArray, None, None], #written by /gazebo
+    # ["/position_joint_trajectory_controller/state", JointTrajectoryControllerState, None, None], #written by /gazebo
+    # ["/position_joint_trajectory_controller/command", JointTrajectory, None, None], #written by unknown
+    
+    ["/franka_gripper/joint_states", JointState, None, None],
 ]
 
 if args.sim == False:

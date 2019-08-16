@@ -1,6 +1,8 @@
 #include <ros/ros.h>
 #include <kdl_parser/kdl_parser.hpp>
+#include <kdl/trajectory_segment.hpp>
 #include <kdl/path_roundedcomposite.hpp>
+#include <kdl/velocityprofile_spline.hpp>
 #include <kdl/rotational_interpolation_sa.hpp>
 #include <kdl/chain.hpp>
 #include <kdl/jntarray.hpp>
@@ -128,6 +130,9 @@ int main(int argc, char **argv)
   bool no_noise = false;
   int batch_count = 1;
   int generated_trajectories = 0;
+  double release_velocity = 1;
+  double trajectory_duration = 4;
+  double dt = trajectory_duration / NUMBER_OF_SAMPLES;
   namespace po = boost::program_options;
   // Declare the supported options.
   po::options_description desc("Allowed options");
@@ -136,6 +141,8 @@ int main(int argc, char **argv)
     ("batch,b", po::value<int>(&batch_count), "set the number of trajectories to generate")
     ("sim,s", po::bool_switch()->default_value(false), "simulation flag")
     ("no-noise,n", po::bool_switch()->default_value(false), "no-noise flag")
+    ("duration,t", po::value<double>(&trajectory_duration), "duration of the trajectory in seconds")
+    ("velocity,v", po::value<double>(&release_velocity), "release velocity in [m/s]")
 
   ;
 
@@ -175,6 +182,17 @@ int main(int argc, char **argv)
   if (vm.count("no-noise"))
   {
     no_noise = vm["no-noise"].as<bool>();
+  }
+
+  if (vm.count("duration"))
+  {
+    trajectory_duration = vm["duration"].as<double>();
+    dt = trajectory_duration / NUMBER_OF_SAMPLES;
+  }
+
+  if (vm.count("velocity"))
+  {
+    release_velocity = vm["velocity"].as<double>();
   }
 
   // if (argc > 1)
@@ -286,18 +304,24 @@ int main(int argc, char **argv)
   // ========== WAYPOINTS ==========
   std::vector<std::vector<double>> starting_waypoints =
   {
+    // // sliding height
+    // // {x, y, z}
+    // {-0.471718997062, -0.0112002648095, 0.831710060669},
+    // {release_x_coordinate, -0.0112002648095, 0.831710060669},
+    // {0.198281002938, -0.0112002648095, 0.836710060669}
+    // // {0.298281002938, -0.0112002648095, 0.861710060669}
+    
+    // testing "safe" height
+    // {x, y, z}
+    {-0.471718997062, -0.0112002648095, 0.931710060669},
+    {release_x_coordinate, -0.0112002648095, 0.931710060669},
+    {0.198281002938, -0.0112002648095, 0.936710060669}
+
     // good
     // {x, y, z}
     // {-0.401718997062, 0.0892002648095, 0.986710060669},
     // {release_x_coordinate, 0.0892002648095, 0.886710060669},
     // {0.568281002938, 0.0892002648095, 1.086710060669}
-    
-    // real test
-    // {x, y, z}
-    {-0.501718997062, -0.0112002648095, 0.856710060669},
-    {release_x_coordinate, -0.0112002648095, 0.856710060669},
-    {0.198281002938, -0.0112002648095, 0.861710060669}
-    // {0.298281002938, -0.0112002648095, 0.861710060669}
 
     // {-0.401718997062, 0.0892002648095, 0.916710060669},
     // {release_x_coordinate, 0.0892002648095, 0.866710060669},
@@ -333,6 +357,7 @@ int main(int argc, char **argv)
   int exception_count;
 
   double current_s;
+  double current_t;
   KDL::Frame current_eef_frame;
   KDL::Frame fk_current_eef_frame;
   std::vector<KDL::Frame> eef_trajectory;
@@ -375,6 +400,9 @@ int main(int argc, char **argv)
   std::vector<double> joints_release_ds;
   std::vector<double> joints_current_ds;
   std::vector<std::vector<double>> decelerating_frames;
+
+  KDL::VelocityProfile_Spline* vel_prof = new KDL::VelocityProfile_Spline();
+  KDL::Trajectory_Segment* trajectory;
   
   while (generated_trajectories < batch_count)
   {
@@ -494,7 +522,18 @@ int main(int argc, char **argv)
     // char c;
     // std::cin >> c;
     // return 0;
-    
+
+
+    // =========================== NEW KDL VELOCITY PROFILE ===========================
+    // SetProfileDuration(double pos1, double vel1, double acc1, double pos2, double vel2, double acc2, double duration)
+    // vel_prof->SetProfileDuration(0.0, 0.0, 0.0, path_length, release_velocity, 0, trajectory_duration);
+    // SetProfileDuration(double pos1, double pos2, double duration)
+    vel_prof->SetProfileDuration(0.0, path_length, trajectory_duration);
+    trajectory = new KDL::Trajectory_Segment(path, vel_prof);
+    // ========================= END NEW KDL VELOCITY PROFILE =========================
+
+
+    // =========================== OLD VELOCITY PROFILE ===========================
     std::vector<double> velocity_dist(NUMBER_OF_SAMPLES, 0);
 
     generate_velocity_profile(velocity_dist, NUMBER_OF_SAMPLES, RELEASE_FRAME, path_length, treshold_length);
@@ -539,13 +578,13 @@ int main(int argc, char **argv)
     // // std::cout << "\tz: " << fk_current_eef_pos.z() << std::endl;
     // // std::cout << "------------------------------\n";
     // // ====================END FK====================
+    // ========================= END OLD VELOCITY PROFILE =========================
     
-    current_s = 0;
-    for (unsigned i = 0; i < NUMBER_OF_SAMPLES; i++)
+    // ======================== NEW TRAJECTORY ========================
+    current_t = 0;
+    for (unsigned i = 0; i <= NUMBER_OF_SAMPLES; i++)
     {
-      // current_s += ds;
-      current_s += velocity_dist[i];
-      current_eef_frame = path -> Pos(current_s);
+      current_eef_frame = trajectory -> Pos(current_t);
       current_eef_frame.M = test_orientation;
       // current_eef_frame.M = starting_orientation;
       eef_trajectory.push_back(current_eef_frame);
@@ -556,8 +595,11 @@ int main(int argc, char **argv)
       // std::cout << "\t\t\tY: " << Y << std::endl;
       // std::cout << "\t\t\tZ: " << Z << std::endl;
 
+
+
       ret = chainIkSolverPos.CartToJnt(last_joint_pos, current_eef_frame, q_out);
       // std::cout << "RET TRUE: " << ret << std::endl;
+      
       joint_trajectory.push_back(q_out);
 
       ret = chainFkSolverPos.JntToCart(q_out, fk_current_eef_frame);
@@ -578,7 +620,52 @@ int main(int argc, char **argv)
       // std::cout << "q_out:\n" << q_out.data << std::endl;
       // std::cout << "------------------------------\n";
       last_joint_pos = q_out;
+      current_t += dt;
     }
+    // ====================== END NEW TRAJECTORY ======================
+    
+    // // ======================== OLD TRAJECTORY ========================
+    // current_s = 0;
+    // for (unsigned i = 0; i < NUMBER_OF_SAMPLES; i++)
+    // {
+
+    //   // current_s += ds;
+    //   current_s += velocity_dist[i];
+    //   current_eef_frame = path -> Pos(current_s);
+    //   current_eef_frame.M = test_orientation;
+    //   // current_eef_frame.M = starting_orientation;
+    //   eef_trajectory.push_back(current_eef_frame);
+
+    //   // current_eef_frame.M.GetEulerZYX(Z, Y, X);
+    //   // std::cout << "EEF frame orientation" << std::endl;
+    //   // std::cout << "\t\t\tX: " << X << std::endl;
+    //   // std::cout << "\t\t\tY: " << Y << std::endl;
+    //   // std::cout << "\t\t\tZ: " << Z << std::endl;
+
+    //   ret = chainIkSolverPos.CartToJnt(last_joint_pos, current_eef_frame, q_out);
+    //   // std::cout << "RET TRUE: " << ret << std::endl;
+    //   joint_trajectory.push_back(q_out);
+
+    //   ret = chainFkSolverPos.JntToCart(q_out, fk_current_eef_frame);
+    //   // std::cout << "------------------------------\n";
+    //   // std::cout << "FK RET: " << ret << std::endl;
+    //   // std::cout << "FK EEF pos: " << std::endl;
+    //   // std::cout << "\tx: " << fk_current_eef_frame.p.x() << std::endl;
+    //   // std::cout << "\ty: " << fk_current_eef_frame.p.y() << std::endl;
+    //   // std::cout << "\tz: " << fk_current_eef_frame.p.z() << std::endl;
+    //   // std::cout << "------------------------------\n";
+    //   fk_eef_trajectory.push_back(fk_current_eef_frame);
+
+    //   // std::cout << "------------------------------\n";
+    //   // std::cout << "Point " << i << ": " << std::endl;
+    //   // std::cout << "x: " << current_eef_frame.p.x() << std::endl;
+    //   // std::cout << "y: " << current_eef_frame.p.y() << std::endl;
+    //   // std::cout << "z: " << current_eef_frame.p.z() << std::endl;
+    //   // std::cout << "q_out:\n" << q_out.data << std::endl;
+    //   // std::cout << "------------------------------\n";
+    //   last_joint_pos = q_out;
+    // }
+    // // ====================== END OLD TRAJECTORY ======================
 
 
     // for (unsigned joint_index = 0; joint_index < joint_names.size(); joint_index++)
@@ -598,6 +685,8 @@ int main(int argc, char **argv)
     // ====================JSON====================
     data = Json::Value();
     data["realease_frame"] = RELEASE_FRAME;
+    data["trajectory_duration"] = trajectory_duration;
+    data["release_velocity"] = release_velocity;
     for (unsigned i = 0; i < joint_names.size(); i++)
     {
       data["joint_names"].append(Json::Value(joint_names[i]));
