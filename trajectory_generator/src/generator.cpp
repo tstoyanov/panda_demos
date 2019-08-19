@@ -125,6 +125,7 @@ std::string getExePath()
 
 int main(int argc, char **argv)
 {
+  bool is_new = false;
   bool is_batch = false;
   bool is_simulation = false;
   bool no_noise = false;
@@ -141,6 +142,7 @@ int main(int argc, char **argv)
     ("batch,b", po::value<int>(&batch_count), "set the number of trajectories to generate")
     ("sim,s", po::bool_switch()->default_value(false), "simulation flag")
     ("no-noise,n", po::bool_switch()->default_value(false), "no-noise flag")
+    ("new", po::bool_switch()->default_value(false), "new trajectory generation flag")
     ("duration,t", po::value<double>(&trajectory_duration), "duration of the trajectory in seconds")
     ("velocity,v", po::value<double>(&release_velocity), "release velocity in [m/s]")
 
@@ -182,6 +184,11 @@ int main(int argc, char **argv)
   if (vm.count("no-noise"))
   {
     no_noise = vm["no-noise"].as<bool>();
+  }
+
+  if (vm.count("new"))
+  {
+    is_new = vm["new"].as<bool>();
   }
 
   if (vm.count("duration"))
@@ -313,9 +320,15 @@ int main(int argc, char **argv)
     
     // testing "safe" height
     // {x, y, z}
-    {-0.471718997062, -0.0112002648095, 0.931710060669},
-    {release_x_coordinate, -0.0112002648095, 0.931710060669},
-    {0.198281002938, -0.0112002648095, 0.936710060669}
+    // {-0.471718997062, -0.0112002648095, 0.931710060669},
+    // {release_x_coordinate, -0.0112002648095, 0.931710060669},
+    // {0.198281002938, -0.0112002648095, 0.936710060669}
+
+    // real test
+    // {x, y, z}
+    {-0.501718997062, -0.0112002648095, 0.856710060669},
+    {release_x_coordinate, -0.0112002648095, 0.856710060669},
+    {0.198281002938, -0.0112002648095, 0.861710060669}
 
     // good
     // {x, y, z}
@@ -523,16 +536,6 @@ int main(int argc, char **argv)
     // std::cin >> c;
     // return 0;
 
-
-    // =========================== NEW KDL VELOCITY PROFILE ===========================
-    // SetProfileDuration(double pos1, double vel1, double acc1, double pos2, double vel2, double acc2, double duration)
-    // vel_prof->SetProfileDuration(0.0, 0.0, 0.0, path_length, release_velocity, 0, trajectory_duration);
-    // SetProfileDuration(double pos1, double pos2, double duration)
-    vel_prof->SetProfileDuration(0.0, path_length, trajectory_duration);
-    trajectory = new KDL::Trajectory_Segment(path, vel_prof);
-    // ========================= END NEW KDL VELOCITY PROFILE =========================
-
-
     // =========================== OLD VELOCITY PROFILE ===========================
     std::vector<double> velocity_dist(NUMBER_OF_SAMPLES, 0);
 
@@ -581,90 +584,100 @@ int main(int argc, char **argv)
     // ========================= END OLD VELOCITY PROFILE =========================
     
     // ======================== NEW TRAJECTORY ========================
-    current_t = 0;
-    for (unsigned i = 0; i <= NUMBER_OF_SAMPLES; i++)
+    if (is_new)
     {
-      current_eef_frame = trajectory -> Pos(current_t);
-      current_eef_frame.M = test_orientation;
-      // current_eef_frame.M = starting_orientation;
-      eef_trajectory.push_back(current_eef_frame);
+      // SetProfileDuration(double pos1, double vel1, double acc1, double pos2, double vel2, double acc2, double duration)
+      // vel_prof->SetProfileDuration(0.0, 0.0, 0.0, path_length, release_velocity, 0, trajectory_duration);
+      // SetProfileDuration(double pos1, double pos2, double duration)
+      vel_prof->SetProfileDuration(0.0, path_length, trajectory_duration);
+      trajectory = new KDL::Trajectory_Segment(path, vel_prof);
+      current_t = 0;
+      for (unsigned i = 0; i <= NUMBER_OF_SAMPLES; i++)
+      {
+        current_eef_frame = trajectory -> Pos(current_t);
+        current_eef_frame.M = test_orientation;
+        // current_eef_frame.M = starting_orientation;
+        eef_trajectory.push_back(current_eef_frame);
 
-      // current_eef_frame.M.GetEulerZYX(Z, Y, X);
-      // std::cout << "EEF frame orientation" << std::endl;
-      // std::cout << "\t\t\tX: " << X << std::endl;
-      // std::cout << "\t\t\tY: " << Y << std::endl;
-      // std::cout << "\t\t\tZ: " << Z << std::endl;
+        // current_eef_frame.M.GetEulerZYX(Z, Y, X);
+        // std::cout << "EEF frame orientation" << std::endl;
+        // std::cout << "\t\t\tX: " << X << std::endl;
+        // std::cout << "\t\t\tY: " << Y << std::endl;
+        // std::cout << "\t\t\tZ: " << Z << std::endl;
 
 
 
-      ret = chainIkSolverPos.CartToJnt(last_joint_pos, current_eef_frame, q_out);
-      // std::cout << "RET TRUE: " << ret << std::endl;
-      
-      joint_trajectory.push_back(q_out);
+        ret = chainIkSolverPos.CartToJnt(last_joint_pos, current_eef_frame, q_out);
+        // std::cout << "RET TRUE: " << ret << std::endl;
+        
+        joint_trajectory.push_back(q_out);
 
-      ret = chainFkSolverPos.JntToCart(q_out, fk_current_eef_frame);
-      // std::cout << "------------------------------\n";
-      // std::cout << "FK RET: " << ret << std::endl;
-      // std::cout << "FK EEF pos: " << std::endl;
-      // std::cout << "\tx: " << fk_current_eef_frame.p.x() << std::endl;
-      // std::cout << "\ty: " << fk_current_eef_frame.p.y() << std::endl;
-      // std::cout << "\tz: " << fk_current_eef_frame.p.z() << std::endl;
-      // std::cout << "------------------------------\n";
-      fk_eef_trajectory.push_back(fk_current_eef_frame);
+        ret = chainFkSolverPos.JntToCart(q_out, fk_current_eef_frame);
+        // std::cout << "------------------------------\n";
+        // std::cout << "FK RET: " << ret << std::endl;
+        // std::cout << "FK EEF pos: " << std::endl;
+        // std::cout << "\tx: " << fk_current_eef_frame.p.x() << std::endl;
+        // std::cout << "\ty: " << fk_current_eef_frame.p.y() << std::endl;
+        // std::cout << "\tz: " << fk_current_eef_frame.p.z() << std::endl;
+        // std::cout << "------------------------------\n";
+        fk_eef_trajectory.push_back(fk_current_eef_frame);
 
-      // std::cout << "------------------------------\n";
-      // std::cout << "Point " << i << ": " << std::endl;
-      // std::cout << "x: " << current_eef_frame.p.x() << std::endl;
-      // std::cout << "y: " << current_eef_frame.p.y() << std::endl;
-      // std::cout << "z: " << current_eef_frame.p.z() << std::endl;
-      // std::cout << "q_out:\n" << q_out.data << std::endl;
-      // std::cout << "------------------------------\n";
-      last_joint_pos = q_out;
-      current_t += dt;
-    }
+        // std::cout << "------------------------------\n";
+        // std::cout << "Point " << i << ": " << std::endl;
+        // std::cout << "x: " << current_eef_frame.p.x() << std::endl;
+        // std::cout << "y: " << current_eef_frame.p.y() << std::endl;
+        // std::cout << "z: " << current_eef_frame.p.z() << std::endl;
+        // std::cout << "q_out:\n" << q_out.data << std::endl;
+        // std::cout << "------------------------------\n";
+        last_joint_pos = q_out;
+        current_t += dt;
+      }
     // ====================== END NEW TRAJECTORY ======================
-    
+    }
     // // ======================== OLD TRAJECTORY ========================
-    // current_s = 0;
-    // for (unsigned i = 0; i < NUMBER_OF_SAMPLES; i++)
-    // {
+    else
+    {
+      current_s = 0;
+      for (unsigned i = 0; i < NUMBER_OF_SAMPLES; i++)
+      {
 
-    //   // current_s += ds;
-    //   current_s += velocity_dist[i];
-    //   current_eef_frame = path -> Pos(current_s);
-    //   current_eef_frame.M = test_orientation;
-    //   // current_eef_frame.M = starting_orientation;
-    //   eef_trajectory.push_back(current_eef_frame);
+        // current_s += ds;
+        current_s += velocity_dist[i];
+        current_eef_frame = path -> Pos(current_s);
+        current_eef_frame.M = test_orientation;
+        // current_eef_frame.M = starting_orientation;
+        eef_trajectory.push_back(current_eef_frame);
 
-    //   // current_eef_frame.M.GetEulerZYX(Z, Y, X);
-    //   // std::cout << "EEF frame orientation" << std::endl;
-    //   // std::cout << "\t\t\tX: " << X << std::endl;
-    //   // std::cout << "\t\t\tY: " << Y << std::endl;
-    //   // std::cout << "\t\t\tZ: " << Z << std::endl;
+        // current_eef_frame.M.GetEulerZYX(Z, Y, X);
+        // std::cout << "EEF frame orientation" << std::endl;
+        // std::cout << "\t\t\tX: " << X << std::endl;
+        // std::cout << "\t\t\tY: " << Y << std::endl;
+        // std::cout << "\t\t\tZ: " << Z << std::endl;
 
-    //   ret = chainIkSolverPos.CartToJnt(last_joint_pos, current_eef_frame, q_out);
-    //   // std::cout << "RET TRUE: " << ret << std::endl;
-    //   joint_trajectory.push_back(q_out);
+        ret = chainIkSolverPos.CartToJnt(last_joint_pos, current_eef_frame, q_out);
+        // std::cout << "RET TRUE: " << ret << std::endl;
+        joint_trajectory.push_back(q_out);
 
-    //   ret = chainFkSolverPos.JntToCart(q_out, fk_current_eef_frame);
-    //   // std::cout << "------------------------------\n";
-    //   // std::cout << "FK RET: " << ret << std::endl;
-    //   // std::cout << "FK EEF pos: " << std::endl;
-    //   // std::cout << "\tx: " << fk_current_eef_frame.p.x() << std::endl;
-    //   // std::cout << "\ty: " << fk_current_eef_frame.p.y() << std::endl;
-    //   // std::cout << "\tz: " << fk_current_eef_frame.p.z() << std::endl;
-    //   // std::cout << "------------------------------\n";
-    //   fk_eef_trajectory.push_back(fk_current_eef_frame);
+        ret = chainFkSolverPos.JntToCart(q_out, fk_current_eef_frame);
+        // std::cout << "------------------------------\n";
+        // std::cout << "FK RET: " << ret << std::endl;
+        // std::cout << "FK EEF pos: " << std::endl;
+        // std::cout << "\tx: " << fk_current_eef_frame.p.x() << std::endl;
+        // std::cout << "\ty: " << fk_current_eef_frame.p.y() << std::endl;
+        // std::cout << "\tz: " << fk_current_eef_frame.p.z() << std::endl;
+        // std::cout << "------------------------------\n";
+        fk_eef_trajectory.push_back(fk_current_eef_frame);
 
-    //   // std::cout << "------------------------------\n";
-    //   // std::cout << "Point " << i << ": " << std::endl;
-    //   // std::cout << "x: " << current_eef_frame.p.x() << std::endl;
-    //   // std::cout << "y: " << current_eef_frame.p.y() << std::endl;
-    //   // std::cout << "z: " << current_eef_frame.p.z() << std::endl;
-    //   // std::cout << "q_out:\n" << q_out.data << std::endl;
-    //   // std::cout << "------------------------------\n";
-    //   last_joint_pos = q_out;
-    // }
+        // std::cout << "------------------------------\n";
+        // std::cout << "Point " << i << ": " << std::endl;
+        // std::cout << "x: " << current_eef_frame.p.x() << std::endl;
+        // std::cout << "y: " << current_eef_frame.p.y() << std::endl;
+        // std::cout << "z: " << current_eef_frame.p.z() << std::endl;
+        // std::cout << "q_out:\n" << q_out.data << std::endl;
+        // std::cout << "------------------------------\n";
+        last_joint_pos = q_out;
+      }
+    }
     // // ====================== END OLD TRAJECTORY ======================
 
 
@@ -685,8 +698,10 @@ int main(int argc, char **argv)
     // ====================JSON====================
     data = Json::Value();
     data["realease_frame"] = RELEASE_FRAME;
-    data["trajectory_duration"] = trajectory_duration;
-    data["release_velocity"] = release_velocity;
+    if (is_new){
+      data["trajectory_duration"] = trajectory_duration;
+      data["release_velocity"] = release_velocity;
+    }
     for (unsigned i = 0; i < joint_names.size(); i++)
     {
       data["joint_names"].append(Json::Value(joint_names[i]));
