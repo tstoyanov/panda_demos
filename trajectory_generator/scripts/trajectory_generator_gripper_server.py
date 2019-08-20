@@ -9,7 +9,7 @@ def handle_trajectory_generator_gripper(req):
 
 def trajectory_generator_gripper_server():
     rospy.init_node('trajectory_generator_gripper_server')
-    s = rospy.Service('trajectory_generator_gripper_server', trajectory_generator_gripper, handle_trajectory_generator_gripper)
+    s = rospy.Service('trajectory_generator_gripper', trajectory_generator_gripper, handle_trajectory_generator_gripper)
     print "Ready to add two ints."
     rospy.spin()
 
