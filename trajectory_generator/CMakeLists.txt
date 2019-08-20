@@ -14,6 +14,9 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   roslib
   cmake_modules
+  rospy
+  std_msgs
+  message_generation
 )
 
 find_package(TinyXML REQUIRED)
@@ -61,11 +64,10 @@ pkg_check_modules(JSONCPP jsoncpp)
 # )
 
 ## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
+add_service_files(
+  FILES
+  trajectory_generator_gripper.srv
+)
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -75,10 +77,10 @@ pkg_check_modules(JSONCPP jsoncpp)
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   std_msgs  # Or other packages containing msgs
-# )
+generate_messages(
+  DEPENDENCIES
+  std_msgs  # Or other packages containing msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -228,3 +230,11 @@ target_link_libraries(generator
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+
+add_executable(trajectory_generator_gripper_server src/trajectory_generator_gripper_server.cpp)
+target_link_libraries(trajectory_generator_gripper_server ${catkin_LIBRARIES})
+add_dependencies(trajectory_generator_gripper_server trajectory_generator_gencpp)
+
+add_executable(trajectory_generator_gripper_client src/trajectory_generator_gripper_client.cpp)
+target_link_libraries(trajectory_generator_gripper_client ${catkin_LIBRARIES})
+add_dependencies(trajectory_generator_gripper_client trajectory_generator_gencpp)
