@@ -7,8 +7,8 @@ from trajectory_generator.srv import *
 def trajectory_generator_gripper_client(x, y):
     rospy.wait_for_service('trajectory_generator_gripper_server')
     try:
-        trajectory_generator_gripper = rospy.ServiceProxy('trajectory_generator_gripper', trajectory_generator_gripper)
-        resp1 = trajectory_generator_gripper(x, y)
+        local_trajectory_generator_gripper = rospy.ServiceProxy('trajectory_generator_gripper', trajectory_generator_gripper)
+        resp1 = local_trajectory_generator_gripper(x, y)
         return resp1.sum
     except rospy.ServiceException, e:
         print "Service call failed: %s"%e
