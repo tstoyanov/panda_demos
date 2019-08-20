@@ -80,8 +80,11 @@ bool add(trajectory_generator::trajectory_generator_gripper::Request &req,
     return true;
 }
 
-bool move(const franka::Gripper& gripper, const MoveGoalConstPtr& goal) {
-  return gripper.move(goal->width, goal->speed);
+bool my_move(const franka::Gripper& gripper, const MoveGoalConstPtr& goal, trajectory_generator::trajectory_generator_gripper::Response &res) {
+    res.sum = 37;
+    ROS_INFO("request received");
+    return true;
+//   return gripper.move(goal->width, goal->speed);
 }
 
 int main(int argc, char **argv)
@@ -120,7 +123,8 @@ int main(int argc, char **argv)
     auto grasp_handler = [&gripper](auto &&goal) { return grasp(gripper, goal); };
     auto move_handler = [&gripper](auto &&goal) { return move(gripper, goal); };
 
-    ros::ServiceServer service = node_handle.advertiseService("trajectory_generator_gripper", add);
+    ros::ServiceServer service = node_handle.advertiseService("trajectory_generator_gripper", move);
+    // ros::ServiceServer service = node_handle.advertiseService("trajectory_generator_gripper", add);
     ROS_INFO("Ready to add two ints.");
     ros::spin();
 
