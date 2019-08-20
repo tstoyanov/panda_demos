@@ -5,7 +5,7 @@ import rospy
 from trajectory_generator.srv import *
 
 def trajectory_generator_gripper_client(x, y):
-    rospy.wait_for_service('trajectory_generator_gripper_server')
+    rospy.wait_for_service('trajectory_generator_gripper')
     try:
         local_trajectory_generator_gripper = rospy.ServiceProxy('trajectory_generator_gripper', trajectory_generator_gripper)
         resp1 = local_trajectory_generator_gripper(x, y)
