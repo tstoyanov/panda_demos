@@ -231,10 +231,14 @@ target_link_libraries(generator
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
 
+find_package(Franka REQUIRED)
+
 add_executable(trajectory_generator_gripper_server src/trajectory_generator_gripper_server.cpp)
 target_link_libraries(trajectory_generator_gripper_server ${catkin_LIBRARIES})
+target_link_libraries(trajectory_generator_gripper_server Franka::Franka )
 add_dependencies(trajectory_generator_gripper_server trajectory_generator_gencpp)
 
 add_executable(trajectory_generator_gripper_client src/trajectory_generator_gripper_client.cpp)
 target_link_libraries(trajectory_generator_gripper_client ${catkin_LIBRARIES})
+target_link_libraries(trajectory_generator_gripper_client Franka::Franka )
 add_dependencies(trajectory_generator_gripper_client trajectory_generator_gencpp)

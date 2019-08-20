@@ -7,6 +7,8 @@
 #include <franka_gripper/StopAction.h>
 #include <franka_gripper/franka_gripper.h>
 
+#include <franka/gripper_state.h>
+
 #include <cmath>
 #include <functional>
 #include <thread>
@@ -20,8 +22,6 @@
 #include <ros/spinner.h>
 #include <sensor_msgs/JointState.h>
 
-#include <franka/gripper_state.h>
-#include <franka_gripper/franka_gripper.h>
 
 namespace
 {
