@@ -13,6 +13,8 @@ import moveit_commander
 import getopt
 import os
 
+from franka_gripper.srv import *
+
 import rospkg
 
 rospack = rospkg.RosPack()
@@ -73,6 +75,15 @@ def talker():
 
     rospy.init_node('myWriter', anonymous=True)
     rate = rospy.Rate(0.1)  # hz
+
+    print ("Waiting for '/panda/franka_gripper/move_service' service...")
+    rospy.wait_for_service('/panda/franka_gripper/move_service')
+    print ("Service found!")
+    try:
+        move_gripper = rospy.ServiceProxy('/panda/franka_gripper/move_service', gripper_service)
+    except rospy.ServiceException, e:
+        print "Service connection failed: %s"%e
+    print ("Service connected!")
 
     moveit_commander.roscpp_initialize(sys.argv)
     group_name = "panda_arm"
@@ -183,20 +194,21 @@ def talker():
     # print("=== Press `Enter` to grasp ===")
     print("=== Press `Enter` to position the gripper ===")
     raw_input()
-    grasp_message = GraspActionGoal()
-    grasp_message.goal.width = 0.02
-    grasp_message.goal.epsilon.inner = 0.01
-    grasp_message.goal.epsilon.outer = 0.01
-    grasp_message.goal.speed = 0.05
-    grasp_message.goal.force = 0.01
 
-    grasp_pub.publish(grasp_message)
+    # ===== Throwing =====
+    # grasp_message = GraspActionGoal()
+    # grasp_message.goal.width = 0.02
+    # grasp_message.goal.epsilon.inner = 0.01
+    # grasp_message.goal.epsilon.outer = 0.01
+    # grasp_message.goal.speed = 0.05
+    # grasp_message.goal.force = 0.01
+    # grasp_pub.publish(grasp_message)
 
-    # ===== Sliding throw =====
-    # gripper_move_message = MoveActionGoal()
-    # gripper_move_message.goal.width = 0.01
-    # gripper_move_message.goal.speed = 0.05
-    # gripper_move_pub.publish(gripper_move_message)
+    # ===== Sliding =====
+    gripper_move_message = MoveActionGoal()
+    gripper_move_message.goal.width = 0.01
+    gripper_move_message.goal.speed = 0.05
+    gripper_move_pub.publish(gripper_move_message)
 
     print("=== Press `Enter` to print trajectory ===")
     raw_input()
@@ -308,10 +320,24 @@ def talker():
         secs = rospy.get_rostime().secs
     while (now.secs <= adjusted_release_time["secs"] and (now.secs < adjusted_release_time["secs"] or now.nsecs < adjusted_release_time["nsecs"])):
         now = rospy.get_rostime()
-    gripper_move_pub.publish(gripper_move_message)
+
+    print("[BEFORE]Opening the gripper at:")
+    print("\tnow.secs = " + str(now.secs))
+    print("\tnow.nsecs = " + str(now.nsecs))
+    # =============================================================
+    # gripper_move_pub.publish(gripper_move_message)
+    # =============================================================
+    # try:
+    #     service_res = move_gripper(0.08, 0.05)
+    #     print ("Service response is: ", str(service_res.success))
+    # except rospy.ServiceException, e:
+    #     print "Service call failed: %s"%e
+    # =============================================================
+
     print("secs_waited = " + str(secs_waited))
     print("secs = " + str(secs))
-    print("Opening the gripper at:")
+    now = rospy.get_rostime()
+    print("[AFTER]Opening the gripper at:")
     print("\tnow.secs = " + str(now.secs))
     print("\tnow.nsecs = " + str(now.nsecs))
     

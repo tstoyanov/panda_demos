@@ -21,6 +21,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 find_package(TinyXML REQUIRED)
 find_package(PkgConfig REQUIRED)
+find_package(OpenCV)
 pkg_check_modules(JSONCPP jsoncpp)
 
 ## System dependencies are found with CMake's conventions
@@ -131,6 +132,7 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIRS}
   ${TinyXML_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}
   # nlohmann
 )
 
@@ -157,6 +159,10 @@ target_link_libraries(generator
   ${orocos_kdl_LIBRARIES}
   ${TinyXML_LIBRARIES}
   ${JSONCPP_LIBRARIES}
+)
+
+add_dependencies(generator
+  trajectory_generator_gencpp
 )
 
 ## Rename C++ executable without prefix
@@ -235,7 +241,6 @@ add_executable(trajectory_generator_gripper_server src/trajectory_generator_grip
 target_link_libraries(trajectory_generator_gripper_server
   ${catkin_LIBRARIES}
 )
-
 add_dependencies(trajectory_generator_gripper_server trajectory_generator_gencpp)
 
 add_executable(trajectory_generator_gripper_client src/trajectory_generator_gripper_client.cpp)

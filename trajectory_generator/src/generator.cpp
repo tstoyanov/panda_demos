@@ -305,18 +305,17 @@ int main(int argc, char **argv)
   KDL::ChainIkSolverVel_wdls chainIkSolverVel {my_chain};
   KDL::ChainIkSolverPos_NR_JL chainIkSolverPos {my_chain, q_min, q_max, chainFkSolverPos, chainIkSolverVel, max_iter, eps};
 
-  double release_x_coordinate = 0.168281002938;
+  double release_x_coordinate = 0.088281002938;
   // double release_x_coordinate = 0.268281002938;
   double noisy_release_x_coordinate;
   // ========== WAYPOINTS ==========
   std::vector<std::vector<double>> starting_waypoints =
   {
-    // // sliding height
-    // // {x, y, z}
-    // {-0.471718997062, -0.0112002648095, 0.831710060669},
-    // {release_x_coordinate, -0.0112002648095, 0.831710060669},
-    // {0.198281002938, -0.0112002648095, 0.836710060669}
-    // // {0.298281002938, -0.0112002648095, 0.861710060669}
+    // sliding height
+    // {x, y, z}
+    {-0.501718997062, -0.0112002648095, 0.831710060669},
+    {release_x_coordinate, -0.0112002648095, 0.831710060669},
+    {0.118281002938, -0.0112002648095, 0.836710060669}
     
     // testing "safe" height
     // {x, y, z}
@@ -324,11 +323,11 @@ int main(int argc, char **argv)
     // {release_x_coordinate, -0.0112002648095, 0.931710060669},
     // {0.198281002938, -0.0112002648095, 0.936710060669}
 
-    // real test
-    // {x, y, z}
-    {-0.501718997062, -0.0112002648095, 0.856710060669},
-    {release_x_coordinate, -0.0112002648095, 0.856710060669},
-    {0.198281002938, -0.0112002648095, 0.861710060669}
+    // // real test
+    // // {x, y, z}
+    // {-0.501718997062, -0.0112002648095, 0.856710060669},
+    // {release_x_coordinate, -0.0112002648095, 0.856710060669},
+    // {0.118281002938, -0.0112002648095, 0.861710060669}
 
     // good
     // {x, y, z}
