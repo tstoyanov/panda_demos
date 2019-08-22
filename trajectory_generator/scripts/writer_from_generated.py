@@ -43,7 +43,7 @@ print("input_folder = " + str(input_folder))
 print("tot_time_nsecs = " + str(tot_time_nsecs))
 
 deceleration_frames = 5     # number of frames used to decelerate
-deceleration_time = 0.5    # deceleration time in seconds
+deceleration_time = 0.7    # deceleration time in seconds
 # deceleration_time = 0.25    # deceleration time in seconds
 deceleration_dt = float(deceleration_time) / deceleration_frames
 
@@ -324,14 +324,16 @@ def talker():
     print("[BEFORE]Opening the gripper at:")
     print("\tnow.secs = " + str(now.secs))
     print("\tnow.nsecs = " + str(now.nsecs))
-    # =============================================================
+    # ======================== THROW =====================================
     # gripper_move_pub.publish(gripper_move_message)
-    # =============================================================
+    # 
+    # ======================== SLIDE =====================================
     # try:
     #     service_res = move_gripper(0.08, 0.05)
     #     print ("Service response is: ", str(service_res.success))
     # except rospy.ServiceException, e:
     #     print "Service call failed: %s"%e
+    # 
     # =============================================================
 
     print("secs_waited = " + str(secs_waited))
