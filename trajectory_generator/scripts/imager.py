@@ -9,8 +9,8 @@ from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 
-min_radius = 8
-max_radius = 14
+min_radius = 8     # default 8
+max_radius = 16     # default 14
 min_dist = min_radius*2
 
 class stone_class:
@@ -58,10 +58,11 @@ class stone_class:
 class stone_organizer:
     def __init__(self):
         self.stones = []
-        self.color_boundaries = np.array([
+        self.colors = np.array([
                 # ([min], [max])
-                ("orange", [0, 0, 150], [49, 255, 250]),  # orange
-                ("blue", [50, 0, 0], [150, 255, 149])   # blue
+                ("orange", [0, 0, 150], [49, 139, 250]),
+                ("blue", [50, 0, 0], [150, 50, 50]),
+                ("white", [60, 60, 60], [255, 255, 255])
             ],
             dtype=[('name', 'S10'),('lower', '<f8', (3)), ('upper', '<f8', (3))])
 
@@ -83,9 +84,20 @@ class stone_organizer:
     def end_search(self):
         for stone in self.stones:
             color = stone.get_color()
-            color_index = np.argwhere(np.all((color >= self.color_boundaries["lower"]) & (color <= self.color_boundaries["upper"]), axis=1))
+            color_index = np.argwhere(np.all((color >= self.colors["lower"]) & (color <= self.colors["upper"]), axis=1))
             if len(color_index) != 0:
-                stone.set_color_name(self.color_boundaries["name"][color_index.reshape(1)[0]])
+                stone.set_color_name(self.colors["name"][color_index.reshape(1)[0]])
+
+class board:
+    def __init__(self, center=(0,0)):
+        self.center = center
+    
+    def get_center(self):
+        return self.center
+    
+    def set_center(self, center):
+        self.center = center
+
 
 class image_converter:
 
@@ -168,9 +180,9 @@ def main(args):
     try:
         # rospy.spin()
         while not rospy.core.is_shutdown():
-            rospy.rostime.wallsleep(0.5)
+            rospy.rostime.wallsleep(1)
             print("Press enter to search for stones")
-            raw_input()
+            # raw_input()
             ic.search()
     except KeyboardInterrupt:
         print("Shutting down")
