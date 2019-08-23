@@ -9,8 +9,8 @@ from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 
-min_radius = 8     # default 8
-max_radius = 16     # default 14
+min_radius = 10     # default 8
+max_radius = 20     # default 14
 min_dist = min_radius*2
 
 class stone_class:
@@ -59,9 +59,14 @@ class stone_organizer:
     def __init__(self):
         self.stones = []
         self.colors = np.array([
+                # desk values
                 # ([min], [max])
-                ("orange", [0, 0, 150], [49, 139, 250]),
-                ("blue", [50, 0, 0], [150, 50, 50]),
+                # ("orange", [0, 0, 150], [49, 139, 250]),
+                # ("blue", [50, 0, 0], [150, 50, 50]),
+                # ("white", [60, 60, 60], [255, 255, 255])
+                # board values
+                ("orange", [0, 0, 100], [19, 139, 250]),
+                ("blue", [20, 0, 0], [150, 50, 50]),
                 ("white", [60, 60, 60], [255, 255, 255])
             ],
             dtype=[('name', 'S10'),('lower', '<f8', (3)), ('upper', '<f8', (3))])
