@@ -68,19 +68,6 @@ class stone_organizer:
     def clear(self):
         self.stones = []
 
-    # def find_nearest_stone_idx(self, x, y):
-    #     if len(self.stones) != 0:
-    #         x_array = np.asarray(list((s.x for s in self.stones)))
-    #         y_array = np.asarray(list((s.y for s in self.stones)))
-    #         distances = np.sqrt(np.square(x_array - x) + np.square(y_array - y))
-    #         if np.amin(distances) < min_dist:
-    #             return distances.argmin()
-    #         else:
-    #             print("stone is too far from the old ones, it has to be a new one")
-    #             return -1
-    #     else:
-    #         return -1
-
     def add_sample(self, x, y, r, color):
         if len(self.stones) != 0:
             x_array = np.asarray(list((s.x for s in self.stones)))
@@ -97,7 +84,8 @@ class stone_organizer:
         for stone in self.stones:
             color = stone.get_color()
             color_index = np.argwhere(np.all((color >= self.color_boundaries["lower"]) & (color <= self.color_boundaries["upper"]), axis=1))
-            stone.set_color_name(self.color_boundaries["name"][color_index.reshape(1)[0]])
+            if len(color_index) != 0:
+                stone.set_color_name(self.color_boundaries["name"][color_index.reshape(1)[0]])
 
 class image_converter:
 
@@ -139,6 +127,7 @@ class image_converter:
                 if isinstance(stones, np.ndarray):
                     stones_nr = len(stones[0])
                     stones = np.uint16(np.around(stones))
+                    print("The number of stones found in iteration " + str(self.iteration) + " is: " + str(stones_nr))
                     for stone in stones[0,:]:
                         # draw the outer circle
                         center_x = stone[0]
@@ -147,14 +136,11 @@ class image_converter:
 
                         color_matrix = cv_image[center_y-(int)(radius/2):center_y+(int)(radius/2),center_x-(int)(radius/2):center_x+(int)(radius/2)]
                         color = np.mean(color_matrix, axis=(0, 1))
-                        # cv2.imshow("color_matrix", color_matrix)
                         self.so.add_sample(center_x, center_y, radius, color)
-                        print("number of stones: ", str(len(self.so.stones)))
                         
                         cv2.circle(drawable_image,(center_x,center_y),radius,(0,0,255),2)
                         # draw the center of the circle
                         # cv2.circle(colored_img,(center_x,center_y),2,(255,0,0),3)
-                        # rospy.loginfo("radius: " + str(radius))
 
 
                 else:
@@ -162,7 +148,6 @@ class image_converter:
             else:
                 self.do_search = False
                 self.so.end_search()                    
-                # rospy.loginfo("Number of stone(s) found: " + str(stones_nr))
                 rospy.loginfo("Number of stone(s) found: " + str(len(self.so.stones)))
         # =============================================
         for s in self.so.stones:
