@@ -37,13 +37,20 @@ class my_colors:
             return "None"
 
 class stone_class:
-    def __init__(self, x=0, y=0, r=0, color=0):
+    def __init__(self, x=0, y=0, r=0, color=0, distance_from_center=None):
         self.sample_counter = 0
         self.x = x
         self.y = y
         self.r = r
         self.color = color #BGR
         self.color_name = None
+        self.distance_from_center = distance_from_center
+    
+    def get_distance_from_center(self):
+        return self.distance_from_center
+    
+    def set_distance_from_center(self, distance):
+        self.distance_from_center = distance
 
     def set_color_name(self, color_name):
         self.color_name = color_name
@@ -56,7 +63,6 @@ class stone_class:
             return "None"
         else:
             return self.color_name
-
     
     def get_center(self):
         return (self.x, self.y)
@@ -100,8 +106,14 @@ class stone_organizer_class:
 
         self.stones.append(stone_class(x, y, r, color))
         return True
+
+    def set_distance_from_center(self, center):
+        for stone in self.stones:
+            stone_center = stone.get_center()
+            stone.set_distance_from_center(math.sqrt(math.pow(stone_center[0]-center[0], 2) + math.pow(stone_center[1]-center[1], 2)))
+
     
-    def finalize_search(self):
+    def finalize_search(self, center):
         stones_to_remove = []
         for stone in self.stones:
             color_name = my_colors.get_name_from_bgr(stone.get_color_bgr())
@@ -110,6 +122,7 @@ class stone_organizer_class:
                 stones_to_remove.append(stone)
             else:
                 stone.set_color_name(color_name)
+                self.set_distance_from_center(center)
         for stone in stones_to_remove:
             self.stones.remove(stone)
 
@@ -226,7 +239,7 @@ class image_converter:
                     # cv2.circle(colored_img,(center_x,center_y),2,(255,0,0),3)
         else:
             self.stone_search_flag = False
-            self.so.finalize_search()                    
+            self.so.finalize_search(self.board.get_center())                    
             rospy.loginfo("Number of stone(s) found: " + str(len(self.so.stones)))
 
     def center_search(self):
@@ -294,7 +307,10 @@ class image_converter:
         for s in self.so.stones:
             cv2.circle(drawable_image,s.get_center(),2,(0,0,0),3)
             cv2.circle(drawable_image,s.get_center(),2,(255,255,255),1)
-            cv2.putText(drawable_image, s.get_color_name(), s.get_center(), cv2.FONT_HERSHEY_SIMPLEX, 1.0, s.get_color_bgr(), lineType=cv2.LINE_AA)
+            distance_from_center = s.get_distance_from_center()
+            if distance_from_center is not None:
+                cv2.putText(drawable_image, str(distance_from_center), s.get_center(), cv2.FONT_HERSHEY_SIMPLEX, 1.0, s.get_color_bgr(), lineType=cv2.LINE_AA)
+            # cv2.putText(drawable_image, s.get_color_name(), s.get_center(), cv2.FONT_HERSHEY_SIMPLEX, 1.0, s.get_color_bgr(), lineType=cv2.LINE_AA)
         
         cv2.imshow("drawable_image window", drawable_image)
         cv2.waitKey(3)
