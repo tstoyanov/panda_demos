@@ -3,6 +3,12 @@ import json, ast, os, math
 from os import listdir
 from os.path import isfile, join
 
+import rospkg
+
+rospack = rospkg.RosPack()
+
+package_path = rospack.get_path("trajectory_generator")
+
 parser = argparse.ArgumentParser(description='Joints position dataset generator')
 parser.add_argument('-i', default="/home/ilbetzy/orebro/src/panda_demos/trajectory_generator/generated_trajectories/cpp/fourth_batch",
                     help='path of the input folder')
