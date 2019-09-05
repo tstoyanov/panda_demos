@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<launch>
+    <group ns="panda">
+        <node pkg="trajectory_generator" name="force_reader" type="force_reader.py" output="screen" args="" />
+    </group>
+</launch>

@@ -8,9 +8,11 @@ import rospkg
 rospack = rospkg.RosPack()
 
 package_path = rospack.get_path("trajectory_generator")
+batch_path = package_path + "/generated_trajectories/cpp/latest_batch"
 
 parser = argparse.ArgumentParser(description='Joints position dataset generator')
-parser.add_argument('-i', default="/home/ilbetzy/orebro/src/panda_demos/trajectory_generator/generated_trajectories/cpp/fourth_batch",
+# parser.add_argument('-i', default="/home/ilbetzy/orebro/src/panda_demos/trajectory_generator/generated_trajectories/cpp/fourth_batch",
+parser.add_argument('-i', default=batch_path,
                     help='path of the input folder')
 args = parser.parse_args()
 input_folder = args.i
@@ -56,9 +58,10 @@ for n, trajectory_file in enumerate(trajectory_files):
         print ("files scanned: ", n+1)
 
 
-script_path = os.path.abspath(__file__)
-main_dir = script_path[:script_path.rfind('/utils')]
-dataset_dir = main_dir + "/generated_trajectories/datasets"
+# script_path = os.path.abspath(__file__)
+# main_dir = script_path[:script_path.rfind('/utils')]
+# dataset_dir = main_dir + "/generated_trajectories/datasets"
+dataset_dir = package_path + "/generated_trajectories/datasets"
 dataset_file = dataset_dir + input_folder[input_folder.rindex("/"):] + "/dataset.txt"
 
 os.makedirs(os.path.dirname(dataset_file), exist_ok=True)
