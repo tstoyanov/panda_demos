@@ -46,9 +46,10 @@
 #define MAX_NUMBER_OF_INVERSIONS 10
 
 
+// [68%, 95%, 99.7%] of the noise falls inside MEAN +/- [1, 2, 3]*NOISE_STDDEV (1 = +/- 3m? => 3cm in the end)
 std::vector<std::map<std::string, double>> NOISE_MATRIX = { // 1 will be converted to 1 cm for now
   // good
-  { // x                                                    // 99% of the noise falls inside MEAN +/- 3*NOISE_STDDEV (1.66 = +/- 5m? => 5cm in the end)
+  { // x
     {"noise_mean", 0}, {"noise_stddev", 1} // 3
   },
   { // y
@@ -750,7 +751,10 @@ int main(int argc, char **argv)
       {
         myfile << data << std::endl;
         myfile.close();
-        std::cout << "Trajectories generated: " << generated_trajectories + 1 << std::endl;
+        if (generated_trajectories % 100 == 99)
+        {
+          std::cout << "Trajectories generated: " << generated_trajectories + 1 << std::endl;
+        }
       }
     }
     else

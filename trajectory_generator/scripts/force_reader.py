@@ -123,8 +123,8 @@ class statistics_calculator:
     # mean accumulates the mean of the entire dataset
     # M2 aggregates the squared distance from the mean
     # count aggregates the number of samples seen so far
-    # after updating "batch_size" amount of times calculates
-    # the population and sample variance and resets the accumulators
+    # after updating "batch_size" amount of times, calculates
+    # the population and sample variance and resets the batch_count variable
     def update(self, new_value):
         self.last_sample = copy.deepcopy(new_value)
         if self.count == 0:
