@@ -699,6 +699,8 @@ int main(int argc, char **argv)
     // ====================JSON====================
     data = Json::Value();
     data["realease_frame"] = RELEASE_FRAME;
+    data["m"] = m;
+    data["c"] = c;
     if (is_new)
     {
       data["trajectory_duration"] = trajectory_duration;

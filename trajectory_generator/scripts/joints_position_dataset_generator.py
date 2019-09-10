@@ -25,7 +25,9 @@ trajectory_files = [f for f in listdir(input_folder) if isfile(join(input_folder
 joint_trajectories_dataset = []
 joint_trajectories_dataset = {
     "joints_positions": [],
-    "eef_velocity_magnitude": []
+    "eef_velocity_magnitude": [],
+    "m": [],
+    "c": []
 }
 
 for n, trajectory_file in enumerate(trajectory_files):
@@ -33,6 +35,8 @@ for n, trajectory_file in enumerate(trajectory_files):
         data = f.read()
     trajectories = json.loads(data)
     joint_trajectories_dataset["joints_positions"].append(trajectories["joint_trajectory"])
+    joint_trajectories_dataset["m"].append(trajectories["m"])
+    joint_trajectories_dataset["c"].append(trajectories["c"])
     
     trajectories = ast.literal_eval(json.dumps(trajectories))
     filter_alpha = 0.9
