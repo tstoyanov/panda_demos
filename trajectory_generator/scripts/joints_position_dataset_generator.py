@@ -12,10 +12,14 @@ batch_path = package_path + "/generated_trajectories/cpp/latest_batch"
 
 parser = argparse.ArgumentParser(description='Joints position dataset generator')
 # parser.add_argument('-i', default="/home/ilbetzy/orebro/src/panda_demos/trajectory_generator/generated_trajectories/cpp/fourth_batch",
-parser.add_argument('-i', default=batch_path,
+parser.add_argument('-i', default="latest_batch",
                     help='path of the input folder')
 args = parser.parse_args()
-input_folder = args.i
+if args.i[0] != "/":
+    args.i = "/" + args.i
+if args.i[-1] == "/":
+    args.i = args.i[0:-1]
+input_folder = package_path + "/generated_trajectories/cpp" + args.i
 
 trajectory_files = [f for f in listdir(input_folder) if isfile(join(input_folder, f))]
 joint_trajectories_dataset = []
@@ -68,6 +72,7 @@ dataset_file = dataset_dir + input_folder[input_folder.rindex("/"):] + "/dataset
 # os.makedirs(os.path.dirname(dataset_file))
 
 # python 3
-os.makedirs(os.path.dirname(dataset_file), exist_ok=True)
+# os.makedirs(os.path.dirname(dataset_file), exist_ok=True)
+os.makedirs(os.path.dirname(dataset_file))
 with open(dataset_file, "w") as f:
     json.dump(joint_trajectories_dataset, f)
