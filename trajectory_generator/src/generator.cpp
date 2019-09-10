@@ -35,8 +35,8 @@
 #define MAX_NOISE_GENERATION_ATTEMPTS 100
 
 #define DECELERATION_OFFSET 5
-#define DECELERATION_TIME 0.25  // duration of the deceleration in seconds
-#define DECELERATION_FRAMES 5   // number of frames during deceleration
+#define DECELERATION_TIME 0.25 // duration of the deceleration in seconds
+#define DECELERATION_FRAMES 5  // number of frames during deceleration
 
 #define NUMBER_OF_SAMPLES 100
 #define RELEASE_FRAME NUMBER_OF_SAMPLES - DECELERATION_OFFSET
@@ -45,27 +45,28 @@
 #define BINARY_SEARCH_TRESHOLD 0.0001 // meters
 #define MAX_NUMBER_OF_INVERSIONS 10
 
-
-// [68%, 95%, 99.7%] of the noise falls inside MEAN +/- [1, 2, 3]*NOISE_STDDEV (1 = +/- 3m? => 3cm in the end)
+// [68%, 95%, 99.7%] of the noise falls inside MEAN +/- [1, 2, 3]*stddev (1 = +/- 3m? => 3cm in the end)
 std::vector<std::map<std::string, double>> NOISE_MATRIX = { // 1 will be converted to 1 cm for now
-  // good
-  { // x
-    {"noise_mean", 0}, {"noise_stddev", 1} // 3
-  },
-  { // y
-    {"noise_mean", 0}, {"noise_stddev", 0.3}
-  },
-  { // z
-    {"noise_mean", 0}, {"noise_stddev", 1} // 2
-  }
-};
+    // good
+    {
+        // x
+        {"mean", 0},
+        {"stddev", 1} // 3
+    },
+    {// y
+     {"mean", 0},
+     {"stddev", 0.3}},
+    {
+        // z
+        {"mean", 0},
+        {"stddev", 1} // 2
+    }};
 
 // std::vector<double> distance_from_release = {
 
 // }
 
-
-double binary_search_treshold (KDL::Path_RoundedComposite &path, double lower_bound, double upper_bound, const double &x_value, const double &treshold)
+double binary_search_treshold(KDL::Path_RoundedComposite &path, double lower_bound, double upper_bound, const double &x_value, const double &treshold)
 {
   double mid = (upper_bound + lower_bound) / 2;
   double mid_x_value = path.Pos(mid).p.x();
@@ -78,16 +79,16 @@ double binary_search_treshold (KDL::Path_RoundedComposite &path, double lower_bo
   {
     if (mid_x_value < x_value)
     {
-      return binary_search_treshold (path, mid, upper_bound, x_value, treshold);
+      return binary_search_treshold(path, mid, upper_bound, x_value, treshold);
     }
     else
     {
-      return binary_search_treshold (path, lower_bound, mid, x_value, treshold);
+      return binary_search_treshold(path, lower_bound, mid, x_value, treshold);
     }
   }
 }
 
-double minima_search (KDL::Path_RoundedComposite &path, double ds, int max_number_of_inversions)
+double minima_search(KDL::Path_RoundedComposite &path, double ds, int max_number_of_inversions)
 {
   int sign = 1;
   int inversions = 0;
@@ -119,9 +120,9 @@ double minima_search (KDL::Path_RoundedComposite &path, double ds, int max_numbe
 
 std::string getExePath()
 {
-  char result[ PATH_MAX ];
-  ssize_t count = readlink( "/proc/self/exe", result, PATH_MAX );
-  return std::string( result, (count > 0) ? count : 0 );
+  char result[PATH_MAX];
+  ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
+  return std::string(result, (count > 0) ? count : 0);
 }
 
 int main(int argc, char **argv)
@@ -138,22 +139,16 @@ int main(int argc, char **argv)
   namespace po = boost::program_options;
   // Declare the supported options.
   po::options_description desc("Allowed options");
-  desc.add_options()
-    ("help", "produce help message")
-    ("batch,b", po::value<int>(&batch_count), "set the number of trajectories to generate")
-    ("sim,s", po::bool_switch()->default_value(false), "simulation flag")
-    ("no-noise,n", po::bool_switch()->default_value(false), "no-noise flag")
-    ("new", po::bool_switch()->default_value(false), "new trajectory generation flag")
-    ("duration,t", po::value<double>(&trajectory_duration), "duration of the trajectory in seconds")
-    ("velocity,v", po::value<double>(&release_velocity), "release velocity in [m/s]")
+  desc.add_options()("help", "produce help message")("batch,b", po::value<int>(&batch_count), "set the number of trajectories to generate")("sim,s", po::bool_switch()->default_value(false), "simulation flag")("no-noise,n", po::bool_switch()->default_value(false), "no-noise flag")("new", po::bool_switch()->default_value(false), "new trajectory generation flag")("duration,t", po::value<double>(&trajectory_duration), "duration of the trajectory in seconds")("velocity,v", po::value<double>(&release_velocity), "release velocity in [m/s]")
 
-  ;
+      ;
 
   po::variables_map vm;
   po::store(po::parse_command_line(argc, argv, desc), vm);
   po::notify(vm);
 
-  if (vm.count("help")) {
+  if (vm.count("help"))
+  {
     std::cout << desc << "\n";
     return 1;
   }
@@ -176,7 +171,7 @@ int main(int argc, char **argv)
   {
     std::cout << "batch argument was not set, a single trajectory will be generated" << std::endl;
   }
-  
+
   if (vm.count("sim"))
   {
     is_simulation = vm["sim"].as<bool>();
@@ -209,10 +204,9 @@ int main(int argc, char **argv)
   //   EQRADIUS = std::stod(argv[1]);
   // }
   ros::init(argc, argv, "myGenerator");
-  KDL::Tree my_tree {};
+  KDL::Tree my_tree{};
   ros::NodeHandle node;
   ros::Rate loop_rate(2);
-  
 
   // ===== getting URDF model and joint names form param server =====
   std::string robot_desc_string;
@@ -228,8 +222,9 @@ int main(int argc, char **argv)
     node.param("/panda/robot_description", robot_desc_string, std::string());
     node.getParam("/panda/position_joint_trajectory_controller/joints", joint_names);
   }
-  
-  if (!kdl_parser::treeFromString(robot_desc_string, my_tree)){
+
+  if (!kdl_parser::treeFromString(robot_desc_string, my_tree))
+  {
     ROS_ERROR("Failed to construct kdl tree");
     return false;
   }
@@ -245,17 +240,17 @@ int main(int argc, char **argv)
   tiny_doc.Parse(robot_desc_string.c_str());
   std::map<std::string, std::map<std::string, double>> joint_limits;
 
-  TiXmlHandle doc_handle {&tiny_doc};
+  TiXmlHandle doc_handle{&tiny_doc};
   std::string joint_name;
   std::vector<std::string>::iterator it;
-  for (TiXmlElement* tiny_joint = doc_handle.FirstChild("robot").Child("joint", 0).ToElement(); tiny_joint; tiny_joint = tiny_joint -> NextSiblingElement("joint"))
+  for (TiXmlElement *tiny_joint = doc_handle.FirstChild("robot").Child("joint", 0).ToElement(); tiny_joint; tiny_joint = tiny_joint->NextSiblingElement("joint"))
   {
-    joint_name = tiny_joint -> Attribute("name");
+    joint_name = tiny_joint->Attribute("name");
     it = std::find(joint_names.begin(), joint_names.end(), joint_name);
     if (it != joint_names.end())
     {
-      joint_limits[joint_name].insert({{"lower", std::stod(tiny_joint -> FirstChild("limit") -> ToElement() -> Attribute("lower"))}});
-      joint_limits[joint_name].insert({{"upper", std::stod(tiny_joint -> FirstChild("limit") -> ToElement() -> Attribute("upper"))}});
+      joint_limits[joint_name].insert({{"lower", std::stod(tiny_joint->FirstChild("limit")->ToElement()->Attribute("lower"))}});
+      joint_limits[joint_name].insert({{"upper", std::stod(tiny_joint->FirstChild("limit")->ToElement()->Attribute("upper"))}});
     }
   }
 
@@ -276,7 +271,7 @@ int main(int argc, char **argv)
   // joint_limits["panda_joint7"]["upper"] = 0.4;
   // ====================END FAKE LIMITS====================
 
-  KDL::Chain my_chain = KDL::Chain {};
+  KDL::Chain my_chain = KDL::Chain{};
   std::vector<std::string> chain_segments_names;
   my_tree.getChain("world", "panda_hand", my_chain);
   unsigned nr_of_joints = my_chain.getNrOfJoints();
@@ -287,8 +282,8 @@ int main(int argc, char **argv)
   //   std::cout << "\tchain segment" << i << ": " << my_chain.getSegment(i).getName() << std::endl;
   // }
 
-  KDL::JntArray q_min {(unsigned) joint_names.size()};
-  KDL::JntArray q_max {(unsigned) joint_names.size()};
+  KDL::JntArray q_min{(unsigned)joint_names.size()};
+  KDL::JntArray q_max{(unsigned)joint_names.size()};
   for (unsigned i = 0; i < joint_names.size(); i++)
   {
     q_min(i) = joint_limits[joint_names[i]]["lower"];
@@ -301,10 +296,10 @@ int main(int argc, char **argv)
   unsigned max_iter = 100;
   double eps = 1e-12;
 
-   // ==================== CHAIN SOLVER ====================
-  KDL::ChainFkSolverPos_recursive chainFkSolverPos {my_chain};
-  KDL::ChainIkSolverVel_wdls chainIkSolverVel {my_chain};
-  KDL::ChainIkSolverPos_NR_JL chainIkSolverPos {my_chain, q_min, q_max, chainFkSolverPos, chainIkSolverVel, max_iter, eps};
+  // ==================== CHAIN SOLVER ====================
+  KDL::ChainFkSolverPos_recursive chainFkSolverPos{my_chain};
+  KDL::ChainIkSolverVel_wdls chainIkSolverVel{my_chain};
+  KDL::ChainIkSolverPos_NR_JL chainIkSolverPos{my_chain, q_min, q_max, chainFkSolverPos, chainIkSolverVel, max_iter, eps};
 
   double release_x_coordinate = 0.088281002938;
   // double release_x_coordinate = 0.268281002938;
@@ -312,49 +307,49 @@ int main(int argc, char **argv)
   // ========== WAYPOINTS ==========
   std::vector<std::vector<double>> starting_waypoints =
   {
-    // sliding height
-    // {x, y, z}
-    {-0.481718997062, -0.1102002648095, 0.861710060669},
-    {release_x_coordinate, -0.1102002648095, 0.861710060669},
-    {0.118281002938, -0.1102002648095, 0.866710060669}
-    
-    // testing "safe" height
-    // {x, y, z}
-    // {-0.471718997062, -0.0112002648095, 0.931710060669},
-    // {release_x_coordinate, -0.0112002648095, 0.931710060669},
-    // {0.198281002938, -0.0112002648095, 0.936710060669}
+      // sliding height
+      // {x, y, z}
+      {-0.481718997062, -0.1102002648095, 0.861710060669},
+      {release_x_coordinate, -0.1102002648095, 0.861710060669},
+      {0.118281002938, -0.1102002648095, 0.866710060669}
 
-    // // real test
-    // // {x, y, z}
-    // {-0.501718997062, -0.0112002648095, 0.856710060669},
-    // {release_x_coordinate, -0.0112002648095, 0.856710060669},
-    // {0.118281002938, -0.0112002648095, 0.861710060669}
+      // testing "safe" height
+      // {x, y, z}
+      // {-0.471718997062, -0.0112002648095, 0.931710060669},
+      // {release_x_coordinate, -0.0112002648095, 0.931710060669},
+      // {0.198281002938, -0.0112002648095, 0.936710060669}
 
-    // good
-    // {x, y, z}
-    // {-0.401718997062, 0.0892002648095, 0.986710060669},
-    // {release_x_coordinate, 0.0892002648095, 0.886710060669},
-    // {0.568281002938, 0.0892002648095, 1.086710060669}
+      // // real test
+      // // {x, y, z}
+      // {-0.501718997062, -0.0112002648095, 0.856710060669},
+      // {release_x_coordinate, -0.0112002648095, 0.856710060669},
+      // {0.118281002938, -0.0112002648095, 0.861710060669}
 
-    // {-0.401718997062, 0.0892002648095, 0.916710060669},
-    // {release_x_coordinate, 0.0892002648095, 0.866710060669},
-    // {0.568281002938, 0.0892002648095, 1.086710060669}
-    
-    // collision test
-    // {x, y, z}
-    // {-0.401718997062, 0.4892002648095, 0.986710060669},
-    // {0.368281002938, 0.4892002648095, 0.886710060669},
-    // {0.468281002938, 0.4892002648095, 0.986710060669}
-    
-    // old
-    // {x, y, z}
-    // {-0.531718997062, 0.0892002648095, 1.08671006067},
-    // {-0.131718997062, 0.0892002648095, 0.886710060669},
-    // {0.368281002938, 0.0892002648095, 0.886710060669},
-    // {0.468281002938, 0.0892002648095, 0.986710060669}
+      // good
+      // {x, y, z}
+      // {-0.401718997062, 0.0892002648095, 0.986710060669},
+      // {release_x_coordinate, 0.0892002648095, 0.886710060669},
+      // {0.568281002938, 0.0892002648095, 1.086710060669}
+
+      // {-0.401718997062, 0.0892002648095, 0.916710060669},
+      // {release_x_coordinate, 0.0892002648095, 0.866710060669},
+      // {0.568281002938, 0.0892002648095, 1.086710060669}
+
+      // collision test
+      // {x, y, z}
+      // {-0.401718997062, 0.4892002648095, 0.986710060669},
+      // {0.368281002938, 0.4892002648095, 0.886710060669},
+      // {0.468281002938, 0.4892002648095, 0.986710060669}
+
+      // old
+      // {x, y, z}
+      // {-0.531718997062, 0.0892002648095, 1.08671006067},
+      // {-0.131718997062, 0.0892002648095, 0.886710060669},
+      // {0.368281002938, 0.0892002648095, 0.886710060669},
+      // {0.468281002938, 0.0892002648095, 0.986710060669}
   };
 
-  KDL::RotationalInterpolation_SingleAxis * orient = new KDL::RotationalInterpolation_SingleAxis();
+  KDL::RotationalInterpolation_SingleAxis *orient = new KDL::RotationalInterpolation_SingleAxis();
   KDL::Path_RoundedComposite *path;
 
   // ========== adding noise to the waypoints ==========
@@ -365,7 +360,7 @@ int main(int argc, char **argv)
   std::vector<std::vector<double>> noisy_waypoints;
   double max_noise;
   double min_noise;
-  std::default_random_engine generator {std::random_device()()};
+  std::default_random_engine generator{std::random_device()()};
   std::normal_distribution<double> distribution;
   int exception_count;
 
@@ -378,8 +373,8 @@ int main(int argc, char **argv)
   KDL::Vector current_eef_pos;
   KDL::Vector fk_current_eef_pos;
   std::vector<KDL::JntArray> joint_trajectory;
-  KDL::JntArray q_out {nr_of_joints};
-  KDL::JntArray last_joint_pos {nr_of_joints};
+  KDL::JntArray q_out{nr_of_joints};
+  KDL::JntArray last_joint_pos{nr_of_joints};
 
   int ret;
   double path_length;
@@ -393,8 +388,11 @@ int main(int argc, char **argv)
   double Z;
   double W;
 
+  double m;
+  double c;
+
   KDL::Rotation starting_orientation;
-  KDL::Rotation test_orientation {1, 0, 0, 0, -1, 0, 0, 0, -1};
+  KDL::Rotation test_orientation{1, 0, 0, 0, -1, 0, 0, 0, -1};
 
   Json::Value data;
 
@@ -414,9 +412,9 @@ int main(int argc, char **argv)
   std::vector<double> joints_current_ds;
   std::vector<std::vector<double>> decelerating_frames;
 
-  KDL::VelocityProfile_Spline* vel_prof = new KDL::VelocityProfile_Spline();
-  KDL::Trajectory_Segment* trajectory;
-  
+  KDL::VelocityProfile_Spline *vel_prof = new KDL::VelocityProfile_Spline();
+  KDL::Trajectory_Segment *trajectory;
+
   while (generated_trajectories < batch_count)
   {
     exception_count = 0;
@@ -439,8 +437,8 @@ int main(int argc, char **argv)
         //   {
         //     for (unsigned ii = 0; ii < noisy_waypoints[i].size(); ii++)
         //     {
-        //       max_noise = NOISE_MATRIX[ii]["noise_mean"] + 3*NOISE_MATRIX[ii]["noise_stddev"];
-        //       min_noise = NOISE_MATRIX[ii]["noise_mean"] - 3*NOISE_MATRIX[ii]["noise_stddev"];
+        //       max_noise = NOISE_MATRIX[ii]["mean"] + 3*NOISE_MATRIX[ii]["stddev"];
+        //       min_noise = NOISE_MATRIX[ii]["mean"] - 3*NOISE_MATRIX[ii]["stddev"];
         //       if (i == 1 && ii == 2)
         //       {
         //         max_noise = abs(noisy_waypoints[0][2] - starting_waypoints[1][2]);
@@ -449,7 +447,7 @@ int main(int argc, char **argv)
         //       {
         //         min_noise = -abs(noisy_waypoints[1][2] - starting_waypoints[2][2]);
         //       }
-        //       distribution = std::normal_distribution<double> (NOISE_MATRIX[ii]["noise_mean"], NOISE_MATRIX[ii]["noise_stddev"]);
+        //       distribution = std::normal_distribution<double> (NOISE_MATRIX[ii]["mean"], NOISE_MATRIX[ii]["stddev"]);
         //       noise_generation_counter = 0;
         //       do
         //       {
@@ -477,10 +475,10 @@ int main(int argc, char **argv)
         //   }
         //   path -> Add(KDL::Frame(KDL::Vector(noisy_waypoints[i][0], noisy_waypoints[i][1], noisy_waypoints[i][2])));
         // }
-        path -> Add(KDL::Frame(KDL::Vector(starting_waypoints[0][0], starting_waypoints[0][1], starting_waypoints[0][2])));
+        path->Add(KDL::Frame(KDL::Vector(starting_waypoints[0][0], starting_waypoints[0][1], starting_waypoints[0][2])));
         for (unsigned matrix_index = 0; matrix_index < NOISE_MATRIX.size(); matrix_index++)
         {
-          distribution = std::normal_distribution<double> (NOISE_MATRIX[matrix_index]["mean"], NOISE_MATRIX[matrix_index]["stddev"]);
+          distribution = std::normal_distribution<double>(NOISE_MATRIX[matrix_index]["mean"], NOISE_MATRIX[matrix_index]["stddev"]);
           noise = distribution(generator) / 100.0;
           if (matrix_index != 2)
           {
@@ -491,19 +489,26 @@ int main(int argc, char **argv)
             noisy_release_point[matrix_index] += abs(noise);
           }
         }
-        path -> Add(KDL::Frame(KDL::Vector(noisy_release_point[0], noisy_release_point[1], noisy_release_point[2])));
+        path->Add(KDL::Frame(KDL::Vector(noisy_release_point[0], noisy_release_point[1], noisy_release_point[2])));
         // path -> Add(KDL::Frame(KDL::Vector(noisy_release_point[0], noisy_release_point[1], noisy_release_point[2])));
-        path -> Add(KDL::Frame(KDL::Vector(starting_waypoints[2][0], starting_waypoints[2][1], starting_waypoints[2][2])));
+
+        // calculating line equation
+        m = (noisy_release_point[1] - starting_waypoints[0][1]) / (noisy_release_point[0] - starting_waypoints[0][0]);
+        c = (noisy_release_point[1] - (m * noisy_release_point[0]));
+
+        starting_waypoints[2][1] = m * starting_waypoints[2][0] + c;
+
+        path->Add(KDL::Frame(KDL::Vector(starting_waypoints[2][0], starting_waypoints[2][1], starting_waypoints[2][2])));
         noisy_release_x_coordinate = noisy_release_point[0];
-        path -> Finish();
+        path->Finish();
       }
-      catch(std::exception& e)
+      catch (std::exception &e)
       {
         exception_count++;
         path_error = true;
         std::cerr << e.what() << '\n';
       }
-      catch(...)
+      catch (...)
       {
         exception_count++;
         path_error = true;
@@ -514,8 +519,7 @@ int main(int argc, char **argv)
         std::cout << "PROGRAM ABORTED: 'Couldn't find a feasible path after " << MAX_PATH_GENERATION_ATTEMPTS << " attempts'" << std::endl;
         return 0;
       }
-    }
-    while (path_error);
+    } while (path_error);
 
     for (unsigned i = 0; i < nr_of_joints; i++)
     {
@@ -526,7 +530,7 @@ int main(int argc, char **argv)
     // std::cout << "FK RET: " << ret << std::endl;
     starting_orientation = fk_current_eef_frame.M;
 
-    path_length = path -> PathLength();
+    path_length = path->PathLength();
     ds = path_length / NUMBER_OF_SAMPLES;
     double treshold_length;
     treshold_length = binary_search_treshold(*path, 0, path_length, noisy_release_x_coordinate, BINARY_SEARCH_TRESHOLD);
@@ -582,7 +586,7 @@ int main(int argc, char **argv)
     // // std::cout << "------------------------------\n";
     // // ====================END FK====================
     // ========================= END OLD VELOCITY PROFILE =========================
-    
+
     // ======================== NEW TRAJECTORY ========================
     if (is_new)
     {
@@ -594,7 +598,7 @@ int main(int argc, char **argv)
       current_t = 0;
       for (unsigned i = 0; i <= NUMBER_OF_SAMPLES; i++)
       {
-        current_eef_frame = trajectory -> Pos(current_t);
+        current_eef_frame = trajectory->Pos(current_t);
         current_eef_frame.M = test_orientation;
         // current_eef_frame.M = starting_orientation;
         eef_trajectory.push_back(current_eef_frame);
@@ -605,11 +609,9 @@ int main(int argc, char **argv)
         // std::cout << "\t\t\tY: " << Y << std::endl;
         // std::cout << "\t\t\tZ: " << Z << std::endl;
 
-
-
         ret = chainIkSolverPos.CartToJnt(last_joint_pos, current_eef_frame, q_out);
         // std::cout << "RET TRUE: " << ret << std::endl;
-        
+
         joint_trajectory.push_back(q_out);
 
         ret = chainFkSolverPos.JntToCart(q_out, fk_current_eef_frame);
@@ -632,7 +634,7 @@ int main(int argc, char **argv)
         last_joint_pos = q_out;
         current_t += dt;
       }
-    // ====================== END NEW TRAJECTORY ======================
+      // ====================== END NEW TRAJECTORY ======================
     }
     // // ======================== OLD TRAJECTORY ========================
     else
@@ -643,7 +645,7 @@ int main(int argc, char **argv)
 
         // current_s += ds;
         current_s += velocity_dist[i];
-        current_eef_frame = path -> Pos(current_s);
+        current_eef_frame = path->Pos(current_s);
         current_eef_frame.M = test_orientation;
         // current_eef_frame.M = starting_orientation;
         eef_trajectory.push_back(current_eef_frame);
@@ -680,12 +682,11 @@ int main(int argc, char **argv)
     }
     // // ====================== END OLD TRAJECTORY ======================
 
-
     // for (unsigned joint_index = 0; joint_index < joint_names.size(); joint_index++)
     // {
     //   joints_release_ds.push_back(joint_trajectory[joint_trajectory.size()].data[joint_index] - joint_trajectory[joint_trajectory.size()-1].data[joint_index]);
     // }
-    
+
     // for (unsigned i = 0; i < DECELERATION_FRAMES; i++)
     // {
     //   for (unsigned joint_index = 0; joint_index < joint_names.size(); joint_index++)
@@ -698,7 +699,8 @@ int main(int argc, char **argv)
     // ====================JSON====================
     data = Json::Value();
     data["realease_frame"] = RELEASE_FRAME;
-    if (is_new){
+    if (is_new)
+    {
       data["trajectory_duration"] = trajectory_duration;
       data["release_velocity"] = release_velocity;
     }
@@ -728,13 +730,13 @@ int main(int argc, char **argv)
     {
       if (generated_trajectories == 0)
       {
-        if(boost::filesystem::exists(remove_dir))
+        if (boost::filesystem::exists(remove_dir))
         {
           boost::filesystem::remove_all(remove_dir);
         }
         dir_path = pkg_path + "/generated_trajectories/cpp/latest_batch";
         dir = boost::filesystem::path(dir_path);
-        if(!(boost::filesystem::exists(dir)))
+        if (!(boost::filesystem::exists(dir)))
         {
           if (boost::filesystem::create_directories(dir))
           {
@@ -761,7 +763,7 @@ int main(int argc, char **argv)
     {
       dir_path = pkg_path + "/generated_trajectories/cpp/latest";
       dir = boost::filesystem::path(dir_path);
-      if(!(boost::filesystem::exists(dir)))
+      if (!(boost::filesystem::exists(dir)))
       {
         if (boost::filesystem::create_directories(dir))
         {
