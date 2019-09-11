@@ -49,17 +49,18 @@
 std::vector<std::map<std::string, double>> NOISE_MATRIX = { // 1 will be converted to 1 cm for now
     // good
     {
-        // x
-        {"mean", 0},
-        {"stddev", 1} // 3
+      // x
+      {"mean", 0},
+      {"stddev", 1} // 3
     },
-    {// y
-     {"mean", 0},
-     {"stddev", 0.3}},
     {
-        // z
-        {"mean", 0},
-        {"stddev", 1} // 2
+      // y
+      {"mean", 0},
+      {"stddev", 0.3}},
+    {
+      // z
+      {"mean", 0},
+      {"stddev", 1} // 2
     }};
 
 // std::vector<double> distance_from_release = {
@@ -139,9 +140,15 @@ int main(int argc, char **argv)
   namespace po = boost::program_options;
   // Declare the supported options.
   po::options_description desc("Allowed options");
-  desc.add_options()("help", "produce help message")("batch,b", po::value<int>(&batch_count), "set the number of trajectories to generate")("sim,s", po::bool_switch()->default_value(false), "simulation flag")("no-noise,n", po::bool_switch()->default_value(false), "no-noise flag")("new", po::bool_switch()->default_value(false), "new trajectory generation flag")("duration,t", po::value<double>(&trajectory_duration), "duration of the trajectory in seconds")("velocity,v", po::value<double>(&release_velocity), "release velocity in [m/s]")
-
-      ;
+  desc.add_options()
+    ("help", "produce help message")
+    ("batch,b", po::value<int>(&batch_count), "set the number of trajectories to generate")
+    ("sim,s", po::bool_switch()->default_value(false), "simulation flag")
+    ("no-noise,n", po::bool_switch()->default_value(false), "no-noise flag")
+    ("new", po::bool_switch()->default_value(false), "new trajectory generation flag")
+    ("duration,t", po::value<double>(&trajectory_duration), "duration of the trajectory in seconds")
+    ("velocity,v", po::value<double>(&release_velocity), "release velocity in [m/s]")
+  ;
 
   po::variables_map vm;
   po::store(po::parse_command_line(argc, argv, desc), vm);

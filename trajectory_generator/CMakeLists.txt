@@ -68,6 +68,7 @@ pkg_check_modules(JSONCPP jsoncpp)
 add_service_files(
   FILES
   trajectory_generator_gripper.srv
+  trajectory_safety_check.srv
 )
 
 ## Generate actions in the 'action' folder
@@ -236,6 +237,18 @@ add_dependencies(generator
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+
+add_executable(trajectory_safety_check_server src/trajectory_safety_check_server.cpp)
+target_link_libraries(trajectory_safety_check_server
+  ${catkin_LIBRARIES}
+  ${kdl_parser_LIBRARIES}
+  ${orocos_kdl_LIBRARIES}
+  ${TinyXML_LIBRARIES}
+  ${JSONCPP_LIBRARIES}
+)
+add_dependencies(trajectory_safety_check_server
+  trajectory_generator_gencpp
+)
 
 add_executable(trajectory_generator_gripper_server src/trajectory_generator_gripper_server.cpp)
 target_link_libraries(trajectory_generator_gripper_server

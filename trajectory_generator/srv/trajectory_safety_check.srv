@@ -1,0 +1,6 @@
+int64 a
+int64 b
+float64[] joints_pos
+---
+int64 sum
+---
