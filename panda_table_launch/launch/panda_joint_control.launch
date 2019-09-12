@@ -42,6 +42,10 @@
         <remap from="/joint_states" to="/joint_states_desired" />
     </node>
 
+    <node name="trajectory_safety_check_server" type="trajectory_safety_check_server" pkg="trajectory_generator" output="screen">
+      <param name="z_lower_limit" value="0.1"/>
+    </node>
+
      <!-- enabled only if we want to run moveit in simulation -->
   </group>
 
