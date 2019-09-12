@@ -69,14 +69,14 @@ for n, trajectory_file in enumerate(trajectory_files):
 # script_path = os.path.abspath(__file__)
 # main_dir = script_path[:script_path.rfind('/utils')]
 # dataset_dir = main_dir + "/generated_trajectories/datasets"
-dataset_dir = package_path + "/generated_trajectories/datasets"
-dataset_file = dataset_dir + input_folder[input_folder.rindex("/"):] + "/dataset.txt"
+dataset_dir = package_path + "/generated_trajectories/datasets" + input_folder[input_folder.rindex("/"):]
+dataset_file = dataset_dir + "/dataset.txt"
 
 # python 2
 # os.makedirs(os.path.dirname(dataset_file))
 
 # python 3
 # os.makedirs(os.path.dirname(dataset_file), exist_ok=True)
-os.makedirs(os.path.dirname(dataset_file))
+os.makedirs(os.path.dirname(dataset_dir))
 with open(dataset_file, "w") as f:
     json.dump(joint_trajectories_dataset, f)
