@@ -391,7 +391,7 @@ class MyDataset(Dataset):
             ret = []
             for joint_index, joints_positions in enumerate(self.dataset["joints_positions"][index]):
                 ret.append(list(map(lambda joint_value, joint_name: (joint_value-joints_ranges[joint_name]["min"])/(joints_ranges[joint_name]["max"]-joints_ranges[joint_name]["min"]), joints_positions, joints_ranges)))
-            return torch.tensor(ret), torch.tensor(round(self.dataset["eef_velocity_magnitude"][index], 1)), torch.tensor(round(self.dataset["eef_velocity_magnitude"][index], 1)), torch.tensor(round(self.dataset["m"][index], 4)), torch.tensor(round(self.dataset["c"][index], 4)), index
+            return torch.tensor(ret), torch.tensor(round(self.dataset["eef_velocity_magnitude"][index], 1)), torch.tensor(round(self.dataset["m"][index], 4)), torch.tensor(round(self.dataset["c"][index], 4)), index
         else:
             discretized_m = (self.dataset["m"][index]*100 // 0.3) * 0.3
             discretized_c = (self.dataset["c"][index]*100 // 0.3) * 0.3
@@ -437,6 +437,71 @@ class VAE(nn.Module):
         mu, logvar = self.encode(x.view(-1, 700))
         z = self.reparameterize(mu, logvar, no_noise)
         return self.decode(z), mu, logvar
+
+
+learning_rate = 0.01
+gamma = 0.99
+class Policy(nn.Module):
+    def __init__(self):
+        super(Policy, self).__init__()
+        self.encoded_perception_dimensions = 1
+        self.encoded_action_dimensions = 5
+        
+        # self.l1 = nn.Linear(self.state_space, 128, bias=False)
+        # self.l2 = nn.Linear(128, self.action_space, bias=False)
+
+        self.fc1 = nn.Linear(encoded_perception_dimensions, 24)
+        
+        self.fc21 = nn.Linear(24, 24)  # mean layer
+        self.fc31 = nn.Linear(24, 5)
+
+        self.fc22 = nn.Linear(24, 24)  # std layer
+        self.fc32 = nn.Linear(24, 5)
+        
+        self.gamma = gamma
+        
+        # Episode policy and reward history 
+        self.policy_history = torch.Tensor()
+        self.reward_episode = []
+        # Overall reward and loss history
+        self.reward_history = []
+        self.loss_history = []
+    
+    def encode(self, x):
+        h = F.relu(self.fc1(x))
+        
+        h21 = self.fc21(h)
+        mean = self.fc31(h21)
+
+        h22 = self.fc22(h)
+        std = self.fc32(h22)
+
+        return mean, std
+
+    def reparameterize(self, mean, std, no_noise):
+        std = torch.exp(0.5*logvar)
+        eps = torch.randn_like(std)
+        
+        if no_noise:
+            return mu
+            # return mu + std
+        
+        return mu + eps*std
+
+    def forward(self, x, no_noise):
+        mean, std = self.encode(x)
+        action_sample = self.reparametrize(mean, std, no_noise)
+
+        return action_sample
+
+        # model = torch.nn.Sequential(
+        #     self.fc1,
+        #     nn.Dropout(p=0.6),
+        #     nn.ReLU(),
+        #     self.l2,
+        #     nn.Softmax(dim=-1)
+        # )
+        # return model(x)
 
 
 model = VAE().to(device)
@@ -785,7 +850,7 @@ if __name__ == "__main__":
             # test_data_to_plot['tsne-test-encoded-' + str(model.fc22.out_features) + 'd-one'] = tsne_results[:,0]
             # test_data_to_plot['tsne-test-encoded-' + str(model.fc22.out_features) + 'd-two'] = tsne_results[:,1]
 
-            fig = plt.figure(figsize=(16,10))
+            fig = plt.figure("tsne_plot", figsize=(16,10))
             if "BOTH" == str(args.tsne).upper():
                 fig.suptitle('t-sne algorithm over ' + str(len(my_train_set_loader.dataset)) + ' trajectories:\nEncoded ' + str(model.fc22.out_features) + ' dimensional data using ' + args.loss_type.upper() + ' loss (left) vs Original ' + str(model.fc1.in_features) + ' dimensional data (right)', fontsize=14)
                 print ("\nApplying the t-sne algorithm to the original data subset...")
@@ -853,7 +918,8 @@ if __name__ == "__main__":
             latent_space_dimension = len(latent_space_dataset[0])
             for i in range(latent_space_dimension):
                 dataset_data_to_plot['latent-space-'+str(i+1)] = [item[i].item() for item in latent_space_dataset]
-            fig = plt.figure(figsize=(16,10))
+            fig = plt.figure("matrix_plot", figsize=(16,10))
+            fig.suptitle("ALPHA = " + str(args.alpha) + "  BETA = " + str(args.beta))
             for i in range(latent_space_dimension):
                 for ii in range(latent_space_dimension):
                     ax0 = plt.subplot(latent_space_dimension, latent_space_dimension, i*latent_space_dimension + ii + 1)
