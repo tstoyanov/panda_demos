@@ -73,10 +73,9 @@ dataset_dir = package_path + "/generated_trajectories/datasets" + input_folder[i
 dataset_file = dataset_dir + "/dataset.txt"
 
 # python 2
-# os.makedirs(os.path.dirname(dataset_file))
+# os.makedirs(os.path.dirname(dataset_dir))
 
 # python 3
-# os.makedirs(os.path.dirname(dataset_file), exist_ok=True)
-os.makedirs(os.path.dirname(dataset_dir))
+os.makedirs(os.path.dirname(dataset_dir), exist_ok=True)
 with open(dataset_file, "w") as f:
     json.dump(joint_trajectories_dataset, f)
