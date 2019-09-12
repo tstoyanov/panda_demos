@@ -150,8 +150,6 @@ int main(int argc, char **argv)
 
     ros::ServiceServer safety_check_service = node_handle.advertiseService<trajectory_generator::trajectory_safety_check::Request, trajectory_generator::trajectory_safety_check::Response>("trajectory_safety_check", safety_check_handler);
     ros::ServiceServer z_setter_service = node_handle.advertiseService<trajectory_generator::trajectory_safety_check_z_setter::Request, trajectory_generator::trajectory_safety_check_z_setter::Response>("trajectory_safety_check_z_setter", z_setter_handler);
-    
-    ROS_INFO("%s: Ready to add two ints.", node_name.c_str());
     ros::spin();
 
     return 0;
