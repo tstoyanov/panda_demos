@@ -110,11 +110,16 @@ int main(int argc, char **argv)
     }
 
     double z_lower_limit;
-    if (!node_handle.getParam("/panda/z_lower_limit", z_lower_limit) && !node_handle.getParam("z_lower_limit", z_lower_limit))
+    if (!node_handle.getParam("/trajectory_safety_check_server/z_lower_limit", z_lower_limit) && !node_handle.getParam("/panda/trajectory_safety_check_server/z_lower_limit", z_lower_limit))
     {
         z_lower_limit = 0.86171;
         ROS_ERROR("%s: Could not parse 'z_lower_limit' parameter. Using default value '0.86171' instead", node_name.c_str());
     }
+    else
+    {
+        ROS_INFO("%s: Found 'z_lower_limit' parameter with value: %f", node_name.c_str(), z_lower_limit);
+    }
+    
 
     auto safety_check_handler = [&my_chain, &chainFkSolverPos, &joints_pos, &eef_frame, &z_lower_limit, nr_of_joints](trajectory_generator::trajectory_safety_check::Request& req, trajectory_generator::trajectory_safety_check::Response& res)
     {

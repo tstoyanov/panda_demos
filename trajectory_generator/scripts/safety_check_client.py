@@ -912,9 +912,9 @@ for point in test:
     test2.extend(point)
 
 def trajectory_safety_check_client(t):
-    rospy.wait_for_service('trajectory_safety_check')
+    rospy.wait_for_service('/panda/trajectory_safety_check')
     try:
-        local_trajectory_safety_check = rospy.ServiceProxy('trajectory_safety_check', trajectory_safety_check)
+        local_trajectory_safety_check = rospy.ServiceProxy('/panda/trajectory_safety_check', trajectory_safety_check)
         res = local_trajectory_safety_check(t)
         return res.is_safe
     except rospy.ServiceException as e:
