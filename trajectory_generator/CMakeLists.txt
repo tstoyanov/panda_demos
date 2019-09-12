@@ -68,6 +68,7 @@ pkg_check_modules(JSONCPP jsoncpp)
 add_service_files(
   FILES
   trajectory_generator_gripper.srv
+  trajectory_safety_check_z_setter.srv
   trajectory_safety_check.srv
 )
 

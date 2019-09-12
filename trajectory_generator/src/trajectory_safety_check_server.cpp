@@ -1,5 +1,6 @@
 #include "ros/ros.h"
 #include "trajectory_generator/trajectory_safety_check.h"
+#include "trajectory_generator/trajectory_safety_check_z_setter.h"
 
 #include <cmath>
 #include <functional>
@@ -21,17 +22,9 @@
 
 #include <boost/program_options.hpp>
 
-bool add(trajectory_generator::trajectory_safety_check::Request &req,
-         trajectory_generator::trajectory_safety_check::Response &res)
-{
-    res.sum = req.a + req.b;
-    ROS_INFO("request: x=%ld, y=%ld", (long int)req.a, (long int)req.b);
-    ROS_INFO("sending back response: [%ld]", (long int)res.sum);
-    return true;
-}
-
 int main(int argc, char **argv)
 {
+    std::string node_name = "trajectory_safety_check_node";
     ros::init(argc, argv, "trajectory_safety_check_server");
     ros::NodeHandle node_handle;
     std::string robot_ip;
@@ -64,6 +57,7 @@ int main(int argc, char **argv)
     std::string robot_desc_string;
     std::vector<std::string> joint_names;
     
+    
 
     if (is_simulation)
     {
@@ -79,7 +73,7 @@ int main(int argc, char **argv)
 
     if (!kdl_parser::treeFromString(robot_desc_string, my_tree))
     {
-        ROS_ERROR("Failed to construct kdl tree");
+        ROS_ERROR("%s: Failed to construct kdl tree", node_name.c_str());
         return false;
     }
 
@@ -102,7 +96,6 @@ int main(int argc, char **argv)
     }
 
     KDL::Chain my_chain = KDL::Chain{};
-    std::vector<std::string> chain_segments_names;
     my_tree.getChain("world", "panda_hand", my_chain);
     unsigned nr_of_joints = my_chain.getNrOfJoints();
     KDL::JntArray joints_pos{nr_of_joints};
@@ -112,31 +105,48 @@ int main(int argc, char **argv)
 
     if (!node_handle.getParam("/panda/franka_control/robot_ip", robot_ip))
     {
-        ROS_ERROR("trajectory_safety_check_node: Could not parse robot_ip parameter");
+        ROS_ERROR("%s: Could not parse robot_ip parameter", node_name.c_str());
         return -1;
     }
 
-    auto safety_check_handler = [&my_chain, &chainFkSolverPos, &joints_pos, &eef_frame, nr_of_joints](trajectory_generator::trajectory_safety_check::Request& req, trajectory_generator::trajectory_safety_check::Response& res)
+    double z_lower_limit;
+    if (!node_handle.getParam("/panda/z_lower_limit", z_lower_limit) && !node_handle.getParam("z_lower_limit", z_lower_limit))
+    {
+        z_lower_limit = 0.86171;
+        ROS_ERROR("%s: Could not parse 'z_lower_limit' parameter. Using default value '0.86171' instead", node_name.c_str());
+    }
+
+    auto safety_check_handler = [&my_chain, &chainFkSolverPos, &joints_pos, &eef_frame, &z_lower_limit, nr_of_joints](trajectory_generator::trajectory_safety_check::Request& req, trajectory_generator::trajectory_safety_check::Response& res)
     {
         int ret = 0;
+        res.is_safe = true;
+        res.error = false;
         for (int i = 0; i < req.joints_pos.size(); i++) {
             joints_pos(i % 7) = req.joints_pos[i];
             if (i % 7 == 6) {
                 ret = chainFkSolverPos.JntToCart(joints_pos, eef_frame);
-                std::cout << "\n\ti = " << i << std::endl;
-                std::cout << "eef_frame.p.x() = " << eef_frame.p.x() << std::endl;
-                std::cout << "eef_frame.p.y() = " << eef_frame.p.y() << std::endl;
-                std::cout << "eef_frame.p.z() = " << eef_frame.p.z() << std::endl;
+                if (eef_frame.p.z() < z_lower_limit)
+                {
+                    res.is_safe = false;
+                }
             }
         }
-        res.sum = nr_of_joints;
-        return "test";
+        return 1;
     };
 
-    ros::ServiceServer service = node_handle.advertiseService<trajectory_generator::trajectory_safety_check::Request, trajectory_generator::trajectory_safety_check::Response>("trajectory_safety_check", safety_check_handler);
-    // ros::ServiceServer service = node_handle.advertiseService("trajectory_safety_check", add);
+    auto z_setter_handler = [&z_lower_limit, &node_name](trajectory_generator::trajectory_safety_check_z_setter::Request& req, trajectory_generator::trajectory_safety_check_z_setter::Response& res)
+    {
+        z_lower_limit = req.z_lower_limit;
+        ROS_INFO("%s: Value of 'z_lower_limit' succesfully updated to: %f", node_name.c_str(), z_lower_limit);
+        res.updated_value = z_lower_limit;
+        res.error = false;
+        return 1;
+    };
+
+    ros::ServiceServer safety_check_service = node_handle.advertiseService<trajectory_generator::trajectory_safety_check::Request, trajectory_generator::trajectory_safety_check::Response>("trajectory_safety_check", safety_check_handler);
+    ros::ServiceServer z_setter_service = node_handle.advertiseService<trajectory_generator::trajectory_safety_check_z_setter::Request, trajectory_generator::trajectory_safety_check_z_setter::Response>("trajectory_safety_check_z_setter", z_setter_handler);
     
-    ROS_INFO("Ready to add two ints.");
+    ROS_INFO("%s: Ready to add two ints.", node_name.c_str());
     ros::spin();
 
     return 0;

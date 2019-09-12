@@ -911,28 +911,15 @@ test2 = []
 for point in test:
     test2.extend(point)
 
-def trajectory_safety_check_client(x, y, z):
+def trajectory_safety_check_client(t):
     rospy.wait_for_service('trajectory_safety_check')
     try:
         local_trajectory_safety_check = rospy.ServiceProxy('trajectory_safety_check', trajectory_safety_check)
-        resp1 = local_trajectory_safety_check(x, y, test2)
-        return resp1.sum
+        res = local_trajectory_safety_check(t)
+        return res.is_safe
     except rospy.ServiceException as e:
         print ("Service call failed: %s"%e)
 
-def usage():
-    return "%s [x y]"%sys.argv[0]
-
 if __name__ == "__main__":
-    # if len(sys.argv) == 3:
-    #     x = int(sys.argv[1])
-    #     y = int(sys.argv[2])
-    # else:
-    #     print (usage())
-    #     sys.exit(1)
-    x = int(sys.argv[1])
-    y = int(sys.argv[2])
-    z = []
-    z.append(int(sys.argv[3]))
-    print ("Requesting %s+%s"%(x, y))
-    print ("%s + %s = %s"%(x, y, trajectory_safety_check_client(x, y, z)))
+    print ("Requesting safety check.")
+    print ("Safety check result: %s"%(trajectory_safety_check_client(test2)))

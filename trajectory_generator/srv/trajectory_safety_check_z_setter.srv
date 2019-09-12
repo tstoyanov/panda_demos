@@ -1,0 +1,4 @@
+float64 z_lower_limit
+---
+float64 updated_value
+bool error
