@@ -212,7 +212,7 @@ def data_split(input_dataset, test_percentage, validation_percentage):
 
         print ("generating train_set, test_set and validation_set...")
         dataset_length = len(train_set["joints_positions"])
-        train_set["eef_velocity_magnitude"] = list(map(lambda vel: round(vel, 1) , train_set["eef_velocity_magnitude"]))
+        # train_set["eef_velocity_magnitude"] = list(map(lambda vel: round(vel, 1) , train_set["eef_velocity_magnitude"]))
         labels = set(train_set["eef_velocity_magnitude"])
         test_set = {
             "joints_positions": [],
