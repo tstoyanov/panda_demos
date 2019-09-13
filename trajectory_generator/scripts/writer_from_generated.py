@@ -81,8 +81,9 @@ def talker():
     print ("Service found!")
     try:
         move_gripper = rospy.ServiceProxy('/panda/franka_gripper/move_service', gripper_service)
-    except rospy.ServiceException, e:
-        print "Service connection failed: %s"%e
+    # except rospy.ServiceException, e:
+    except rospy.ServiceException as e:
+        print ("Service connection failed: %s", e)
     print ("Service connected!")
 
     moveit_commander.roscpp_initialize(sys.argv)

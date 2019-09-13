@@ -90,6 +90,8 @@ parser.add_argument('--wmb', nargs='?', const=True, default=False,
                     help='whether to show the trajectories with the worst, median and best loss or not')
 parser.add_argument('--write', nargs='?', const=True, default=False,
                     help='whether to write the generated trajectory to the rostopic or not')
+parser.add_argument('--vae-dim', default=5,
+                    help='set the dimension of the latent space of the VAE used to encode the trajectories')
 
 
 args = parser.parse_args()
@@ -403,13 +405,13 @@ class MyDataset(Dataset):
         # return self.dataset[index], index
 
 class VAE(nn.Module):
-    def __init__(self):
+    def __init__(self, latent_space_dim):
         super(VAE, self).__init__()
         
         self.fc1 = nn.Linear(700, 400)
-        self.fc21 = nn.Linear(400, 5)  # mu layer
-        self.fc22 = nn.Linear(400, 5)  # logvariance layer
-        self.fc3 = nn.Linear(5, 400)
+        self.fc21 = nn.Linear(400, latent_space_dim)  # mu layer
+        self.fc22 = nn.Linear(400, latent_space_dim)  # logvariance layer
+        self.fc3 = nn.Linear(latent_space_dim, 400)
         self.fc4 = nn.Linear(400, 700)
         self.fc5 = nn.Linear(700, 700)
 
@@ -445,7 +447,7 @@ class Policy(nn.Module):
     def __init__(self):
         super(Policy, self).__init__()
         self.encoded_perception_dimensions = 1
-        self.encoded_action_dimensions = 5
+        self.encoded_action_dimensions = args.vae_dim
         
         # self.l1 = nn.Linear(self.state_space, 128, bias=False)
         # self.l2 = nn.Linear(128, self.action_space, bias=False)
@@ -453,10 +455,10 @@ class Policy(nn.Module):
         self.fc1 = nn.Linear(encoded_perception_dimensions, 24)
         
         self.fc21 = nn.Linear(24, 24)  # mean layer
-        self.fc31 = nn.Linear(24, 5)
+        self.fc31 = nn.Linear(24, encoded_action_dimensions)
 
-        self.fc22 = nn.Linear(24, 24)  # std layer
-        self.fc32 = nn.Linear(24, 5)
+        self.fc22 = nn.Linear(24, 24)  # logvar layer
+        self.fc32 = nn.Linear(24, encoded_action_dimensions)
         
         self.gamma = gamma
         
@@ -474,11 +476,11 @@ class Policy(nn.Module):
         mean = self.fc31(h21)
 
         h22 = self.fc22(h)
-        std = self.fc32(h22)
+        logvar = self.fc32(h22)
 
-        return mean, std
+        return mean, logvar
 
-    def reparameterize(self, mean, std, no_noise):
+    def reparameterize(self, mean, logvar, no_noise):
         std = torch.exp(0.5*logvar)
         eps = torch.randn_like(std)
         
@@ -489,8 +491,8 @@ class Policy(nn.Module):
         return mu + eps*std
 
     def forward(self, x, no_noise):
-        mean, std = self.encode(x)
-        action_sample = self.reparametrize(mean, std, no_noise)
+        mean, logvar = self.encode(x)
+        action_sample = self.reparametrize(mean, logvar, no_noise)
 
         return action_sample
 
@@ -504,7 +506,7 @@ class Policy(nn.Module):
         # return model(x)
 
 
-model = VAE().to(device)
+model = VAE(int(args.vae_dim)).to(device)
 optimizer = optim.Adam(model.parameters(), lr=1e-3)
 
 
@@ -656,8 +658,9 @@ def save_model_state_dict(save_path):
 
 
 def load_model_state_dict(load_path):
-    loaded_model = VAE().to(device)
-    loaded_model.load_state_dict(torch.load(load_path))
+    model_sd = torch.load(load_path)
+    loaded_model = VAE(len(model_sd["fc21.bias"])).to(device)
+    loaded_model.load_state_dict(model_sd)
     loaded_model.eval()
     return loaded_model
     # return VAE().to(device).load_state_dict(torch.load(load_path)).eval()
@@ -770,8 +773,8 @@ if __name__ == "__main__":
 
         # Turn these into an object that can be used to map time values to colors and
         # can be passed to plt.colorbar().
-        cpick = cm.ScalarMappable(norm=cnorm,cmap=cm1)
-        # cpick = cm.ScalarMappable(norm=cnorm,cmap=plt.get_cmap("autumn"))
+        # cpick = cm.ScalarMappable(norm=cnorm,cmap=cm1)
+        cpick = cm.ScalarMappable(norm=cnorm,cmap=plt.get_cmap("hsv"))
         cpick.set_array([])
         
         # F = plt.figure()
