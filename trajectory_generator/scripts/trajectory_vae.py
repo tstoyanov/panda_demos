@@ -26,6 +26,8 @@ from math import pi as PI
 
 from collections import Counter
 
+from nn_models.model_trajectory_vae import VAE as VAE
+
 # debug purpose?
 # import multiprocessing
 # multiprocessing.set_start_method('spawn', True)
@@ -54,11 +56,11 @@ parser.add_argument('--dataset-dir', default="latest_batch",
                     help='path of the directory containing the input dataset')
 parser.add_argument('--debug', nargs='?', const=True, default=False,
                     help='debug flag')
-parser.add_argument('--save-dir', default=package_path + "/saved_model/",
+parser.add_argument('--save-dir', default=package_path + "/saved_models/trajectory_vae/",
                     help='directory where to save the model once trained')
 parser.add_argument('--save-file', default=False,
                     help='name of the file to save the model once trained')
-parser.add_argument('--load-dir', default=package_path + "/saved_model/",
+parser.add_argument('--load-dir', default=package_path + "/saved_models/trajectory_vae/",
                     help='directory from where to load the model')
 parser.add_argument('--load-file', default=False,
                     help='name of the file to load the model from')
@@ -108,11 +110,6 @@ if args.deg:
     coeff = 180/PI
 else:
     coeff = 1
-
-if not args.save_dir:
-    args.save_dir = package_path + "/saved_model/"
-if not args.load_dir:
-    args.load_dir = package_path + "/saved_model/"
 
 get_encoded_data = args.tsne != False or args.matrix_plot != False
 
@@ -404,110 +401,44 @@ class MyDataset(Dataset):
         # return self.flat_dataset[index], index
         # return self.dataset[index], index
 
-class VAE(nn.Module):
-    def __init__(self, latent_space_dim):
-        super(VAE, self).__init__()
+# class VAE(nn.Module):
+#     def __init__(self, latent_space_dim):
+#         super(VAE, self).__init__()
         
-        self.fc1 = nn.Linear(700, 400)
-        self.fc21 = nn.Linear(400, latent_space_dim)  # mu layer
-        self.fc22 = nn.Linear(400, latent_space_dim)  # logvariance layer
-        self.fc3 = nn.Linear(latent_space_dim, 400)
-        self.fc4 = nn.Linear(400, 700)
-        self.fc5 = nn.Linear(700, 700)
+#         self.fc1 = nn.Linear(700, 400)
+#         self.fc21 = nn.Linear(400, latent_space_dim)  # mu layer
+#         self.fc22 = nn.Linear(400, latent_space_dim)  # logvariance layer
+#         self.fc3 = nn.Linear(latent_space_dim, 400)
+#         self.fc4 = nn.Linear(400, 700)
+#         self.fc5 = nn.Linear(700, 700)
 
-    def encode(self, x):
-        h1 = F.relu(self.fc1(x))
-        return self.fc21(h1), self.fc22(h1)
+#     def encode(self, x):
+#         h1 = F.relu(self.fc1(x))
+#         return self.fc21(h1), self.fc22(h1)
 
-    def reparameterize(self, mu, logvar, no_noise):
-        std = torch.exp(0.5*logvar)
-        eps = torch.randn_like(std)
+#     def reparameterize(self, mu, logvar, no_noise):
+#         std = torch.exp(0.5*logvar)
+#         eps = torch.randn_like(std)
         
-        if no_noise:
-            return mu
-            # return mu + std
+#         if no_noise:
+#             return mu
+#             # return mu + std
         
-        return mu + eps*std
+#         return mu + eps*std
 
-    def decode(self, z):
-        h3 = F.relu(self.fc3(z))
-        h4 = torch.sigmoid(self.fc4(h3))
-        # return h4
-        return self.fc5(h4)
+#     def decode(self, z):
+#         h3 = F.relu(self.fc3(z))
+#         h4 = torch.sigmoid(self.fc4(h3))
+#         # return h4
+#         return self.fc5(h4)
 
-    def forward(self, x, no_noise):
-        mu, logvar = self.encode(x.view(-1, 700))
-        z = self.reparameterize(mu, logvar, no_noise)
-        return self.decode(z), mu, logvar
+#     def forward(self, x, no_noise):
+#         mu, logvar = self.encode(x.view(-1, 700))
+#         z = self.reparameterize(mu, logvar, no_noise)
+#         return self.decode(z), mu, logvar
 
-
-learning_rate = 0.01
-gamma = 0.99
-class Policy(nn.Module):
-    def __init__(self):
-        super(Policy, self).__init__()
-        self.encoded_perception_dimensions = 1
-        self.encoded_action_dimensions = args.vae_dim
-        
-        # self.l1 = nn.Linear(self.state_space, 128, bias=False)
-        # self.l2 = nn.Linear(128, self.action_space, bias=False)
-
-        self.fc1 = nn.Linear(encoded_perception_dimensions, 24)
-        
-        self.fc21 = nn.Linear(24, 24)  # mean layer
-        self.fc31 = nn.Linear(24, encoded_action_dimensions)
-
-        self.fc22 = nn.Linear(24, 24)  # logvar layer
-        self.fc32 = nn.Linear(24, encoded_action_dimensions)
-        
-        self.gamma = gamma
-        
-        # Episode policy and reward history 
-        self.policy_history = torch.Tensor()
-        self.reward_episode = []
-        # Overall reward and loss history
-        self.reward_history = []
-        self.loss_history = []
-    
-    def encode(self, x):
-        h = F.relu(self.fc1(x))
-        
-        h21 = self.fc21(h)
-        mean = self.fc31(h21)
-
-        h22 = self.fc22(h)
-        logvar = self.fc32(h22)
-
-        return mean, logvar
-
-    def reparameterize(self, mean, logvar, no_noise):
-        std = torch.exp(0.5*logvar)
-        eps = torch.randn_like(std)
-        
-        if no_noise:
-            return mu
-            # return mu + std
-        
-        return mu + eps*std
-
-    def forward(self, x, no_noise):
-        mean, logvar = self.encode(x)
-        action_sample = self.reparametrize(mean, logvar, no_noise)
-
-        return action_sample
-
-        # model = torch.nn.Sequential(
-        #     self.fc1,
-        #     nn.Dropout(p=0.6),
-        #     nn.ReLU(),
-        #     self.l2,
-        #     nn.Softmax(dim=-1)
-        # )
-        # return model(x)
-
-
-model = VAE(int(args.vae_dim)).to(device)
-optimizer = optim.Adam(model.parameters(), lr=1e-3)
+vae_model = VAE(int(args.vae_dim)).to(device)
+vae_optimizer = optim.Adam(vae_model.parameters(), lr=1e-3)
 
 
 # Reconstruction + KL divergence losses summed over all elements and batch
@@ -569,13 +500,13 @@ def loss_function(recon_x, x, mu, logvar, label):
 
 def my_train(epoch, loss_plots):
 
-    model.train()
+    vae_model.train()
     # print ("model: ", model)
     train_loss = 0
     for batch_idx, (data, label, m, c, index) in enumerate(my_train_set_loader):
         data = data.to(device)
-        optimizer.zero_grad()
-        recon_batch, mu, logvar = model(data, False)
+        vae_optimizer.zero_grad()
+        recon_batch, mu, logvar = vae_model(data, False)
         # print ("mu.grad_fn: ", mu.grad_fn)
         # print ("mu.grad_fn.next_functions[0][0]: ", mu.grad_fn.next_functions[0][0])
         # print ("logvar.grad_fn: ", logvar.grad_fn)
@@ -584,7 +515,7 @@ def my_train(epoch, loss_plots):
         # print (model.fc1.bias.grad)
         loss.backward()
         train_loss += loss.item()
-        optimizer.step()
+        vae_optimizer.step()
         # print ("model.parameters(): ", model.parameters())
         # for i, f in enumerate(model.parameters()):
         #     print ("i: ", i)
@@ -610,7 +541,7 @@ def my_train(epoch, loss_plots):
 
         if isinstance(args.joints_plot, str) and ("NO-NOISE" == args.joints_plot.upper() or "NO_NOISE" == args.joints_plot.upper() or "NONOISE" == args.joints_plot.upper()):
             title = "Random sample from train set without noise\nDecoded vs Original"
-            recon_data, mu, logvar = model(data[0].unsqueeze(0), True)
+            recon_data, mu, logvar = vae_model(data[0].unsqueeze(0), True)
             joints_plot(data[0], recon_data.view(1, 100, 7)[0], title)
         # joints_plot(last_data, last_recon_data, title)
 
@@ -619,12 +550,12 @@ def my_train(epoch, loss_plots):
 
 
 def my_test(epoch, loss_plots):
-    model.eval()
+    vae_model.eval()
     test_loss = 0
     with torch.no_grad():
         for batch_idx, (data, label, m, c, index) in enumerate(my_test_set_loader):
             data = data.to(device)
-            recon_batch, mu, logvar = model(data, False)
+            recon_batch, mu, logvar = vae_model(data, False)
             test_loss += loss_function(recon_batch, data, mu, logvar, label)[0].item()
 
             # if batch_idx == 0:
@@ -640,7 +571,7 @@ def my_test(epoch, loss_plots):
 
             if isinstance(args.joints_plot, str) and ("NO-NOISE" == args.joints_plot.upper() or "NO_NOISE" == args.joints_plot.upper() or "NONOISE" == args.joints_plot.upper()):
                 title = "Random sample from test set without noise\nDecoded vs Original"
-                recon_data, mu, logvar = model(data[0].unsqueeze(0), True)
+                recon_data, mu, logvar = vae_model(data[0].unsqueeze(0), True)
                 joints_plot(data[0], recon_data.view(1, 100, 7)[0], title)
 
                 title = "Absolute difference between reconstructed and original trajectory from test set"
@@ -654,7 +585,7 @@ def my_test(epoch, loss_plots):
 
 
 def save_model_state_dict(save_path):
-    torch.save(model.state_dict(), save_path)
+    torch.save(vae_model.state_dict(), save_path)
 
 
 def load_model_state_dict(load_path):
@@ -685,7 +616,7 @@ if args.debug:
 if __name__ == "__main__":
     plt.ion()
     if args.load_file != False:
-        model = load_model_state_dict(args.load_dir+args.load_file)
+        vae_model = load_model_state_dict(args.load_dir+args.load_file)
         my_test("loaded_model", None)
     else:
         loss_plots = {
@@ -755,10 +686,10 @@ if __name__ == "__main__":
                 test_data_2 = data[0]
             else:
                 break
-        mu, logvar = model.encode(test_data_1.unsqueeze(0).view(-1, 700))
-        test_encoded_1 = model.reparameterize(mu, logvar, False)[0]
-        mu, logvar = model.encode(test_data_2.unsqueeze(0).view(-1, 700))
-        test_encoded_2 = model.reparameterize(mu, logvar, False)[0]
+        mu, logvar = vae_model.encode(test_data_1.unsqueeze(0).view(-1, 700))
+        test_encoded_1 = vae_model.reparameterize(mu, logvar, False)[0]
+        mu, logvar = vae_model.encode(test_data_2.unsqueeze(0).view(-1, 700))
+        test_encoded_2 = vae_model.reparameterize(mu, logvar, False)[0]
         steps = int(args.transformation_plot)
         ds = torch.tensor(list(map(lambda e1, e2: (e1 - e2) / steps , test_encoded_1, test_encoded_2)))
 
@@ -790,7 +721,7 @@ if __name__ == "__main__":
 
 
         for i in range(steps+1):
-            decoded = model.decode(test_encoded_2 + i*ds).view(len(test_data_1), -1)
+            decoded = vae_model.decode(test_encoded_2 + i*ds).view(len(test_data_1), -1)
             title = "transformation_plot"
             # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!REVERT CHANGES!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             # joints_plot(decoded, i, title)
@@ -821,19 +752,19 @@ if __name__ == "__main__":
             # for batch_idx, (data, label) in enumerate(train_loader):
             with torch.no_grad():
                 for batch_idx, (data, label, m, c, index) in enumerate(my_train_set_loader):
-                    mu, logvar = model.encode(data.view(-1, 700))
-                    latent_space_train = torch.cat((latent_space_train, model.reparameterize(mu, logvar, False)), 0)
+                    mu, logvar = vae_model.encode(data.view(-1, 700))
+                    latent_space_train = torch.cat((latent_space_train, vae_model.reparameterize(mu, logvar, False)), 0)
                     original_data = torch.cat((original_data, data.view(-1, 700)), 0)
                     # labels = labels.append(pd.Series(m), ignore_index=True)
                     labels = labels.append(pd.Series(label), ignore_index=True)
                 
                 latent_space_test = torch.tensor([])
                 for batch_idx, (data, label, m, c, index) in enumerate(my_test_set_loader):
-                    mu, logvar = model.encode(data.view(-1, 700))
-                    latent_space_test = torch.cat((latent_space_test, model.reparameterize(mu, logvar, False)), 0)
+                    mu, logvar = vae_model.encode(data.view(-1, 700))
+                    latent_space_test = torch.cat((latent_space_test, vae_model.reparameterize(mu, logvar, False)), 0)
                     # test_labels = test_labels.append(pd.Series(m), ignore_index=True)
                     test_labels = test_labels.append(pd.Series(label), ignore_index=True)
-            
+
             data_to_plot['vel'] = labels
             test_data_to_plot['test_vel'] = test_labels
 
@@ -843,8 +774,8 @@ if __name__ == "__main__":
             tsne = TSNE(n_components=2, verbose=1, perplexity=40, n_iter=300)
             tsne_results = tsne.fit_transform(latent_space_train.detach().numpy())
             print('t-SNE over the latent space done! Time elapsed: {} seconds'.format(time.time()-time_start))
-            data_to_plot['tsne-train-encoded-' + str(model.fc22.out_features) + 'd-one'] = tsne_results[:,0]
-            data_to_plot['tsne-train-encoded-' + str(model.fc22.out_features) + 'd-two'] = tsne_results[:,1]
+            data_to_plot['tsne-train-encoded-' + str(vae_model.fc22.out_features) + 'd-one'] = tsne_results[:,0]
+            data_to_plot['tsne-train-encoded-' + str(vae_model.fc22.out_features) + 'd-two'] = tsne_results[:,1]
 
             # print ("\nApplying the t-sne algorithm to the latent space test subset...")
             # time_start = time.time()
@@ -855,7 +786,7 @@ if __name__ == "__main__":
 
             fig = plt.figure("tsne_plot", figsize=(16,10))
             if "BOTH" == str(args.tsne).upper():
-                fig.suptitle('t-sne algorithm over ' + str(len(my_train_set_loader.dataset)) + ' trajectories:\nEncoded ' + str(model.fc22.out_features) + ' dimensional data using ' + args.loss_type.upper() + ' loss (left) vs Original ' + str(model.fc1.in_features) + ' dimensional data (right)', fontsize=14)
+                fig.suptitle('t-sne algorithm over ' + str(len(my_train_set_loader.dataset)) + ' trajectories:\nEncoded ' + str(vae_model.fc22.out_features) + ' dimensional data using ' + args.loss_type.upper() + ' loss (left) vs Original ' + str(vae_model.fc1.in_features) + ' dimensional data (right)', fontsize=14)
                 print ("\nApplying the t-sne algorithm to the original data subset...")
                 time_start = time.time()
                 tsne_results = tsne.fit_transform(original_data.detach().numpy())
@@ -879,14 +810,14 @@ if __name__ == "__main__":
                     if i != 0:
                         label_text.set_text(round(float(label_text.get_text()), 1))
             else:
-                fig.suptitle('t-sne algorithm over ' + str(len(my_train_set_loader.dataset)) + ' trajectories:\nEncoded ' + str(model.fc22.out_features) + ' dimensional data using ' + args.loss_type.upper() + ' loss', fontsize=14)
+                fig.suptitle('t-sne algorithm over ' + str(len(my_train_set_loader.dataset)) + ' trajectories:\nEncoded ' + str(vae_model.fc22.out_features) + ' dimensional data using ' + args.loss_type.upper() + ' loss', fontsize=14)
                 ax0 = plt.subplot(1, 1, 1)
                 # ax0 = plt.subplot(1, 2, 1)
                 # ax2 = plt.subplot(1, 2, 2)
 
             ax0.set_title("ALPHA = " + str(args.alpha) + "  BETA = " + str(args.beta))
             g = sns.scatterplot(
-                x="tsne-train-encoded-" + str(model.fc22.out_features) + "d-one", y="tsne-train-encoded-" + str(model.fc22.out_features) + "d-two",
+                x="tsne-train-encoded-" + str(vae_model.fc22.out_features) + "d-one", y="tsne-train-encoded-" + str(vae_model.fc22.out_features) + "d-two",
                 hue="vel",
                 palette=sns.color_palette("hls", data_to_plot['vel'].nunique()),
                 data=data_to_plot,
@@ -957,12 +888,12 @@ if __name__ == "__main__":
             
             print ("Scanning the dataset...")
             for batch_idx, (data, label, m, c, index) in enumerate(temp_train_set_loader):
-                recon_batch, mu, logvar = model(data, False)
+                recon_batch, mu, logvar = vae_model(data, False)
                 loss, recon_loss, kld_loss = loss_function(recon_batch, data, mu, logvar, label)
                 train_traj_loss.append((data[0], recon_batch.view(len(data[0]), -1), loss))
 
             for batch_idx, (data, label, m, c, index) in enumerate(temp_test_set_loader):
-                recon_batch, mu, logvar = model(data, False)
+                recon_batch, mu, logvar = vae_model(data, False)
                 loss, recon_loss, kld_loss = loss_function(recon_batch, data, mu, logvar, label)
                 test_traj_loss.append((data[0], recon_batch.view(len(data[0]), -1), loss))
             

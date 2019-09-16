@@ -1,5 +1,8 @@
 trajectory_generator/generated_trajectories
-trajectory_generator/saved_model
+trajectory_generator/saved_models/trajectory_vae/*
+!trajectory_generator/saved_models/trajectory_vae/.gitkeep
+trajectory_generator/saved_models/learning_loop/*
+!trajectory_generator/saved_models/learning_loop/.gitkeep
 trajectory_generator/images
 .vscode
 devel/
