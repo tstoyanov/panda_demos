@@ -61,9 +61,9 @@ parser.add_argument('--save-dir', default=package_path + "/saved_models/trajecto
 parser.add_argument('--save-file', default=False,
                     help='name of the file to save the model once trained')
 parser.add_argument('--load-dir', default=package_path + "/saved_models/trajectory_vae/",
-                    help='directory from where to load the model')
+                    help='directory from where to load the trained model')
 parser.add_argument('--load-file', default=False,
-                    help='name of the file to load the model from')
+                    help='name of the file to load the trained model from')
 parser.add_argument('--tsne', nargs='?', const=True, default=False,
                     help='whether or not to perform and plot t-sne on the embedded data')
 parser.add_argument('--loss-type', default="MSE_SUM",

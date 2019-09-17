@@ -26,6 +26,8 @@ from math import pi as PI
 
 from collections import Counter
 
+import importlib
+
 from nn_models.model_trajectory_vae import VAE as VAE
 
 import rospkg
@@ -54,22 +56,46 @@ parser.add_argument('--save-file', default=False,
                     help='name of the file to save the model once trained')
 parser.add_argument('--load-dir', default=package_path + "/saved_models/learning_loop/",
                     help='directory from where to load the model')
-parser.add_argument('--decoder-dir', default=package_path + "/saved_models/trajectory_vae/",
-                    help='directory from where to load the model of the action decoder')
-parser.add_argument('--decoder-file', default=False,
-                    help='file from where to load the model of the action decoder')
 parser.add_argument('--load-file', default=False,
                     help='name of the file to load the model from')
+parser.add_argument('--decoder-dir', default=package_path + "/saved_models/trajectory_vae/",
+                    help='directory from where to load the trained model of the action decoder')
+parser.add_argument('--decoder-file', default=False,
+                    help='file from where to load the trained model of the action decoder')
+parser.add_argument('--save-policy-dir', default=package_path + "/saved_models/policy_network/",
+                    help='directory where to save the trained model of the policy network')
+parser.add_argument('--save-policy', default=False,
+                    help='file where to save the trained model of the policy network')
+parser.add_argument('--load-policy-dir', default=package_path + "/saved_models/policy_network/",
+                    help='directory where to load the trained model of the policy network')
+parser.add_argument('--load-policy', default=False,
+                    help='file where to load the trained model of the policy network')
+parser.add_argument('--policy-model-dir', default="nn_models",
+                    help='directory where to load the trained model of the policy network')
+parser.add_argument('--policy-model', default=False,
+                    help='file where to load the trained model of the policy network')
+parser.add_argument('--state-dir', default=package_path + "/saved_models/trajectory_vae/",
+                    help='directory from where to load the trained model of the state encoder')
+parser.add_argument('--state-file', default=False,
+                    help='file from where to load the trained model of the state encoder')
+parser.add_argument('--algorithm-dir', default="learning_algorithms",
+                    help='directory from where to load the learning algorithm')
+parser.add_argument('--algorithm', default=False,
+                    help='file from where to load the learning algorithm')
 parser.add_argument('--learning-rate', type=float, default=0.01,
                     help='value of the learning rate')
 parser.add_argument('--gamma', type=float, default=0.99,
                     help='value of the discount factor')
+parser.add_argument('--no-noise', nargs='?', const=True, default=False,
+                    help='flag for the added noise in action sampling')
 
 args = parser.parse_args()
 
 args.cuda = not args.no_cuda and torch.cuda.is_available()
-torch.manual_seed(args.seed)
+# torch.manual_seed(args.seed)
 device = torch.device("cuda" if args.cuda else "cpu")
+
+initial_state = torch.zeros(1)
 
 if not args.decoder_file:
     print ("No decoder specified: provide the file name of the decoder model using the '--decoder-file' argument")
@@ -81,94 +107,137 @@ else:
     decoder_model.load_state_dict(model_sd)
     decoder_model.eval()
 
-class Policy(nn.Module):
-    def __init__(self, encoded_perception_dimensions):
-        super(Policy, self).__init__()
-        self.state_space = encoded_perception_dimensions
-        self.action_space = decoder_in_dim
-        
-        # self.l1 = nn.Linear(self.state_space, 128, bias=False)
-        # self.l2 = nn.Linear(128, self.action_space, bias=False)
+if not args.policy_model:
+    print ("No policy model specified: provide the file name of the policy model using the '--policy-model' argument")
+    sys.exit(2)
+else:
+    policy_module = importlib.import_module(args.policy_model_dir + "." + args.policy_model)
+    policy_model = policy_module.Policy(initial_state.dim(), decoder_in_dim)
+    optimizer = optim.Adam(policy_model.parameters(), lr=args.learning_rate)
 
-        self.fc1 = nn.Linear(self.state_space, 24)
-        
-        self.fc21 = nn.Linear(24, 24)  # mean layer
-        self.fc31 = nn.Linear(24, self.action_space)
+if not args.algorithm:
+    print ("No learning algorithm specified: provide the file name of the learning algorithm using the '--algorithm' argument")
+    sys.exit(2)
+else:
+    algorithm_module = importlib.import_module(args.algorithm_dir + "." + args.algorithm)
+    algorithm = algorithm_module.ALGORITHM(policy_model, optimizer, args.gamma)
 
-        self.fc22 = nn.Linear(24, 24)  # logvar layer
-        self.fc32 = nn.Linear(24, self.action_space)
-        
-        self.gamma = args.gamma
-        
-        # Episode policy and reward history 
-        self.batch_policies = torch.Tensor()
-        self.batch_rewards = []
-        # Overall reward and loss history
-        self.reward_history = []
-        self.loss_history = []
+def update_graph(fig, ax, line, x_value, y_value):
     
-    def encode(self, x):
-        h = F.relu(self.fc1(x))
+    line.set_xdata(np.append(line.get_xdata(), x_value))
+    line.set_ydata(np.append(line.get_ydata(), y_value))
+    # plt.draw()
+
+    ax.relim()
+    ax.autoscale_view()
+    fig.canvas.draw()
+    fig.canvas.flush_events()
+
+live_plots = {
+    "loss": {
+        "fig": None,
+        "ax": None,
+        "line1": None
+    },
+    "reward": {
+        "fig": None,
+        "ax": None,
+        "line1": None
+    }
+}
+plt.ion()
+live_plots["loss"]["fig"] = plt.figure("Loss")
+# live_plots["loss"]["fig"].suptitle('Loss', fontsize=10)
+live_plots["loss"]["ax"] = live_plots["loss"]["fig"].add_subplot(2, 1, 1)
+# live_plots["loss"]["ax"].set_title("Loss")
+live_plots["loss"]["line1"], = live_plots["loss"]["ax"].plot([], [], 'o-r', label="TRAIN Loss")
+live_plots["loss"]["zero"], = live_plots["loss"]["ax"].plot([], [], '-k')
+
+live_plots["reward"]["fig"] = live_plots["loss"]["fig"]
+live_plots["reward"]["ax"] = live_plots["loss"]["fig"].add_subplot(2, 1, 2)
+# live_plots["reward"]["ax"].set_title("Reward")
+live_plots["reward"]["line1"], = live_plots["reward"]["ax"].plot([], [], 'o-b', label="Reward")
+live_plots["reward"]["zero"], = live_plots["reward"]["ax"].plot([], [], '-k')
+
+# live_plots["kld_loss"]["fig"] = live_plots["loss"]["fig"]
+# live_plots["kld_loss"]["ax"] = live_plots["loss"]["ax"]
+# live_plots["kld_loss"]["line1"], = live_plots["loss"]["ax"].plot([], [], '-k', label="KLD Loss")
+
+# live_plots["test_loss"]["fig"] = live_plots["loss"]["fig"]
+# live_plots["test_loss"]["ax"] = live_plots["loss"]["ax"]
+# live_plots["test_loss"]["line1"], = live_plots["loss"]["ax"].plot([], [], 'x-b', label="TEST Loss")
+
+live_plots["loss"]["ax"].legend()
+live_plots["reward"]["ax"].legend()
+
+history = []
+# history item:
+# {
+#     "state": value
+#     "action": value
+#     "mean": value
+#     "log_var": value
+#     "log_prob": value
+#     "entropy": value
+#     "reward": value
+# }
+
+# loss of each batch
+loss_history = []
+
+def execute_action(action):
+    error = False
+    reward = ((-1)*abs(action - 2)).sum().item()
+    # reward = ((-1)*(action - 2)**2).sum().item()
+    # reward = reward / action.dim()
+    return error, reward
+
+def train():
+    for epoch in range(args.epochs):
+        print ("Epoch ", str(epoch+1))
+        entropies = []
+        log_probs = []
+        rewards = []
+        for batch_index in range(args.batch_size):
+
+            # action, mean, log_var, log_prob, entropy = policy_model(initial_state, args.no_noise)
+            action, mean, log_var, log_prob, entropy = policy_model(initial_state, args.no_noise)
+            error, reward = execute_action(action)
+            # print ("\n\tAttempt ", str(batch_index+1))
+            # print ("\taction = ", str(action))
+            # print ("\treward = ", str(reward))
+
+            log_probs.append(log_prob)
+            entropies.append(entropy)
+            rewards.append(reward)
+            history.append(
+                {
+                    "state": initial_state,
+                    "action": action,
+                    "mean": mean,
+                    "log_var": log_var,
+                    "log_prob": log_prob,
+                    "entropy": entropy,
+                    "reward": reward
+                }
+            )
+
+        loss = algorithm.update_policy(log_probs, rewards, entropies)
+        loss_history.append(loss)
+        # print ("loss = ", str(loss))
+        update_graph(live_plots["loss"]["fig"], live_plots["loss"]["ax"], live_plots["loss"]["line1"], epoch, loss.item())
+        update_graph(live_plots["reward"]["fig"], live_plots["reward"]["ax"], live_plots["reward"]["line1"], epoch, reward)
+        True
         
-        h21 = self.fc21(h)
-        mean = self.fc31(h21)
 
-        h22 = self.fc22(h)
-        logvar = self.fc32(h22)
 
-        return mean, logvar
-
-    def reparameterize(self, mean, logvar, no_noise):
-        std = torch.exp(0.5*logvar)
-        eps = torch.randn_like(std)
-        
-        if no_noise:
-            return mean
-            # return mean + std
-        
-        return mean + eps*std
-
-    def forward(self, x, no_noise):
-        mean, logvar = self.encode(x)
-        action_sample = self.reparametrize(mean, logvar, no_noise)
-
-        return action_sample
-
-        # model = torch.nn.Sequential(
-        #     self.fc1,
-        #     nn.Dropout(p=0.6),
-        #     nn.ReLU(),
-        #     self.l2,
-        #     nn.Softmax(dim=-1)
-        # )
-        # return model(x)
-
-def update_policy():
-    R = 0
-    rewards = []
+def main(args):
     
-    # Discount future rewards back to the present using gamma
-    # for r in policy_model.batch_rewards[::-1]:
-    #     R = r + policy_model.gamma * R
-    #     rewards.insert(0,R)
-        
-    # Scale rewards
-    # rewards = torch.FloatTensor(rewards)
-    # rewards = (rewards - rewards.mean()) / (rewards.std() + np.finfo(np.float32).eps)
-    
-    # Calculate loss
-    loss = (torch.sum(torch.mul(policy_model.batch_policies, policy_model.batch_rewards).mul(-1), -1))
-    
-    # Update network weights
-    optimizer.zero_grad()
-    loss.backward()
-    optimizer.step()
-    
-    #Save and intialize episode history counters
-    policy_model.loss_history.append(loss.data[0])
-    policy_model.reward_history.append(np.sum(policy_model.batch_rewards))
-    policy_model.batch_policies = torch.Tensor()
-    policy_model.batch_rewards= []
+    print ("Start training")
+    train()
+    print ("Done training")
 
-policy_model = Policy(1)
-optimizer = optim.Adam(policy_model.parameters(), lr=args.learning_rate)
+    plt.show()
+
+if __name__ == '__main__':
+    main(sys.argv)  
