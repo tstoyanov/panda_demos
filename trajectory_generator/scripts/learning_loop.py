@@ -112,7 +112,8 @@ if not args.policy_model:
     sys.exit(2)
 else:
     policy_module = importlib.import_module(args.policy_model_dir + "." + args.policy_model)
-    policy_model = policy_module.Policy(initial_state.dim(), decoder_in_dim)
+    # policy_model = policy_module.Policy(initial_state.dim(), decoder_in_dim)
+    policy_model = policy_module.Policy(initial_state.dim(), 2)
     optimizer = optim.Adam(policy_model.parameters(), lr=args.learning_rate)
 
 if not args.algorithm:
