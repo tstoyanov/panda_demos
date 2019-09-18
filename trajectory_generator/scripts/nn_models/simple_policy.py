@@ -24,6 +24,18 @@ class Policy(nn.Module):
         self.fc22 = nn.Linear(24, 24)  # log_var layer
         self.fc32 = nn.Linear(24, self.action_space)
 
+        # self.p1 = torch.Variable(torch.randn(1))
+        # self.p2 = torch.Variable(torch.randn(1))
+
+        self.p1 = torch.Tensor(torch.randn(1))
+        self.p2 = torch.Tensor(torch.randn(1))
+
+        self.p1 = torch.nn.Parameter(torch.randn(1))
+        self.p2 = torch.nn.Parameter(torch.randn(1))
+
+        # self.p1 = nn.Linear(1, 1)
+        # self.p2 = nn.Linear(1, 1)
+
     
     def normal_prob(self, x, mean, sigma_sq):
         a = (-1*(x-mean).pow(2)/(2*sigma_sq)).exp()
@@ -52,8 +64,12 @@ class Policy(nn.Module):
         return mean + eps*std
 
     def forward(self, x, no_noise):
-        mean, log_var = self.encode(x)
-        sigma_sq = torch.exp(log_var)
+        mean = torch.nn.Parameter(torch.Tensor([self.p1, self.p2]))
+        log_var = torch.randn(2)
+        
+        sigma_sq = torch.tensor([0.01, 0.01])
+        # mean, log_var = self.encode(x)
+        # sigma_sq = torch.exp(log_var)
 
         # =============== NEW CODE ===============
         # cov_matrix = torch.diag(sigma_sq)
