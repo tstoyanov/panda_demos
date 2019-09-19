@@ -17,15 +17,15 @@ parser.add_argument('--seed', type=int, default=543, metavar='N',
                     help='random seed (default: 543)')
 parser.add_argument('--log-interval', type=int, default=1, metavar='N',
                     help='interval between training status logs (default: 1)')
-parser.add_argument('--epochs', type=int, default=20,
+parser.add_argument('--epochs', type=int, default=200,
                     help='number of epochs for training (default: 20)')
 parser.add_argument('--batch-size', type=int, default=10, metavar='N',
                     help='input batch size for training (default: 1)')
-parser.add_argument('--in-dim', type=int, default=4,
+parser.add_argument('--state-dim', type=int, default=4,
                     help='policy input dimension (default: 4)')
-parser.add_argument('--out-dim', type=int, default=5,
+parser.add_argument('--action-dim', type=int, default=5,
                     help='policy output dimension (default: 1)')
-parser.add_argument('--learning-rate', type=int, default=0.001,
+parser.add_argument('--learning-rate', type=int, default=0.002,
                     help='learning rate of the optimizer')
 args = parser.parse_args()
 
@@ -53,7 +53,7 @@ live_plots = {
     "theta": {
         "fig": None,
         "ax": None,
-        "line1": None
+        "lines": []
     }
 }
 plt.ion()
@@ -65,9 +65,16 @@ live_plots["reward"]["fig"] = live_plots["loss"]["fig"]
 live_plots["reward"]["ax"] = live_plots["loss"]["fig"].add_subplot(2, 1, 2)
 live_plots["reward"]["line1"], = live_plots["reward"]["ax"].plot([], [], 'o-b', label="Reward")
 
+live_plots["theta"]["fig"] = plt.figure("Theta")
+live_plots["theta"]["ax"] = live_plots["theta"]["fig"].add_subplot(1, 1, 1)
+for i in range(args.action_dim):
+    live_plots["theta"]["lines"].append(live_plots["theta"]["ax"].plot([], [], label="["+str(i)+"]", marker="o")[0])
+live_plots["theta"]["ax"].axhline(y=0, color="k")
+
 
 live_plots["loss"]["ax"].legend()
 live_plots["reward"]["ax"].legend()
+live_plots["theta"]["ax"].legend()
 
 
 class Policy(nn.Module):
@@ -101,7 +108,7 @@ class Policy(nn.Module):
     def forward(self, x):
         return self.encode(x)
 
-policy = Policy(args.in_dim, args.out_dim)
+policy = Policy(args.state_dim, args.action_dim)
 optimizer = optim.Adam(policy.parameters(), lr=args.learning_rate)
 eps = np.finfo(np.float32).eps.item()
 
@@ -119,7 +126,7 @@ def select_action(state):
 
     log_prob = dist.log_prob(action_sample)
     policy.saved_log_probs.append(log_prob)
-    return action_sample
+    return action_sample, mean
 
 
 def finish_episode():
@@ -132,6 +139,7 @@ def finish_episode():
         returns.insert(0, r)
     returns = torch.tensor(returns)
     # returns = (returns - returns.mean()) # baseline
+    print ("batch mean = {} . batch std = {}".format(returns.mean(), returns.std()))
     returns = (returns - returns.mean()) / (returns.std() + eps) # baseline and normalization
     for log_prob, R in zip(policy.saved_log_probs, returns):
         policy_loss.append(-log_prob * R)
@@ -145,30 +153,43 @@ def finish_episode():
 
 def execute_action(action):
     error = False
-    reward = -(abs(action)).sum().pow(4).item() * 100
+    reward = -(abs(action)).sum().pow(2).item() * 100
     return error, reward
 
+def exp_lr_scheduler(optimizer, epoch, lr_decay=0.1, lr_decay_epoch=2):
+    """Decay learning rate by a factor of lr_decay every lr_decay_epoch epochs"""
+    if epoch % lr_decay_epoch:
+        return optimizer
+    
+    for param_group in optimizer.param_groups:
+        param_group['lr'] *= lr_decay
+    return optimizer
 
-def main():
+
+def main(args):
     starting_state = torch.ones(policy.in_dim)
-    for i_episode in range(args.epochs):
+    mean = None
+    for epoch in range(args.epochs):
         reward = 0
         for t in range(0, args.batch_size):  # Don't infinite loop while learning
 
-            action = select_action(starting_state)
+            action, mean = select_action(starting_state)
             error, reward = execute_action(action)
             policy.rewards.append(reward)
 
         loss = finish_episode()
+        # exp_lr_scheduler(optimizer, epoch)
 
-        if i_episode % args.log_interval == 0:
+        if epoch % args.log_interval == 0:
             print('Episode {}\tLast reward: {:.2f}'.format(
-                  i_episode, reward))
-            update_graph(live_plots["loss"]["fig"], live_plots["loss"]["ax"], live_plots["loss"]["line1"], i_episode, loss.item())
-            update_graph(live_plots["reward"]["fig"], live_plots["reward"]["ax"], live_plots["reward"]["line1"], i_episode, reward)
+                  epoch, reward))
+            update_graph(live_plots["loss"]["fig"], live_plots["loss"]["ax"], live_plots["loss"]["line1"], (epoch+1)*args.batch_size, loss.item())
+            update_graph(live_plots["reward"]["fig"], live_plots["reward"]["ax"], live_plots["reward"]["line1"], (epoch+1)*args.batch_size, reward)
+            for i in range(args.action_dim):
+                update_graph(live_plots["theta"]["fig"], live_plots["theta"]["ax"], live_plots["theta"]["lines"][i], (epoch+1)*args.batch_size, mean[i].item())
     
     plt.show()
 
 
 if __name__ == '__main__':
-    main()
+    main(sys.argv)

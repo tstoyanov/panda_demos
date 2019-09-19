@@ -2,13 +2,15 @@
 from __future__ import print_function
 
 import sys
-import cv2
 import math
 import rospy
 import numpy as np
 from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
+# sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
+import cv2
+# sys.path.append('/opt/ros/kinetic/lib/python2.7/dist-packages')
 
 min_radius = 10     # board default 10
 max_radius = 20     # board default 20
@@ -18,23 +20,23 @@ class my_colors:
     colors = np.array([
                     # desk values
                     # ([min], [max])
-                    ("orange", [0, 0, 100], [49, 139, 250]),
-                    ("blue", [20, 0, 0], [150, 50, 50]),
-                    ("white", [60, 60, 60], [255, 255, 255])
-                    # board values
-                    # ("orange", [0, 0, 100], [19, 139, 250]),
+                    # ("orange", [0, 0, 100], [49, 139, 250]),
                     # ("blue", [20, 0, 0], [150, 50, 50]),
                     # ("white", [60, 60, 60], [255, 255, 255])
+                    # board values
+                    ("orange", [0, 0, 100], [49, 139, 250]),
+                    ("blue", [20, 0, 0], [150, 30, 30]),
+                    ("white", [60, 60, 60], [255, 255, 255])
                 ],
                 dtype=[('name', 'S10'),('lower', '<f8', (3)), ('upper', '<f8', (3))])
     
     @staticmethod
     def get_name_from_bgr(bgr):
-        color_index = np.argwhere(np.all((bgr >= my_colors.colors["lower"]) & (bgr <= my_colors.colors["upper"]), axis=1))
-        if len(color_index) != 0:
-            return str(my_colors.colors["name"][color_index.reshape(1)[0]])
-        else:
-            return "None"
+        if bgr is not None:
+            color_index = np.argwhere(np.all((bgr >= my_colors.colors["lower"]) & (bgr <= my_colors.colors["upper"]), axis=1))
+            if len(color_index) != 0:
+                return str(my_colors.colors["name"][color_index.reshape(1)[0]])
+        return "None"
 
 class stone_class:
     def __init__(self, x=0, y=0, r=0, color=0, distance_from_center=None):
@@ -184,7 +186,7 @@ class board_class:
 class image_converter:
 
     def __init__(self, iteration_treshold=10, stone_organizer=None, board=None):
-        self.image_pub = rospy.Publisher("my_image_topic",Image)
+        self.image_pub = rospy.Publisher("my_image_topic",Image, queue_size=10)
 
         self.bridge = CvBridge()
         self.image_sub = rospy.Subscriber("/camera/rgb/image_raw",Image,self.callback)
@@ -200,6 +202,24 @@ class image_converter:
         self.center_search_flag = False
         self.iteration = 0
         self.iteration_treshold = iteration_treshold
+
+        # while not rospy.core.is_shutdown():
+        #     while not self.board.center_found():
+        #         print("Press enter to search for the center")
+        #         # raw_input()
+        #         input()
+        #         self.center_search()
+        #         rospy.rostime.wallsleep(1)
+        #         while self.center_search_flag:
+        #             rospy.rostime.wallsleep(1)
+
+        #     rospy.rostime.wallsleep(1)
+
+        #     while not self.board.get_error and self.board.get_center is not None:
+        #         print("Press enter to search for the center")
+        #         # raw_input()
+        #         input()
+        #         self.center_search()
 
     def clear(self):
         self.iteration = 0
@@ -302,7 +322,38 @@ class image_converter:
             self.center_search_cb(cv_image, drawable_image)
 
         if self.board.center_found():
-            cv2.circle(drawable_image,self.board.get_center(),2,(0,128,0),2)
+            c = self.board.get_center()
+            x = c[0]
+            y = c[1]
+
+            source = drawable_image
+            overlay = None
+            alpha = 0.7
+
+            #copy the source image to an overlay
+            overlay = np.copy(source)
+
+            # x, y = np.meshgrid(np.linspace(-1,1,320), np.linspace(-1,1,320))
+            # d = np.sqrt(x*x+y*y)
+            # sigma, mu = 1.0, 0.0
+            # g = np.exp(-( (d-mu)**2 / ( 2.0 * sigma**2 ) ) )
+            # g = np.float32(g)
+            # g = np.floor(g*255)
+            # cv2.applyColorMap(g, cv2.COLORMAP_JET)
+            # overlay[y-160:y+160, x-160:x+160] = g
+
+            # draw a filled, yellow rectangle on the overlay copy
+            x_max = overlay.shape[1]
+            y_max = overlay.shape[0]
+            cv2.circle(overlay, (x, y), 160, (0,96,255), 2)
+            cv2.circle(overlay, (x, y), 100, (0,255,255), 2)
+            cv2.circle(overlay, (x, y), 50, (0,255,0), 2)
+
+            # blend the overlay with the source image
+            cv2.addWeighted(overlay, alpha, source, 1 - alpha, 0, source);
+
+            cv2.circle(drawable_image, (x, y), 2, (0,128,0), 2)
+            # cv2.rectangle(drawable_image, (x-160, y-160), (x+160, y+160), (0,128,0), thickness=2)
 
         for s in self.so.stones:
             cv2.circle(drawable_image,s.get_center(),2,(0,0,0),3)
@@ -329,6 +380,7 @@ def main(args):
             while not ic.board.center_found():
                 print("Press enter to search for the center")
                 raw_input()
+                # input()
                 ic.center_search()
                 rospy.rostime.wallsleep(1)
                 while ic.center_search_flag:
@@ -339,11 +391,13 @@ def main(args):
             while not ic.board.get_error and ic.board.get_center is not None:
                 print("Press enter to search for the center")
                 raw_input()
+                # input()
                 ic.center_search()
 
             while not rospy.core.is_shutdown():
                 print("Press enter to search for stones")
                 raw_input()
+                # input()
                 ic.stone_search()
 
     except KeyboardInterrupt:
