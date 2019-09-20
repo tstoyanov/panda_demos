@@ -78,12 +78,12 @@ class stone_class:
         self.color = (self.sample_counter*self.color+color)/(self.sample_counter+1)
         if self.sample_counter < 10:
             self.sample_counter += 1
-        print("refined stone:")
-        print("\tx = ", str(self.x))
-        print("\ty = ", str(self.y))
-        print("\tr = ", str(self.r))
-        print("\tcolor = ", str(self.color))
-        print("\tsample_counter = ", str(self.sample_counter))
+        # print("refined stone:")
+        # print("\tx = ", str(self.x))
+        # print("\ty = ", str(self.y))
+        # print("\tr = ", str(self.r))
+        # print("\tcolor = ", str(self.color))
+        # print("\tsample_counter = ", str(self.sample_counter))
 
 
 class stone_organizer_class:
@@ -186,6 +186,7 @@ class board_class:
 class image_converter:
 
     def __init__(self, iteration_treshold=10, stone_organizer=None, board=None):
+        rospy.init_node('image_converter', anonymous=True)
         self.image_pub = rospy.Publisher("my_image_topic",Image, queue_size=10)
 
         self.bridge = CvBridge()
@@ -206,8 +207,8 @@ class image_converter:
         # while not rospy.core.is_shutdown():
         #     while not self.board.center_found():
         #         print("Press enter to search for the center")
-        #         # raw_input()
-        #         input()
+        #         raw_input()
+        #         # input()
         #         self.center_search()
         #         rospy.rostime.wallsleep(1)
         #         while self.center_search_flag:
@@ -217,8 +218,8 @@ class image_converter:
 
         #     while not self.board.get_error and self.board.get_center is not None:
         #         print("Press enter to search for the center")
-        #         # raw_input()
-        #         input()
+        #         raw_input()
+        #         # input()
         #         self.center_search()
 
     def clear(self):
@@ -371,34 +372,64 @@ class image_converter:
         except CvBridgeError as e:
             print(e)
 
+    def initialize_board(self):
+        while not self.board.center_found():
+            print("Press enter to search for the center")
+            raw_input()
+            # input()
+            self.center_search()
+            rospy.rostime.wallsleep(1)
+            while self.center_search_flag:
+                rospy.rostime.wallsleep(1)
+
+        rospy.rostime.wallsleep(1)
+
+        while not self.board.get_error and self.board.get_center is not None:
+            print("Press enter to search for the center")
+            raw_input()
+            # input()
+            self.center_search()
+    
+    def close(self):
+        cv2.destroyAllWindows()
+
+    def evaluate_board(self):
+        print("Press enter to evaluate the board")
+        raw_input()
+        # input()
+        self.stone_search()
+        rospy.rostime.wallsleep(1)
+
 def main(args):
     ic = image_converter()
-    rospy.init_node('image_converter', anonymous=True)
     try:
         # rospy.spin()
+
+        ic.initialize_board()
+        # while not rospy.core.is_shutdown():
+            # while not ic.board.center_found():
+            #     print("Press enter to search for the center")
+            #     raw_input()
+            #     # input()
+            #     ic.center_search()
+            #     rospy.rostime.wallsleep(1)
+            #     while ic.center_search_flag:
+            #         rospy.rostime.wallsleep(1)
+
+            # rospy.rostime.wallsleep(1)
+
+            # while not ic.board.get_error and ic.board.get_center is not None:
+            #     print("Press enter to search for the center")
+            #     raw_input()
+            #     # input()
+            #     ic.center_search()
+
         while not rospy.core.is_shutdown():
-            while not ic.board.center_found():
-                print("Press enter to search for the center")
-                raw_input()
-                # input()
-                ic.center_search()
-                rospy.rostime.wallsleep(1)
-                while ic.center_search_flag:
-                    rospy.rostime.wallsleep(1)
-
+            print("Press enter to search for stones")
+            raw_input()
+            # input()
+            ic.stone_search()
             rospy.rostime.wallsleep(1)
-
-            while not ic.board.get_error and ic.board.get_center is not None:
-                print("Press enter to search for the center")
-                raw_input()
-                # input()
-                ic.center_search()
-
-            while not rospy.core.is_shutdown():
-                print("Press enter to search for stones")
-                raw_input()
-                # input()
-                ic.stone_search()
 
     except KeyboardInterrupt:
         print("Shutting down")

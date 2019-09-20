@@ -95,8 +95,8 @@ parser.add_argument('--write', nargs='?', const=True, default=False,
 parser.add_argument('--vae-dim', default=5,
                     help='set the dimension of the latent space of the VAE used to encode the trajectories')
 
-
-args = parser.parse_args()
+args, unknown = parser.parse_known_args()
+# args = parser.parse_args()
 if args.dataset_dir[0] != "/":
     args.dataset_dir = "/" + args.dataset_dir
 if args.dataset_dir[-1] != "/":

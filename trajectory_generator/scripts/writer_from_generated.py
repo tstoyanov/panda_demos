@@ -17,39 +17,7 @@ from franka_gripper.srv import *
 
 import rospkg
 
-rospack = rospkg.RosPack()
-
-input_folder = "latest"
-is_simulation = False
-tot_time_nsecs = 2000000000  # total execution time for the trajectory in nanoseconds
-
-try:
-    opts, args = getopt.getopt(sys.argv[1:],"i:t:s",["input=", "nanoseconds=", "simulation="])
-except getopt.GetoptError:
-    print("test.py -i <input_folder> -t <trajectory_execution_time> -s")
-    sys.exit(2)
-for opt, arg in opts:
-    if opt == '-h':
-        print("test.py -i <input_folder> -t <trajectory_execution_time>")
-        sys.exit()
-    elif opt in ("-i", "--input"):
-        input_folder = arg
-    elif opt in ("-t", "--nanoseconds"):
-        tot_time_nsecs = int(arg)
-    elif opt in ("-s", "--simulation"):
-        is_simulation = True
-
-print("input_folder = " + str(input_folder))
-print("tot_time_nsecs = " + str(tot_time_nsecs))
-
-deceleration_frames = 5     # number of frames used to decelerate
-deceleration_time = 0.7    # deceleration time in seconds
-# deceleration_time = 0.25    # deceleration time in seconds
-deceleration_dt = float(deceleration_time) / deceleration_frames
-
-gripper_open_delay = 0.3    # delay in seconds between sending and executing the open command
-
-def talker():
+def talker(input_folder, tot_time_nsecs, is_simulation):
 
     if is_simulation:
         print("SIMULATION MODE")
@@ -355,6 +323,36 @@ class my_point:
 
 if __name__ == '__main__':
     try:
-        talker()
+        input_folder = "latest"
+        is_simulation = False
+        tot_time_nsecs = 2000000000  # total execution time for the trajectory in nanoseconds
+        try:
+            opts, args = getopt.getopt(sys.argv[1:],"i:t:s",["input=", "nanoseconds=", "simulation="])
+        except getopt.GetoptError:
+            print("test.py -i <input_folder> -t <trajectory_execution_time> -s")
+            sys.exit(2)
+        for opt, arg in opts:
+            if opt == '-h':
+                print("test.py -i <input_folder> -t <trajectory_execution_time>")
+                sys.exit()
+            elif opt in ("-i", "--input"):
+                input_folder = arg
+            elif opt in ("-t", "--nanoseconds"):
+                tot_time_nsecs = int(arg)
+            elif opt in ("-s", "--simulation"):
+                is_simulation = True
+        rospack = rospkg.RosPack()
+
+
+        print("input_folder = " + str(input_folder))
+        print("tot_time_nsecs = " + str(tot_time_nsecs))
+
+        deceleration_frames = 5     # number of frames used to decelerate
+        deceleration_time = 0.7    # deceleration time in seconds
+        # deceleration_time = 0.25    # deceleration time in seconds
+        deceleration_dt = float(deceleration_time) / deceleration_frames
+
+        gripper_open_delay = 0.3    # delay in seconds between sending and executing the open command
+        talker(input_folder, tot_time_nsecs, is_simulation)
     except rospy.ROSInterruptException:
         pass
