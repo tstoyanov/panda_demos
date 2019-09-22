@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<launch>
+    <group ns="panda">
+        <node pkg="trajectory_generator" name="learning_loop" type="main.py" output="screen" args="--decoder-sd a200_b1e-1_1000e.pt" />
+    </group>
+</launch>

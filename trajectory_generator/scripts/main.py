@@ -11,64 +11,37 @@ rospack = rospkg.RosPack()
 package_path = rospack.get_path("trajectory_generator")
 
 parser = argparse.ArgumentParser(description='PyTorch REINFORCE example')
-parser.add_argument('--gamma', type=float, default=0.99, metavar='G',
-                    help='discount factor (default: 0.99)')
-parser.add_argument('--seed', type=int, default=543, metavar='N',
-                    help='random seed (default: 543)')
-parser.add_argument('--pre-train-log-interval', type=int, default=10, metavar='N',
-                    help='interval between training status logs (default: 100)')
-parser.add_argument('--pre-train-epochs', type=int, default=100,
-                    help='number of epochs for training (default: 1000)')
-parser.add_argument('--pre-train-batch-size', type=int, default=12, metavar='N',
-                    help='input batch size for training (default: 1000)')
-parser.add_argument('--log-interval', type=int, default=1, metavar='N',
-                    help='interval between training status logs (default: 1)')
-parser.add_argument('--epochs', type=int, default=150,
-                    help='number of epochs for training (default: 15)')
-parser.add_argument('--batch-size', type=int, default=12, metavar='N',
-                    help='input batch size for training (default: 12)')
-parser.add_argument('--no-cuda', action='store_true', default=False,
-                    help='enables CUDA training')
-parser.add_argument('--state-dim', type=int, default=4,
-                    help='policy input dimension (default: 4)')
-parser.add_argument('--action-dim', type=int, default=5,
-                    help='policy output dimension (default: 5)')
-parser.add_argument('--learning-rate', type=int, default=0.002,
-                    help='learning rate of the optimizer')
-parser.add_argument('--models-dir', default="nn_models",
-                    help='directory from where to load the network shape of the action decoder')
-parser.add_argument('--decoder-model-file', default="model_trajectory_vae",
-                    help='file from where to load the network shape of the action decoder')
-parser.add_argument('--decoder-dir', default=package_path + "/saved_models/trajectory_vae/",
-                    help='directory from where to load the trained model of the action decoder')
-parser.add_argument('--decoder-sd', default=False,
-                    help='file from where to load the trained model of the action decoder')
-parser.add_argument('--encoder-dir', default=package_path + "/saved_models/state_vae/",
-                    help='directory from where to load the trained model of the state encoder')
-parser.add_argument('--encoder-file', default="model_state_vae.py",
-                    help='file from where to load the network shape of the state encoder')
-parser.add_argument('--encoder-sd', default=False,
-                    help='file from where to load the trained model of the state encoder')
-parser.add_argument('--algorithm-dir', default="learning_algorithms",
-                    help='directory from where to load the learning algorithm')
-parser.add_argument('--algorithm', default="pytorch_reinforce",
-                    help='file from where to load the learning algorithm')
-parser.add_argument('--scripts-dir', default=package_path + "/scripts/",
-                    help='directory from where to load the scripts')
-parser.add_argument('--image-reader', default="imager",
-                    help='file from where to load the learning algorithm')
-parser.add_argument('--action-script', default="writer_from_generated",
-                    help='file from where to load the learning algorithm')
-parser.add_argument('--no-plot', nargs='?', const=True, default=False,
-                    help='whether to plot data or not')
-parser.add_argument('--execution-time', type=int, default=3000000000,
-                    help='execution time in nanoseconds')
-parser.add_argument('--trajectory-folder', default="latest",
-                    help='folder where to look for the trajectory to execute')
-parser.add_argument('--trajectory-file', default="trajectories.txt",
-                    help='file describing the trajectory to follow')
-parser.add_argument('--safety-check-script', default="safety_check_client",
-                    help='script for the trajectory safety check')
+parser.add_argument('--gamma', type=float, default=0.99, metavar='G', help='discount factor (default: 0.99)')
+parser.add_argument('--seed', type=int, default=543, metavar='N', help='random seed (default: 543)')
+parser.add_argument('--pre-train-log-interval', type=int, default=10, metavar='N', help='interval between training status logs (default: 100)')
+parser.add_argument('--pre-train-epochs', type=int, default=500, help='number of epochs for training (default: 1000)')
+parser.add_argument('--pre-train-batch-size', type=int, default=12, metavar='N', help='input batch size for training (default: 1000)')
+parser.add_argument('--log-interval', type=int, default=1, metavar='N', help='interval between training status logs (default: 1)')
+parser.add_argument('--epochs', type=int, default=150, help='number of epochs for training (default: 15)')
+parser.add_argument('--batch-size', type=int, default=12, metavar='N', help='input batch size for training (default: 12)')
+parser.add_argument('--no-cuda', action='store_true', default=False, help='enables CUDA training')
+parser.add_argument('--state-dim', type=int, default=4, help='policy input dimension (default: 4)')
+parser.add_argument('--action-dim', type=int, default=5, help='policy output dimension (default: 5)')
+parser.add_argument('--learning-rate', type=int, default=0.002, help='learning rate of the optimizer')
+parser.add_argument('--models-dir', default="nn_models", help='directory from where to load the network shape of the action decoder')
+parser.add_argument('--decoder-model-file', default="model_trajectory_vae", help='file from where to load the network shape of the action decoder')
+parser.add_argument('--decoder-dir', default=package_path + "/saved_models/trajectory_vae/", help='directory from where to load the trained model of the action decoder')
+parser.add_argument('--decoder-sd', default=False, help='file from where to load the trained model of the action decoder')
+parser.add_argument('--encoder-dir', default=package_path + "/saved_models/state_vae/", help='directory from where to load the trained model of the state encoder')
+parser.add_argument('--encoder-file', default="model_state_vae.py", help='file from where to load the network shape of the state encoder')
+parser.add_argument('--encoder-sd', default=False, help='file from where to load the trained model of the state encoder')
+parser.add_argument('--algorithm-dir', default="learning_algorithms", help='directory from where to load the learning algorithm')
+parser.add_argument('--algorithm', default="pytorch_reinforce", help='file from where to load the learning algorithm')
+parser.add_argument('--scripts-dir', default=package_path + "/scripts/", help='directory from where to load the scripts')
+parser.add_argument('--image-reader', default="imager", help='file from where to load the learning algorithm')
+parser.add_argument('--action-script', default="writer_from_generated", help='file from where to load the learning algorithm')
+parser.add_argument('--no-plot', nargs='?', const=True, default=False, help='whether to plot data or not')
+parser.add_argument('--execution-time', type=int, default=9000000000, help='execution time in nanoseconds')
+parser.add_argument('--trajectory-folder', default="latest", help='folder where to look for the trajectory to execute')
+parser.add_argument('--trajectory-file', default="trajectories.txt", help='file describing the trajectory to follow')
+parser.add_argument('--safety-check-script', default="safety_check_client", help='script for the trajectory safety check')
+parser.add_argument('--trajectory-writer-script', default="writer_from_generated", help='script publishing the trajectory')
+parser.add_argument('--release-frame', type=int, default=95, help='release frame')
 
 args, unknown = parser.parse_known_args()
 # args = parser.parse_args()
@@ -100,6 +73,17 @@ else:
 action_script = importlib.import_module(args.action_script)
 image_reader_module = importlib.import_module(args.image_reader)
 safety_check_module = importlib.import_module(args.safety_check_script)
+trajectory_writer_module = importlib.import_module(args.trajectory_writer_script)
+
+joint_names = [
+    "panda_joint1",
+    "panda_joint2",
+    "panda_joint3",
+    "panda_joint4",
+    "panda_joint5",
+    "panda_joint6",
+    "panda_joint7"
+]
 
 def get_dummy_state(dim):
     # return torch.randn(dim)
@@ -108,8 +92,8 @@ def get_dummy_state(dim):
 
 def get_dummy_action(dim):
     # return torch.tensor([-1.0398e+00,  1.2563e+00,  8.3643e-02, -5.1169e-01,  1.4186e-01])
-    # return torch.zeros(dim)
-    return torch.randn(dim)
+    return torch.zeros(dim)
+    # return torch.randn(dim)
     # return torch.ones(dim)
 
 def execute_action(action):
@@ -1034,28 +1018,49 @@ def main(args):
         algorithm = algorithm_module.ALGORITHM(plot=True)
         items.append(algorithm)
         # algorithm.plot = False
-        algorithm.pre_train(args.pre_train_epochs, args.pre_train_batch_size, args.pre_train_log_interval)
+        # algorithm.pre_train(args.pre_train_epochs, args.pre_train_batch_size, args.pre_train_log_interval)
         print ("pre train over")
         # algorithm.plot = True
         ret = [0, 0]
         n = 0
         reward = None
+        trajectory_dict = {
+            "joint_trajectory": [],
+            "joint_names": joint_names,
+            "realease_frame": args.release_frame
+        }
         for epoch in range(args.epochs):
             for t in range(args.batch_size):
                 print ("t = {}".format(t))
                 n += 1
                 state = get_dummy_state(algorithm.policy.in_dim)
                 action, mean = algorithm.select_action(state)
-                # action = get_dummy_action(algorithm.policy.out_dim)
+                action = get_dummy_action(algorithm.policy.out_dim)
                 trajectory = decoder_model.decode(action)
-                is_safe = safety_check_module.check(trajectory)
+                is_safe, avg_distance, unsafe_pts = safety_check_module.check(trajectory.tolist())
                 if is_safe:
                     ret[0] += 1
                     reward = 1
+                    # t["joint_trajectory"] = trajectory.view(100, -1).tolist()
                 else:
                     ret[1] += 1
-                    reward = -1
+                    reward = -unsafe_pts
                 print (ret)
+                # print (is_safe)
+                print ("unsafe_pts = " + str(unsafe_pts))
+                # print (str(avg_distance)+"\n")
+            	# rospy.rostime.wallsleep(0.2)
+
+
+                test3 = []
+                for point in test:
+                    test3.extend(point)
+                test3 = torch.tensor(test3)
+                is_safe, avg_distance, unsafe_pts = safety_check_module.check(test3.tolist())
+                trajectory_dict["joint_trajectory"] = test3.view(100, -1).tolist()
+                
+                
+                trajectory_writer_module.talker(input_folder=False, tot_time_nsecs=args.execution_time, is_simulation=False, is_learning=True, t=trajectory_dict)
                 algorithm.set_reward(reward)
             loss = algorithm.finish_episode()
 
@@ -1064,7 +1069,6 @@ def main(args):
                     epoch, reward))
                 if algorithm.plot:
                     algorithm.update_graphs()
-            # rospy.rostime.wallsleep(0.1)
 
         # image_reader.evaluate_board()
         close_all(items)

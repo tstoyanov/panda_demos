@@ -18,7 +18,7 @@ parser.add_argument('--seed', type=int, default=543, metavar='N',
                     help='random seed (default: 543)')
 parser.add_argument('--log-interval', type=int, default=100, metavar='N',
                     help='interval between training status logs (default: 1)')
-parser.add_argument('--epochs', type=int, default=2000,
+parser.add_argument('--epochs', type=int, default=20000,
                     help='number of epochs for training (default: 20)')
 parser.add_argument('--batch-size', type=int, default=10, metavar='N',
                     help='input batch size for training (default: 1)')
@@ -199,6 +199,10 @@ class ALGORITHM:
     
     def execute_action(self, action):
         error = False
+        # if all(action < 0.2) and all(action > -0.2):
+        #     reward = 1
+        # else:
+        #     reward = -1
         reward = -(abs(action)).sum().pow(2).item() * 100
         return error, reward
 

@@ -124,18 +124,25 @@ int main(int argc, char **argv)
     auto safety_check_handler = [&my_chain, &chainFkSolverPos, &joints_pos, &eef_frame, &z_lower_limit, nr_of_joints](trajectory_generator::trajectory_safety_check::Request& req, trajectory_generator::trajectory_safety_check::Response& res)
     {
         int ret = 0;
+        double avg_distance = 0;
         res.is_safe = true;
         res.error = false;
+        res.unsafe_pts = 0;
         for (int i = 0; i < req.joints_pos.size(); i++) {
             joints_pos(i % 7) = req.joints_pos[i];
             if (i % 7 == 6) {
                 ret = chainFkSolverPos.JntToCart(joints_pos, eef_frame);
+                avg_distance += std::abs(eef_frame.p.z() - z_lower_limit);
                 if (eef_frame.p.z() < z_lower_limit)
                 {
-                    res.is_safe = false;
+                    res.unsafe_pts++;
                 }
             }
         }
+        if (res.unsafe_pts != 0) {
+            res.is_safe = false;
+        }
+        res.avg_distance = avg_distance / req.joints_pos.size();
         return 1;
     };
 

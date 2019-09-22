@@ -16,8 +16,16 @@ import os
 from franka_gripper.srv import *
 
 import rospkg
+rospack = rospkg.RosPack()
 
-def talker(input_folder, tot_time_nsecs, is_simulation):
+deceleration_frames = 5     # number of frames used to decelerate
+deceleration_time = 0.7    # deceleration time in seconds
+# deceleration_time = 0.25    # deceleration time in seconds
+deceleration_dt = float(deceleration_time) / deceleration_frames
+
+gripper_open_delay = 0.3    # delay in seconds between sending and executing the open command
+
+def talker(input_folder="latest", tot_time_nsecs=9000000000, is_simulation=False, is_learning=False, t=None):
 
     if is_simulation:
         print("SIMULATION MODE")
@@ -28,9 +36,10 @@ def talker(input_folder, tot_time_nsecs, is_simulation):
         gripper_move_pub = rospy.Publisher('/franka_gripper/move/goal',
                             MoveActionGoal, queue_size=10)
         # getting the generated trajectory data
-        package_path = rospack.get_path("trajectory_generator")
-        with open(package_path + "/generated_trajectories/cpp/" + input_folder + "/trajectories.txt", 'r') as f:
-            data = f.read()
+        if not is_learning:
+            package_path = rospack.get_path("trajectory_generator")
+            with open(package_path + "/generated_trajectories/cpp/" + input_folder + "/trajectories.txt", 'r') as f:
+                data = f.read()
     else:
         pub = rospy.Publisher('/panda/position_joint_trajectory_controller/follow_joint_trajectory/goal',
                             FollowJointTrajectoryActionGoal, queue_size=10)
@@ -38,8 +47,9 @@ def talker(input_folder, tot_time_nsecs, is_simulation):
                             GraspActionGoal, queue_size=10)
         gripper_move_pub = rospy.Publisher('/panda/franka_gripper/move/goal',
                             MoveActionGoal, queue_size=10)
-        with open(input_folder, 'r') as f:
-            data = f.read()
+        if not is_learning:
+            with open(input_folder, 'r') as f:
+                data = f.read()
 
     rospy.init_node('myWriter', anonymous=True)
     rate = rospy.Rate(0.1)  # hz
@@ -69,9 +79,11 @@ def talker(input_folder, tot_time_nsecs, is_simulation):
     # group.go(joint_goal, wait=True)
     # group.stop()
 
-    
-    trajectories = json.loads(data)
-    trajectories = ast.literal_eval(json.dumps(trajectories))
+    if not is_learning:
+        trajectories = json.loads(data)
+        trajectories = ast.literal_eval(json.dumps(trajectories))
+    else:
+        trajectories = t
     joint_trajectories = {}
     for i in range(len(trajectories["joint_trajectory"][0])):
         joint_trajectories[i] = []
@@ -341,18 +353,10 @@ if __name__ == '__main__':
                 tot_time_nsecs = int(arg)
             elif opt in ("-s", "--simulation"):
                 is_simulation = True
-        rospack = rospkg.RosPack()
-
 
         print("input_folder = " + str(input_folder))
         print("tot_time_nsecs = " + str(tot_time_nsecs))
 
-        deceleration_frames = 5     # number of frames used to decelerate
-        deceleration_time = 0.7    # deceleration time in seconds
-        # deceleration_time = 0.25    # deceleration time in seconds
-        deceleration_dt = float(deceleration_time) / deceleration_frames
-
-        gripper_open_delay = 0.3    # delay in seconds between sending and executing the open command
         talker(input_folder, tot_time_nsecs, is_simulation)
     except rospy.ROSInterruptException:
         pass

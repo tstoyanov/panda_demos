@@ -1,4 +1,6 @@
 float64[] joints_pos
 ---
 bool is_safe
+float64 avg_distance
+int64 unsafe_pts
 bool error

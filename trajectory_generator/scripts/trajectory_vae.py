@@ -28,6 +28,8 @@ from collections import Counter
 
 from nn_models.model_trajectory_vae import VAE as VAE
 
+import importlib
+
 # debug purpose?
 # import multiprocessing
 # multiprocessing.set_start_method('spawn', True)
@@ -94,6 +96,8 @@ parser.add_argument('--write', nargs='?', const=True, default=False,
                     help='whether to write the generated trajectory to the rostopic or not')
 parser.add_argument('--vae-dim', default=5,
                     help='set the dimension of the latent space of the VAE used to encode the trajectories')
+parser.add_argument('--safety-check-script', default="safety_check_client",
+                    help='script for the trajectory safety check')
 
 args, unknown = parser.parse_known_args()
 # args = parser.parse_args()
@@ -114,6 +118,8 @@ else:
 get_encoded_data = args.tsne != False or args.matrix_plot != False
 
 device = torch.device("cuda" if args.cuda else "cpu")
+
+safety_check_module = importlib.import_module(args.safety_check_script)
 
 kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
 # train_loader = torch.utils.data.DataLoader(
@@ -741,32 +747,72 @@ if __name__ == "__main__":
 
     if get_encoded_data:
         # global latent_space_train
+        # safe_markers = {
+        #     True: "o",
+        #     False: "*"
+        # }
+        safe_markers = True
         data_to_plot = pd.DataFrame()
         test_data_to_plot = pd.DataFrame()
         original_data = pd.Series()
         labels = pd.Series()
         test_labels = pd.Series()
+        safe_list = []
+        is_safe = pd.Series()
+        test_is_safe = pd.Series()
+        unsafe_list = []
+        unsafe_points = pd.Series()
+        test_unsafe_points = pd.Series()
         if latent_space_train == None:
             latent_space_train = torch.tensor([])
             original_data = torch.tensor([])
             # for batch_idx, (data, label) in enumerate(train_loader):
             with torch.no_grad():
+                print ("Checking safety for train trajectories...")
                 for batch_idx, (data, label, m, c, index) in enumerate(my_train_set_loader):
                     mu, logvar = vae_model.encode(data.view(-1, 700))
-                    latent_space_train = torch.cat((latent_space_train, vae_model.reparameterize(mu, logvar, False)), 0)
+                    latent_space_sample = vae_model.reparameterize(mu, logvar, no_noise=True)
+                    for n, s in enumerate(latent_space_sample):
+                        if ((batch_idx * args.batch_size) + n) % 500 == 0:
+                            print ((batch_idx * args.batch_size) + n)
+                        decoded_t = vae_model.decode(s)
+                        safe, avg_distance, unsafe_pts = safety_check_module.check(decoded_t)
+                        safe_list.append(safe)
+                        unsafe_list.append(unsafe_pts)
+                    # latent_space_train = torch.cat((latent_space_train, vae_model.reparameterize(mu, logvar, no_noise=False)), 0)
+                    latent_space_train = torch.cat((latent_space_train, latent_space_sample), 0)
                     original_data = torch.cat((original_data, data.view(-1, 700)), 0)
                     # labels = labels.append(pd.Series(m), ignore_index=True)
                     labels = labels.append(pd.Series(label), ignore_index=True)
                 
+                is_safe = is_safe.append(pd.Series(safe_list), ignore_index=True)
+                unsafe_points = unsafe_points.append(pd.Series(unsafe_list), ignore_index=True)
                 latent_space_test = torch.tensor([])
+                safe_list = []
+                print ("Checking safety for test trajectories...")
                 for batch_idx, (data, label, m, c, index) in enumerate(my_test_set_loader):
                     mu, logvar = vae_model.encode(data.view(-1, 700))
-                    latent_space_test = torch.cat((latent_space_test, vae_model.reparameterize(mu, logvar, False)), 0)
+                    latent_space_test_sample = vae_model.reparameterize(mu, logvar, no_noise=True)
+                    for n, s in enumerate(latent_space_test_sample):
+                        if ((batch_idx * args.batch_size) + n) % 500 == 0:
+                            print ((batch_idx * args.batch_size) + n)
+                        decoded_t = vae_model.decode(s)
+                        safe, avg_distance, unsafe_pts = safety_check_module.check(decoded_t)
+                        safe_list.append(safe)
+                        unsafe_list.append(unsafe_pts)
+                    latent_space_test = torch.cat((latent_space_test, latent_space_test_sample), 0)
+                    # latent_space_test = torch.cat((latent_space_test, vae_model.reparameterize(mu, logvar, False)), 0)
                     # test_labels = test_labels.append(pd.Series(m), ignore_index=True)
                     test_labels = test_labels.append(pd.Series(label), ignore_index=True)
+                test_is_safe.append(pd.Series(safe_list), ignore_index=True)
+                test_unsafe_points = test_unsafe_points.append(pd.Series(unsafe_list), ignore_index=True)
 
             data_to_plot['vel'] = labels
+            data_to_plot['is_safe'] = is_safe
+            data_to_plot['unsafe_points'] = unsafe_points
             test_data_to_plot['test_vel'] = test_labels
+            test_data_to_plot['test_is_safe'] = test_is_safe
+            test_data_to_plot['test_unsafe_points'] = test_unsafe_points
 
         if args.tsne != False:
             print ("\nApplying the t-sne algorithm to the latent space train subset...")
@@ -809,7 +855,34 @@ if __name__ == "__main__":
                 for i, label_text in enumerate(legend.texts):
                     if i != 0:
                         label_text.set_text(round(float(label_text.get_text()), 1))
+
+            elif "DOUBLE" == str(args.tsne).upper():
+                ax0 = fig.add_subplot(1, 1, 1)
+                fig_double = plt.figure("tsne_plot_unsafe_pts", figsize=(16,10))
+                fig_double.suptitle('t-sne algorithm over ' + str(len(my_train_set_loader.dataset)) + ' trajectories:\nEncoded ' + str(vae_model.fc22.out_features) + ' dimensional data using ' + args.loss_type.upper() + ' loss', fontsize=14)
+                
+                ax2 = plt.subplot(1, 1, 1)
+                ax2.set_title("ALPHA = " + str(args.alpha) + "  BETA = " + str(args.beta))
+                g = sns.scatterplot(
+                    x="tsne-train-encoded-" + str(vae_model.fc22.out_features) + "d-one", y="tsne-train-encoded-" + str(vae_model.fc22.out_features) + "d-two",
+                    hue="unsafe_points",
+                    palette=sns.color_palette("hls", data_to_plot['unsafe_points'].nunique()),
+                    style="is_safe",
+                    markers=safe_markers,
+                    data=data_to_plot,
+                    legend="full",
+                    # legend="brief",
+                    alpha=0.3,
+                    ax=ax2
+                )
+                legend = g.legend_
+                for i, label_text in enumerate(legend.texts):
+                    try:
+                        label_text.set_text(round(float(label_text.get_text()), 2))
+                    except ValueError:
+                        pass
             else:
+                fig = plt.figure("tsne_plot", figsize=(16,10))
                 fig.suptitle('t-sne algorithm over ' + str(len(my_train_set_loader.dataset)) + ' trajectories:\nEncoded ' + str(vae_model.fc22.out_features) + ' dimensional data using ' + args.loss_type.upper() + ' loss', fontsize=14)
                 ax0 = plt.subplot(1, 1, 1)
                 # ax0 = plt.subplot(1, 2, 1)
@@ -820,15 +893,24 @@ if __name__ == "__main__":
                 x="tsne-train-encoded-" + str(vae_model.fc22.out_features) + "d-one", y="tsne-train-encoded-" + str(vae_model.fc22.out_features) + "d-two",
                 hue="vel",
                 palette=sns.color_palette("hls", data_to_plot['vel'].nunique()),
+                style="is_safe",
+                markers=safe_markers,
                 data=data_to_plot,
                 legend="full",
+                # legend="brief",
                 alpha=0.3,
                 ax=ax0
             )
+            # fig.subplots_adjust(right=0.9)
+            # g.legend(bbox_to_anchor=(1, 1), loc=2, borderaxespad=0., ncol=1)
             legend = g.legend_
             for i, label_text in enumerate(legend.texts):
-                if i != 0:
-                    label_text.set_text(round(float(label_text.get_text()), 1))
+                try:
+                    label_text.set_text(round(float(label_text.get_text()), 2))
+                except ValueError:
+                    pass
+                # if i != 0:
+                #     label_text.set_text(round(float(label_text.get_text()), 1))
             
             # ax2.set_title("ALPHA = " + str(args.alpha) + "  BETA = " + str(args.beta))
             # g = sns.scatterplot(
