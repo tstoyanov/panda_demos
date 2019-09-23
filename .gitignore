@@ -1,10 +1,10 @@
 trajectory_generator/generated_trajectories
-trajectory_generator/saved_models/trajectory_vae/*
-!trajectory_generator/saved_models/trajectory_vae/.gitkeep
-trajectory_generator/saved_models/policy_network/*
-!trajectory_generator/saved_models/policy_network/.gitkeep
-trajectory_generator/saved_models/state_vae/*
-!trajectory_generator/saved_models/state_vae/.gitkeep
+# trajectory_generator/saved_models/trajectory_vae/*
+# !trajectory_generator/saved_models/trajectory_vae/.gitkeep
+# trajectory_generator/saved_models/policy_network/*
+# !trajectory_generator/saved_models/policy_network/.gitkeep
+# trajectory_generator/saved_models/state_vae/*
+# !trajectory_generator/saved_models/state_vae/.gitkeep
 # trajectory_generator/images
 .vscode
 devel/
