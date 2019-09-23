@@ -777,7 +777,10 @@ if __name__ == "__main__":
                             print ((batch_idx * args.batch_size) + n)
                         decoded_t = vae_model.decode(s)
                         safe, avg_distance, unsafe_pts = safety_check_module.check(decoded_t)
-                        safe_list.append(safe)
+                        if safe:
+                            safe_list.append("Safe")
+                        else:    
+                            safe_list.append("Unsafe")
                         unsafe_list.append(unsafe_pts)
                     # latent_space_train = torch.cat((latent_space_train, vae_model.reparameterize(mu, logvar, no_noise=False)), 0)
                     latent_space_train = torch.cat((latent_space_train, latent_space_sample), 0)
@@ -798,7 +801,10 @@ if __name__ == "__main__":
                             print ((batch_idx * args.batch_size) + n)
                         decoded_t = vae_model.decode(s)
                         safe, avg_distance, unsafe_pts = safety_check_module.check(decoded_t)
-                        safe_list.append(safe)
+                        if safe:
+                            safe_list.append("Safe")
+                        else:    
+                            safe_list.append("Unsafe")  
                         unsafe_list.append(unsafe_pts)
                     latent_space_test = torch.cat((latent_space_test, latent_space_test_sample), 0)
                     # latent_space_test = torch.cat((latent_space_test, vae_model.reparameterize(mu, logvar, False)), 0)
@@ -840,6 +846,8 @@ if __name__ == "__main__":
                 data_to_plot['tsne-original-one'] = tsne_results[:,0]
                 data_to_plot['tsne-original-two'] = tsne_results[:,1]
                 
+                # ax0 = fig.add_subplot(1, 2, 1)
+                # ax1 = fig.add_subplot(1, 2, 2)
                 ax0 = plt.subplot(1, 2, 1)
                 ax1 = plt.subplot(1, 2, 2)
                 g = sns.scatterplot(
@@ -848,7 +856,7 @@ if __name__ == "__main__":
                     palette=sns.color_palette("hls", data_to_plot['vel'].nunique()),
                     data=data_to_plot,
                     legend="full",
-                    alpha=0.3,
+                    alpha=0.5,
                     ax=ax1
                 )
                 legend = g.legend_
@@ -857,11 +865,13 @@ if __name__ == "__main__":
                         label_text.set_text(round(float(label_text.get_text()), 1))
 
             elif "DOUBLE" == str(args.tsne).upper():
-                ax0 = fig.add_subplot(1, 1, 1)
+                # fig = plt.figure("tsne_plot", figsize=(16,10))
+                # ax0 = fig.add_subplot(1, 1, 1)
+                ax0 = plt.subplot(1, 1, 1)
                 fig_double = plt.figure("tsne_plot_unsafe_pts", figsize=(16,10))
                 fig_double.suptitle('t-sne algorithm over ' + str(len(my_train_set_loader.dataset)) + ' trajectories:\nEncoded ' + str(vae_model.fc22.out_features) + ' dimensional data using ' + args.loss_type.upper() + ' loss', fontsize=14)
                 
-                ax2 = plt.subplot(1, 1, 1)
+                ax2 = fig_double.add_subplot(1, 1, 1)
                 ax2.set_title("ALPHA = " + str(args.alpha) + "  BETA = " + str(args.beta))
                 g = sns.scatterplot(
                     x="tsne-train-encoded-" + str(vae_model.fc22.out_features) + "d-one", y="tsne-train-encoded-" + str(vae_model.fc22.out_features) + "d-two",
@@ -872,7 +882,7 @@ if __name__ == "__main__":
                     data=data_to_plot,
                     legend="full",
                     # legend="brief",
-                    alpha=0.3,
+                    alpha=0.5,
                     ax=ax2
                 )
                 legend = g.legend_
@@ -882,8 +892,9 @@ if __name__ == "__main__":
                     except ValueError:
                         pass
             else:
-                fig = plt.figure("tsne_plot", figsize=(16,10))
+                # fig = plt.figure("tsne_plot", figsize=(16,10))
                 fig.suptitle('t-sne algorithm over ' + str(len(my_train_set_loader.dataset)) + ' trajectories:\nEncoded ' + str(vae_model.fc22.out_features) + ' dimensional data using ' + args.loss_type.upper() + ' loss', fontsize=14)
+                # ax0 = fig.add_subplot(1, 1, 1)
                 ax0 = plt.subplot(1, 1, 1)
                 # ax0 = plt.subplot(1, 2, 1)
                 # ax2 = plt.subplot(1, 2, 2)
@@ -898,7 +909,7 @@ if __name__ == "__main__":
                 data=data_to_plot,
                 legend="full",
                 # legend="brief",
-                alpha=0.3,
+                alpha=0.5,
                 ax=ax0
             )
             # fig.subplots_adjust(right=0.9)

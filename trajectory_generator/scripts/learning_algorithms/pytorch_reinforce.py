@@ -121,6 +121,19 @@ class ALGORITHM:
             self.live_plots["loss"]["ax"].legend()
             self.live_plots["reward"]["ax"].legend()
             self.live_plots["theta"]["ax"].legend()
+    
+    def save_model_state_dict(self, save_path):
+        torch.save(self.policy.state_dict(), save_path)
+
+
+    def load_model_state_dict(self, load_path):
+        model_sd = torch.load(load_path)
+        loaded_model = Policy(args.state_dim, args.action_dim)
+        loaded_model.load_state_dict(model_sd)
+        loaded_model.eval()
+        self.policy = loaded_model
+        return loaded_model
+        # return VAE().to(device).load_state_dict(torch.load(load_path)).eval()
 
     def select_action(self, state):
         mean, log_var = self.policy(state)

@@ -43,7 +43,8 @@
     </node>
 
     <node name="trajectory_safety_check_server" type="trajectory_safety_check_server" pkg="trajectory_generator" output="screen">
-      <param name="z_lower_limit" value="0.86171"/>
+      <param name="z_lower_limit" value="0.86000"/>
+      <param name="z_upper_limit" value="0.87000"/>
     </node>
 
      <!-- enabled only if we want to run moveit in simulation -->

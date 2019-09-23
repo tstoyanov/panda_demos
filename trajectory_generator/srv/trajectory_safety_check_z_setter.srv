@@ -1,4 +1,8 @@
+bool update_lower
 float64 z_lower_limit
+bool update_upper
+float64 z_upper_limit
 ---
-float64 updated_value
+float64 updated_lower
+float64 updated_upper
 bool error

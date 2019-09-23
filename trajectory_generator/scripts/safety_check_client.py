@@ -932,6 +932,15 @@ def check(t):
     except rospy.ServiceException as e:
         print ("Service call failed: %s"%e)
 
+def get_z_bounds():
+    # rospy.wait_for_service('/panda/trajectory_safety_check')
+    try:
+        local_get_z_bounds = rospy.ServiceProxy('/panda/trajectory_safety_check_z_getter', trajectory_safety_check_z_getter)
+        res = local_get_z_bounds()
+        return res.z_lower, res.z_upper
+    except rospy.ServiceException as e:
+        print ("Service call failed: %s"%e)
+
 if __name__ == "__main__":
     print ("Requesting safety check.")
     print ("Safety check result: %s"%(trajectory_safety_check_client(test2)))

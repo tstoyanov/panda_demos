@@ -14,10 +14,10 @@ parser = argparse.ArgumentParser(description='PyTorch REINFORCE example')
 parser.add_argument('--gamma', type=float, default=0.99, metavar='G', help='discount factor (default: 0.99)')
 parser.add_argument('--seed', type=int, default=543, metavar='N', help='random seed (default: 543)')
 parser.add_argument('--pre-train-log-interval', type=int, default=10, metavar='N', help='interval between training status logs (default: 100)')
-parser.add_argument('--pre-train-epochs', type=int, default=500, help='number of epochs for training (default: 1000)')
+parser.add_argument('--pre-train-epochs', type=int, default=200, help='number of epochs for training (default: 1000)')
 parser.add_argument('--pre-train-batch-size', type=int, default=12, metavar='N', help='input batch size for training (default: 1000)')
 parser.add_argument('--log-interval', type=int, default=1, metavar='N', help='interval between training status logs (default: 1)')
-parser.add_argument('--epochs', type=int, default=150, help='number of epochs for training (default: 15)')
+parser.add_argument('--epochs', type=int, default=300, help='number of epochs for training (default: 15)')
 parser.add_argument('--batch-size', type=int, default=12, metavar='N', help='input batch size for training (default: 12)')
 parser.add_argument('--no-cuda', action='store_true', default=False, help='enables CUDA training')
 parser.add_argument('--state-dim', type=int, default=4, help='policy input dimension (default: 4)')
@@ -42,6 +42,10 @@ parser.add_argument('--trajectory-file', default="trajectories.txt", help='file 
 parser.add_argument('--safety-check-script', default="safety_check_client", help='script for the trajectory safety check')
 parser.add_argument('--trajectory-writer-script', default="writer_from_generated", help='script publishing the trajectory')
 parser.add_argument('--release-frame', type=int, default=95, help='release frame')
+parser.add_argument('--save-dir', default=package_path + "/saved_models/policy_network/", help='directory where to save the policy model once trained')
+parser.add_argument('--save-file', default=False, help='name of the file to save the policy model once trained')
+parser.add_argument('--load-dir', default=package_path + "/saved_models/policy_network/", help='directory from where to load the trained policy model')
+parser.add_argument('--load-file', default=False, help='name of the file of the trained policy model')
 
 args, unknown = parser.parse_known_args()
 # args = parser.parse_args()
@@ -87,8 +91,8 @@ joint_names = [
 
 def get_dummy_state(dim):
     # return torch.randn(dim)
-    # return torch.ones(dim)
-    return torch.zeros(dim)
+    return torch.ones(dim)
+    # return torch.zeros(dim)
 
 def get_dummy_action(dim):
     # return torch.tensor([-1.0398e+00,  1.2563e+00,  8.3643e-02, -5.1169e-01,  1.4186e-01])
@@ -1016,11 +1020,12 @@ def main(args):
         # items.append(image_reader)
         # image_reader.initialize_board()
         algorithm = algorithm_module.ALGORITHM(plot=True)
+        # algorithm = algorithm_module.ALGORITHM(plot=False)
         items.append(algorithm)
-        # algorithm.plot = False
-        # algorithm.pre_train(args.pre_train_epochs, args.pre_train_batch_size, args.pre_train_log_interval)
+        algorithm.plot = False
+        algorithm.pre_train(args.pre_train_epochs, args.pre_train_batch_size, args.pre_train_log_interval)
         print ("pre train over")
-        # algorithm.plot = True
+        algorithm.plot = True
         ret = [0, 0]
         n = 0
         reward = None
@@ -1035,13 +1040,13 @@ def main(args):
                 n += 1
                 state = get_dummy_state(algorithm.policy.in_dim)
                 action, mean = algorithm.select_action(state)
-                action = get_dummy_action(algorithm.policy.out_dim)
+                # action = get_dummy_action(algorithm.policy.out_dim)
                 trajectory = decoder_model.decode(action)
                 is_safe, avg_distance, unsafe_pts = safety_check_module.check(trajectory.tolist())
                 if is_safe:
                     ret[0] += 1
                     reward = 1
-                    # t["joint_trajectory"] = trajectory.view(100, -1).tolist()
+                    # trajectory_dict["joint_trajectory"] = trajectory.view(100, -1).tolist()
                 else:
                     ret[1] += 1
                     reward = -unsafe_pts
@@ -1060,7 +1065,7 @@ def main(args):
                 trajectory_dict["joint_trajectory"] = test3.view(100, -1).tolist()
                 
                 
-                trajectory_writer_module.talker(input_folder=False, tot_time_nsecs=args.execution_time, is_simulation=False, is_learning=True, t=trajectory_dict)
+                # trajectory_writer_module.talker(input_folder=False, tot_time_nsecs=args.execution_time, is_simulation=False, is_learning=True, t=trajectory_dict)
                 algorithm.set_reward(reward)
             loss = algorithm.finish_episode()
 

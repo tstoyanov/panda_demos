@@ -1,6 +1,7 @@
 #include "ros/ros.h"
 #include "trajectory_generator/trajectory_safety_check.h"
 #include "trajectory_generator/trajectory_safety_check_z_setter.h"
+#include "trajectory_generator/trajectory_safety_check_z_getter.h"
 
 #include <cmath>
 #include <functional>
@@ -112,16 +113,27 @@ int main(int argc, char **argv)
     double z_lower_limit;
     if (!node_handle.getParam("/trajectory_safety_check_server/z_lower_limit", z_lower_limit) && !node_handle.getParam("/panda/trajectory_safety_check_server/z_lower_limit", z_lower_limit))
     {
-        z_lower_limit = 0.86171;
-        ROS_ERROR("%s: Could not parse 'z_lower_limit' parameter. Using default value '0.86171' instead", node_name.c_str());
+        z_lower_limit = 0.85671;
+        ROS_ERROR("%s: Could not parse 'z_lower_limit' parameter. Using default value '0.85671' instead", node_name.c_str());
     }
     else
     {
         ROS_INFO("%s: Found 'z_lower_limit' parameter with value: %f", node_name.c_str(), z_lower_limit);
     }
+
+    double z_upper_limit;
+    if (!node_handle.getParam("/trajectory_safety_check_server/z_upper_limit", z_upper_limit) && !node_handle.getParam("/panda/trajectory_safety_check_server/z_upper_limit", z_upper_limit))
+    {
+        z_upper_limit = 0.86671;
+        ROS_ERROR("%s: Could not parse 'z_upper_limit' parameter. Using default value '0.86671' instead", node_name.c_str());
+    }
+    else
+    {
+        ROS_INFO("%s: Found 'z_upper_limit' parameter with value: %f", node_name.c_str(), z_upper_limit);
+    }
     
 
-    auto safety_check_handler = [&my_chain, &chainFkSolverPos, &joints_pos, &eef_frame, &z_lower_limit, nr_of_joints](trajectory_generator::trajectory_safety_check::Request& req, trajectory_generator::trajectory_safety_check::Response& res)
+    auto safety_check_handler = [&my_chain, &chainFkSolverPos, &joints_pos, &eef_frame, &z_lower_limit, &z_upper_limit, nr_of_joints](trajectory_generator::trajectory_safety_check::Request& req, trajectory_generator::trajectory_safety_check::Response& res)
     {
         int ret = 0;
         double avg_distance = 0;
@@ -129,11 +141,11 @@ int main(int argc, char **argv)
         res.error = false;
         res.unsafe_pts = 0;
         for (int i = 0; i < req.joints_pos.size(); i++) {
-            joints_pos(i % 7) = req.joints_pos[i];
+            joints_pos(i % nr_of_joints) = req.joints_pos[i];
             if (i % 7 == 6) {
                 ret = chainFkSolverPos.JntToCart(joints_pos, eef_frame);
                 avg_distance += std::abs(eef_frame.p.z() - z_lower_limit);
-                if (eef_frame.p.z() < z_lower_limit)
+                if (eef_frame.p.z() < z_lower_limit || (i / nr_of_joints < 90 && eef_frame.p.z() > z_upper_limit))
                 {
                     res.unsafe_pts++;
                 }
@@ -146,17 +158,31 @@ int main(int argc, char **argv)
         return 1;
     };
 
-    auto z_setter_handler = [&z_lower_limit, &node_name](trajectory_generator::trajectory_safety_check_z_setter::Request& req, trajectory_generator::trajectory_safety_check_z_setter::Response& res)
+    auto z_setter_handler = [&z_lower_limit, &z_upper_limit, &node_name](trajectory_generator::trajectory_safety_check_z_setter::Request& req, trajectory_generator::trajectory_safety_check_z_setter::Response& res)
     {
-        z_lower_limit = req.z_lower_limit;
-        ROS_INFO("%s: Value of 'z_lower_limit' succesfully updated to: %f", node_name.c_str(), z_lower_limit);
-        res.updated_value = z_lower_limit;
+        if (req.update_lower) {
+            z_lower_limit = req.z_lower_limit;
+            ROS_INFO("%s: Value of 'z_lower_limit' succesfully updated to: %f", node_name.c_str(), z_lower_limit);
+        }
+        if (req.update_upper) {
+            z_upper_limit = req.z_upper_limit;
+            ROS_INFO("%s: Value of 'z_upper_limit' succesfully updated to: %f", node_name.c_str(), z_upper_limit);
+        }
+        res.updated_lower = z_lower_limit;
+        res.updated_upper = z_upper_limit;
         res.error = false;
+        return 1;
+    };
+
+    auto z_getter_handler = [&z_lower_limit, &z_upper_limit](trajectory_generator::trajectory_safety_check_z_getter::Request& req, trajectory_generator::trajectory_safety_check_z_getter::Response& res){
+        res.z_lower = z_lower_limit;
+        res.z_upper = z_upper_limit;
         return 1;
     };
 
     ros::ServiceServer safety_check_service = node_handle.advertiseService<trajectory_generator::trajectory_safety_check::Request, trajectory_generator::trajectory_safety_check::Response>("trajectory_safety_check", safety_check_handler);
     ros::ServiceServer z_setter_service = node_handle.advertiseService<trajectory_generator::trajectory_safety_check_z_setter::Request, trajectory_generator::trajectory_safety_check_z_setter::Response>("trajectory_safety_check_z_setter", z_setter_handler);
+    ros::ServiceServer z_getter_service = node_handle.advertiseService<trajectory_generator::trajectory_safety_check_z_getter::Request, trajectory_generator::trajectory_safety_check_z_getter::Response>("trajectory_safety_check_z_getter", z_getter_handler);
     ros::spin();
 
     return 0;
