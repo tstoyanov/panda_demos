@@ -203,6 +203,7 @@ class image_converter:
         self.center_search_flag = False
         self.iteration = 0
         self.iteration_treshold = iteration_treshold
+        self.single_serach_flag = False
 
         # while not rospy.core.is_shutdown():
         #     while not self.board.center_found():
@@ -224,6 +225,13 @@ class image_converter:
 
     def clear(self):
         self.iteration = 0
+    
+    def single_stone_search(self):
+        if not self.stone_search_flag:
+            self.so.clear()
+            self.clear()
+            self.stone_search_flag = True
+            self.single_serach_flag = True
     
     def stone_search(self):
         if not self.stone_search_flag:
@@ -259,9 +267,14 @@ class image_converter:
                     # draw the center of the circle
                     # cv2.circle(colored_img,(center_x,center_y),2,(255,0,0),3)
         else:
-            self.stone_search_flag = False
-            self.so.finalize_search(self.board.get_center())                    
-            rospy.loginfo("Number of stone(s) found: " + str(len(self.so.stones)))
+            self.so.finalize_search(self.board.get_center())                
+            if self.single_serach_flag and len(self.so.stones) != 1:
+                self.clear()
+                self.so.clear()
+            else:
+                self.stone_search_flag = False
+                self.single_serach_flag = False
+                rospy.loginfo("Number of stone(s) found: " + str(len(self.so.stones)))
 
     def center_search(self):
         if not self.center_search_flag:
@@ -346,7 +359,7 @@ class image_converter:
             # draw a filled, yellow rectangle on the overlay copy
             x_max = overlay.shape[1]
             y_max = overlay.shape[0]
-            cv2.circle(overlay, (x, y), 160, (0,96,255), 2)
+            cv2.circle(overlay, (x, y), 150, (0,96,255), 2)
             cv2.circle(overlay, (x, y), 100, (0,255,255), 2)
             cv2.circle(overlay, (x, y), 50, (0,255,0), 2)
 
@@ -394,11 +407,14 @@ class image_converter:
         cv2.destroyAllWindows()
 
     def evaluate_board(self):
-        print("Press enter to evaluate the board")
-        raw_input()
+        # print("Press enter to evaluate the board")
+        # raw_input()
         # input()
-        self.stone_search()
+        self.single_stone_search()
         rospy.rostime.wallsleep(1)
+        while self.single_serach_flag:
+            pass
+        return self.so.stones[0].get_distance_from_center()
 
 def main(args):
     ic = image_converter()

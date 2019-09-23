@@ -928,7 +928,7 @@ def check(t):
     try:
         local_trajectory_safety_check = rospy.ServiceProxy('/panda/trajectory_safety_check', trajectory_safety_check)
         res = local_trajectory_safety_check(t)
-        return res.is_safe, res.avg_distance, res.unsafe_pts
+        return res.is_safe, res.avg_distance, res.unsafe_pts, res.fk_z
     except rospy.ServiceException as e:
         print ("Service call failed: %s"%e)
 

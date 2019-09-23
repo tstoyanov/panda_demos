@@ -746,6 +746,7 @@ if __name__ == "__main__":
 
 
     if get_encoded_data:
+        z_lower_bound, z_upper_bound = safety_check_module.get_z_bounds()
         # global latent_space_train
         # safe_markers = {
         #     True: "o",
@@ -763,6 +764,9 @@ if __name__ == "__main__":
         unsafe_list = []
         unsafe_points = pd.Series()
         test_unsafe_points = pd.Series()
+        avg_dist_list = []
+        avg_dist = pd.Series()
+        test_avg_dist = pd.Series()
         if latent_space_train == None:
             latent_space_train = torch.tensor([])
             original_data = torch.tensor([])
@@ -771,16 +775,17 @@ if __name__ == "__main__":
                 print ("Checking safety for train trajectories...")
                 for batch_idx, (data, label, m, c, index) in enumerate(my_train_set_loader):
                     mu, logvar = vae_model.encode(data.view(-1, 700))
-                    latent_space_sample = vae_model.reparameterize(mu, logvar, no_noise=True)
+                    latent_space_sample = vae_model.reparameterize(mu, logvar, no_noise=False)
                     for n, s in enumerate(latent_space_sample):
                         if ((batch_idx * args.batch_size) + n) % 500 == 0:
                             print ((batch_idx * args.batch_size) + n)
                         decoded_t = vae_model.decode(s)
-                        safe, avg_distance, unsafe_pts = safety_check_module.check(decoded_t)
+                        safe, avg_distance, unsafe_pts, fk_z = safety_check_module.check(decoded_t)
                         if safe:
                             safe_list.append("Safe")
-                        else:    
+                        else:
                             safe_list.append("Unsafe")
+                        avg_dist_list.append(avg_distance)
                         unsafe_list.append(unsafe_pts)
                     # latent_space_train = torch.cat((latent_space_train, vae_model.reparameterize(mu, logvar, no_noise=False)), 0)
                     latent_space_train = torch.cat((latent_space_train, latent_space_sample), 0)
@@ -788,23 +793,26 @@ if __name__ == "__main__":
                     # labels = labels.append(pd.Series(m), ignore_index=True)
                     labels = labels.append(pd.Series(label), ignore_index=True)
                 
+
                 is_safe = is_safe.append(pd.Series(safe_list), ignore_index=True)
                 unsafe_points = unsafe_points.append(pd.Series(unsafe_list), ignore_index=True)
+                avg_dist = avg_dist.append(pd.Series(avg_dist_list), ignore_index=True)
                 latent_space_test = torch.tensor([])
                 safe_list = []
                 print ("Checking safety for test trajectories...")
                 for batch_idx, (data, label, m, c, index) in enumerate(my_test_set_loader):
                     mu, logvar = vae_model.encode(data.view(-1, 700))
-                    latent_space_test_sample = vae_model.reparameterize(mu, logvar, no_noise=True)
+                    latent_space_test_sample = vae_model.reparameterize(mu, logvar, no_noise=False)
                     for n, s in enumerate(latent_space_test_sample):
                         if ((batch_idx * args.batch_size) + n) % 500 == 0:
                             print ((batch_idx * args.batch_size) + n)
                         decoded_t = vae_model.decode(s)
-                        safe, avg_distance, unsafe_pts = safety_check_module.check(decoded_t)
+                        safe, avg_distance, unsafe_pts, fk_z = safety_check_module.check(decoded_t)
                         if safe:
                             safe_list.append("Safe")
                         else:    
-                            safe_list.append("Unsafe")  
+                            safe_list.append("Unsafe")
+                        avg_dist_list.append(avg_distance)
                         unsafe_list.append(unsafe_pts)
                     latent_space_test = torch.cat((latent_space_test, latent_space_test_sample), 0)
                     # latent_space_test = torch.cat((latent_space_test, vae_model.reparameterize(mu, logvar, False)), 0)
@@ -812,13 +820,16 @@ if __name__ == "__main__":
                     test_labels = test_labels.append(pd.Series(label), ignore_index=True)
                 test_is_safe.append(pd.Series(safe_list), ignore_index=True)
                 test_unsafe_points = test_unsafe_points.append(pd.Series(unsafe_list), ignore_index=True)
+                test_avg_dist = test_avg_dist.append(pd.Series(avg_dist_list), ignore_index=True)
 
             data_to_plot['vel'] = labels
             data_to_plot['is_safe'] = is_safe
             data_to_plot['unsafe_points'] = unsafe_points
+            data_to_plot['avg_dist'] = avg_dist
             test_data_to_plot['test_vel'] = test_labels
             test_data_to_plot['test_is_safe'] = test_is_safe
             test_data_to_plot['test_unsafe_points'] = test_unsafe_points
+            test_data_to_plot['test_avg_dist'] = test_avg_dist
 
         if args.tsne != False:
             print ("\nApplying the t-sne algorithm to the latent space train subset...")
@@ -836,7 +847,7 @@ if __name__ == "__main__":
             # test_data_to_plot['tsne-test-encoded-' + str(model.fc22.out_features) + 'd-one'] = tsne_results[:,0]
             # test_data_to_plot['tsne-test-encoded-' + str(model.fc22.out_features) + 'd-two'] = tsne_results[:,1]
 
-            fig = plt.figure("tsne_plot", figsize=(16,10))
+            fig = plt.figure("tsne_safe_unsafe", figsize=(16,10))
             if "BOTH" == str(args.tsne).upper():
                 fig.suptitle('t-sne algorithm over ' + str(len(my_train_set_loader.dataset)) + ' trajectories:\nEncoded ' + str(vae_model.fc22.out_features) + ' dimensional data using ' + args.loss_type.upper() + ' loss (left) vs Original ' + str(vae_model.fc1.in_features) + ' dimensional data (right)', fontsize=14)
                 print ("\nApplying the t-sne algorithm to the original data subset...")
@@ -867,16 +878,19 @@ if __name__ == "__main__":
             elif "DOUBLE" == str(args.tsne).upper():
                 # fig = plt.figure("tsne_plot", figsize=(16,10))
                 # ax0 = fig.add_subplot(1, 1, 1)
+                fig.suptitle('t-sne algorithm over ' + str(len(my_train_set_loader.dataset)) + ' trajectories:\nEncoded ' + str(vae_model.fc22.out_features) + ' dimensional data using ' + args.loss_type.upper() + ' loss', fontsize=14)
                 ax0 = plt.subplot(1, 1, 1)
-                fig_double = plt.figure("tsne_plot_unsafe_pts", figsize=(16,10))
+                fig_double = plt.figure("tsne_plot_unsafe_alt", figsize=(16,10))
                 fig_double.suptitle('t-sne algorithm over ' + str(len(my_train_set_loader.dataset)) + ' trajectories:\nEncoded ' + str(vae_model.fc22.out_features) + ' dimensional data using ' + args.loss_type.upper() + ' loss', fontsize=14)
                 
                 ax2 = fig_double.add_subplot(1, 1, 1)
-                ax2.set_title("ALPHA = " + str(args.alpha) + "  BETA = " + str(args.beta))
+                ax2.set_title("ALPHA = " + str(args.alpha) + "  BETA = " + str(args.beta) + "  z_lower_bound = " + str(z_lower_bound) + "  z_upper_bound = " + str(z_upper_bound))
                 g = sns.scatterplot(
                     x="tsne-train-encoded-" + str(vae_model.fc22.out_features) + "d-one", y="tsne-train-encoded-" + str(vae_model.fc22.out_features) + "d-two",
-                    hue="unsafe_points",
-                    palette=sns.color_palette("hls", data_to_plot['unsafe_points'].nunique()),
+                    # hue="unsafe_points",
+                    # palette=sns.color_palette("hls", data_to_plot['unsafe_points'].nunique()),
+                    hue="is_safe",
+                    palette=sns.color_palette("colorblind", data_to_plot['is_safe'].nunique()),
                     style="is_safe",
                     markers=safe_markers,
                     data=data_to_plot,
@@ -899,11 +913,13 @@ if __name__ == "__main__":
                 # ax0 = plt.subplot(1, 2, 1)
                 # ax2 = plt.subplot(1, 2, 2)
 
-            ax0.set_title("ALPHA = " + str(args.alpha) + "  BETA = " + str(args.beta))
+            ax0.set_title("ALPHA = " + str(args.alpha) + "  BETA = " + str(args.beta) + "  z_lower_bound = " + str(z_lower_bound) + "  z_upper_bound = " + str(z_upper_bound))
             g = sns.scatterplot(
                 x="tsne-train-encoded-" + str(vae_model.fc22.out_features) + "d-one", y="tsne-train-encoded-" + str(vae_model.fc22.out_features) + "d-two",
-                hue="vel",
-                palette=sns.color_palette("hls", data_to_plot['vel'].nunique()),
+                # hue="vel",
+                # palette=sns.color_palette("hls", data_to_plot['vel'].nunique()),
+                hue="avg_dist",
+                palette=sns.color_palette("hls", data_to_plot['avg_dist'].nunique()),
                 style="is_safe",
                 markers=safe_markers,
                 data=data_to_plot,
@@ -941,6 +957,7 @@ if __name__ == "__main__":
         if args.matrix_plot != False:
             dataset_data_to_plot = pd.DataFrame()
             dataset_data_to_plot['vel'] = pd.concat([data_to_plot['vel'], test_data_to_plot['test_vel']], ignore_index=True)
+            dataset_data_to_plot['is_safe'] = pd.concat([data_to_plot['is_safe'], test_data_to_plot['test_is_safe']], ignore_index=True)
             latent_space_dataset = torch.cat((latent_space_train, latent_space_test), 0)
             latent_space_dimension = len(latent_space_dataset[0])
             for i in range(latent_space_dimension):
@@ -954,6 +971,7 @@ if __name__ == "__main__":
                         x="latent-space-"+str(ii+1), y="latent-space-"+str(i+1),
                         hue="vel",
                         palette=sns.color_palette("hls", dataset_data_to_plot['vel'].nunique()),
+                        # palette=sns.color_palette("colorblind", dataset_data_to_plot['vel'].nunique()),
                         data=dataset_data_to_plot,
                         legend=False,
                         alpha=0.3,
@@ -963,6 +981,28 @@ if __name__ == "__main__":
                         a.set_ylabel(None)
                     if i != latent_space_dimension-1:
                         a.set_xlabel(None)
+
+            fig = plt.figure("matrix_plot_safe_unsafe", figsize=(16,10))
+            fig.suptitle("ALPHA = " + str(args.alpha) + "  BETA = " + str(args.beta) + "  z_lower_bound = " + str(z_lower_bound) + "  z_upper_bound = " + str(z_upper_bound))
+            for i in range(latent_space_dimension):
+                for ii in range(latent_space_dimension):
+                    ax0 = plt.subplot(latent_space_dimension, latent_space_dimension, i*latent_space_dimension + ii + 1)
+                    a = sns.scatterplot(
+                        x="latent-space-"+str(ii+1), y="latent-space-"+str(i+1),
+                        hue="is_safe",
+                        palette=sns.color_palette("colorblind", dataset_data_to_plot['is_safe'].nunique()),
+                        data=dataset_data_to_plot,
+                        legend=False,
+                        alpha=0.3,
+                        ax=ax0
+                    )
+                    if ii != 0:
+                        a.set_ylabel(None)
+                    if i != latent_space_dimension-1:
+                        a.set_xlabel(None)
+                    if i == 0 and 11 == latent_space_dimension-1:
+                        a.legend = True
+                        a.legend(bbox_to_anchor=(1.01, 1), loc=2, borderaxespad=0., ncol=1)
 
     if args.wmb != False:
 

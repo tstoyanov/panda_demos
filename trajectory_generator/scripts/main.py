@@ -1016,9 +1016,9 @@ for point in test:
 
 def main(args):
     try:
-        # image_reader = image_reader_module.image_converter()
-        # items.append(image_reader)
-        # image_reader.initialize_board()
+        image_reader = image_reader_module.image_converter()
+        items.append(image_reader)
+        image_reader.initialize_board()
         algorithm = algorithm_module.ALGORITHM(plot=True)
         # algorithm = algorithm_module.ALGORITHM(plot=False)
         items.append(algorithm)
@@ -1042,7 +1042,7 @@ def main(args):
                 action, mean = algorithm.select_action(state)
                 # action = get_dummy_action(algorithm.policy.out_dim)
                 trajectory = decoder_model.decode(action)
-                is_safe, avg_distance, unsafe_pts = safety_check_module.check(trajectory.tolist())
+                is_safe, avg_distance, unsafe_pts, fk_z = safety_check_module.check(trajectory.tolist())
                 if is_safe:
                     ret[0] += 1
                     reward = 1
@@ -1057,15 +1057,17 @@ def main(args):
             	# rospy.rostime.wallsleep(0.2)
 
 
-                test3 = []
-                for point in test:
-                    test3.extend(point)
-                test3 = torch.tensor(test3)
-                is_safe, avg_distance, unsafe_pts = safety_check_module.check(test3.tolist())
-                trajectory_dict["joint_trajectory"] = test3.view(100, -1).tolist()
+                # test3 = []
+                # for point in test:
+                #     test3.extend(point)
+                # test3 = torch.tensor(test3)
+                # is_safe, avg_distance, unsafe_pts = safety_check_module.check(test3.tolist())
+                # trajectory_dict["joint_trajectory"] = test3.view(100, -1).tolist()
                 
-                
-                # trajectory_writer_module.talker(input_folder=False, tot_time_nsecs=args.execution_time, is_simulation=False, is_learning=True, t=trajectory_dict)
+                if is_safe:
+                    # trajectory_writer_module.talker(input_folder=False, tot_time_nsecs=args.execution_time, is_simulation=False, is_learning=True, t=trajectory_dict)
+                    reward = image_reader.evaluate_board()
+                    reward = 3 - reward//50
                 algorithm.set_reward(reward)
             loss = algorithm.finish_episode()
 
@@ -1075,7 +1077,6 @@ def main(args):
                 if algorithm.plot:
                     algorithm.update_graphs()
 
-        # image_reader.evaluate_board()
         close_all(items)
 
     except KeyboardInterrupt:

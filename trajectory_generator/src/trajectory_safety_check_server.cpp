@@ -137,6 +137,7 @@ int main(int argc, char **argv)
     {
         int ret = 0;
         double avg_distance = 0;
+        std::vector<double> fk_z;
         res.is_safe = true;
         res.error = false;
         res.unsafe_pts = 0;
@@ -144,8 +145,9 @@ int main(int argc, char **argv)
             joints_pos(i % nr_of_joints) = req.joints_pos[i];
             if (i % 7 == 6) {
                 ret = chainFkSolverPos.JntToCart(joints_pos, eef_frame);
+                fk_z.push_back(eef_frame.p.z());
                 avg_distance += std::abs(eef_frame.p.z() - z_lower_limit);
-                if (eef_frame.p.z() < z_lower_limit || (i / nr_of_joints < 90 && eef_frame.p.z() > z_upper_limit))
+                if (eef_frame.p.z() < z_lower_limit || (i / nr_of_joints < 95 && eef_frame.p.z() > z_upper_limit))
                 {
                     res.unsafe_pts++;
                 }
@@ -154,6 +156,7 @@ int main(int argc, char **argv)
         if (res.unsafe_pts != 0) {
             res.is_safe = false;
         }
+        res.fk_z = fk_z;
         res.avg_distance = avg_distance / req.joints_pos.size();
         return 1;
     };
