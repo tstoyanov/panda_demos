@@ -252,7 +252,7 @@ class image_converter:
             if isinstance(stones, np.ndarray):
                 stones_nr = len(stones[0])
                 stones = np.uint16(np.around(stones))
-                print("The number of stones found in iteration " + str(self.iteration) + " is: " + str(stones_nr))
+                # print("The number of stones found in iteration " + str(self.iteration) + " is: " + str(stones_nr))
                 for stone in stones[0,:]:
                     # draw the outer circle
                     center_x = stone[0]
@@ -271,6 +271,9 @@ class image_converter:
             if self.single_serach_flag and len(self.so.stones) != 1:
                 self.clear()
                 self.so.clear()
+                self.stone_search_flag = False
+                self.single_serach_flag = False
+                rospy.loginfo("Couldn't find stone")
             else:
                 self.stone_search_flag = False
                 self.single_serach_flag = False
@@ -407,14 +410,15 @@ class image_converter:
         cv2.destroyAllWindows()
 
     def evaluate_board(self):
-        # print("Press enter to evaluate the board")
-        # raw_input()
         # input()
         self.single_stone_search()
         rospy.rostime.wallsleep(1)
         while self.single_serach_flag:
             pass
-        return self.so.stones[0].get_distance_from_center()
+        if len(self.so.stones) == 1:
+            return self.so.stones[0].get_distance_from_center()
+        else:
+            return -1
 
 def main(args):
     ic = image_converter()

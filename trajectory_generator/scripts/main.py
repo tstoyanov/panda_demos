@@ -15,14 +15,14 @@ parser.add_argument('--gamma', type=float, default=0.99, metavar='G', help='disc
 parser.add_argument('--seed', type=int, default=543, metavar='N', help='random seed (default: 543)')
 parser.add_argument('--pre-train-log-interval', type=int, default=10, metavar='N', help='interval between training status logs (default: 100)')
 parser.add_argument('--pre-train-epochs', type=int, default=200, help='number of epochs for training (default: 1000)')
-parser.add_argument('--pre-train-batch-size', type=int, default=12, metavar='N', help='input batch size for training (default: 1000)')
+parser.add_argument('--pre-train-batch-size', type=int, default=100, metavar='N', help='input batch size for training (default: 1000)')
 parser.add_argument('--log-interval', type=int, default=1, metavar='N', help='interval between training status logs (default: 1)')
 parser.add_argument('--epochs', type=int, default=300, help='number of epochs for training (default: 15)')
 parser.add_argument('--batch-size', type=int, default=12, metavar='N', help='input batch size for training (default: 12)')
 parser.add_argument('--no-cuda', action='store_true', default=False, help='enables CUDA training')
 parser.add_argument('--state-dim', type=int, default=4, help='policy input dimension (default: 4)')
 parser.add_argument('--action-dim', type=int, default=5, help='policy output dimension (default: 5)')
-parser.add_argument('--learning-rate', type=int, default=0.002, help='learning rate of the optimizer')
+parser.add_argument('--learning-rate', type=float, default=0.01, help='learning rate of the optimizer')
 parser.add_argument('--models-dir', default="nn_models", help='directory from where to load the network shape of the action decoder')
 parser.add_argument('--decoder-model-file', default="model_trajectory_vae", help='file from where to load the network shape of the action decoder')
 parser.add_argument('--decoder-dir', default=package_path + "/saved_models/trajectory_vae/", help='directory from where to load the trained model of the action decoder')
@@ -36,7 +36,8 @@ parser.add_argument('--scripts-dir', default=package_path + "/scripts/", help='d
 parser.add_argument('--image-reader', default="imager", help='file from where to load the learning algorithm')
 parser.add_argument('--action-script', default="writer_from_generated", help='file from where to load the learning algorithm')
 parser.add_argument('--no-plot', nargs='?', const=True, default=False, help='whether to plot data or not')
-parser.add_argument('--execution-time', type=int, default=9000000000, help='execution time in nanoseconds')
+parser.add_argument('--safe-execution-time', type=int, default=9000000000, help='safe execution time in nanoseconds')
+parser.add_argument('--execution-time', type=int, default=2000000000, help='execution time in nanoseconds')
 parser.add_argument('--trajectory-folder', default="latest", help='folder where to look for the trajectory to execute')
 parser.add_argument('--trajectory-file', default="trajectories.txt", help='file describing the trajectory to follow')
 parser.add_argument('--safety-check-script', default="safety_check_client", help='script for the trajectory safety check')
@@ -100,8 +101,8 @@ def get_dummy_action(dim):
     # return torch.randn(dim)
     # return torch.ones(dim)
 
-def execute_action(action):
-    action_script.talker(args.trajectory_folder+args.trajectory_file, args.execution_time, False)
+def execute_action(input_folder, tot_time_nsecs, is_simulation, is_learning, t):
+    trajectory_writer_module.talker(input_folder, tot_time_nsecs, is_simulation, is_learning, t)
 
 def close_all(items):
     for item in items:
@@ -1014,16 +1015,24 @@ test2 = []
 for point in test:
     test2.extend(point)
 
+latent_space_means = [-0.95741573,  0.60835766,  0.03808778, -0.70411791,  0.15081754]
+latent_space_stds = [0.14915584, 0.77813671, 0.15265675, 0.17448557, 0.12238263]
+
+best_mean = [-0.9914,  0.7875,  0.0775, -0.6818,  0.1817]
+best_std = [0.0538, 0.0181, 0.3415, 0.0175, 0.2323]
+
+best_mean_faster = [-1.0914,  1.0875,  0.0775, -0.5818,  0.1817]
+
 def main(args):
     try:
         image_reader = image_reader_module.image_converter()
         items.append(image_reader)
         image_reader.initialize_board()
-        algorithm = algorithm_module.ALGORITHM(plot=True)
+        algorithm = algorithm_module.ALGORITHM(args.state_dim, args.action_dim, args.learning_rate, plot=True)
         # algorithm = algorithm_module.ALGORITHM(plot=False)
         items.append(algorithm)
-        algorithm.plot = False
-        algorithm.pre_train(args.pre_train_epochs, args.pre_train_batch_size, args.pre_train_log_interval)
+        # algorithm.plot = False
+        algorithm.pre_train(args.pre_train_epochs, args.pre_train_batch_size, args.pre_train_log_interval, target=torch.tensor(best_mean_faster))
         print ("pre train over")
         algorithm.plot = True
         ret = [0, 0]
@@ -1044,9 +1053,11 @@ def main(args):
                 trajectory = decoder_model.decode(action)
                 is_safe, avg_distance, unsafe_pts, fk_z = safety_check_module.check(trajectory.tolist())
                 if is_safe:
+                    print("Action to execute:")
+                    print(action)
                     ret[0] += 1
                     reward = 1
-                    # trajectory_dict["joint_trajectory"] = trajectory.view(100, -1).tolist()
+                    trajectory_dict["joint_trajectory"] = trajectory.view(100, -1).tolist()
                 else:
                     ret[1] += 1
                     reward = -unsafe_pts
@@ -1065,9 +1076,40 @@ def main(args):
                 # trajectory_dict["joint_trajectory"] = test3.view(100, -1).tolist()
                 
                 if is_safe:
-                    # trajectory_writer_module.talker(input_folder=False, tot_time_nsecs=args.execution_time, is_simulation=False, is_learning=True, t=trajectory_dict)
-                    reward = image_reader.evaluate_board()
-                    reward = 3 - reward//50
+                    execute_action(input_folder=False, tot_time_nsecs=args.execution_time, is_simulation=False, is_learning=True, t=trajectory_dict)
+                    raw_input("Press enter to evaluate the board")
+                    while True:
+                        distance = image_reader.evaluate_board()
+                        print("reward = {}".format(reward))
+                        if distance != -1:
+                            reward = max(0, 9 - distance//50)
+                            # if distance > 350:
+                            #     reward = 0
+                            # else:
+                            #     reward = (1-(distance/350.0))**2
+                            break
+                        else:
+                            command = raw_input("'c'=continue\n's'=set reward\n't'=try again\n'o'=out of bounds (reward = -(400^2)\n\nInput command: ")
+                            if "c" == command:
+                                break
+                            elif "s" == command:
+                                while True:
+                                    try:
+                                        r = raw_input("Set the reward: ")
+                                        if "q" != r:
+                                            reward = float(r)
+                                        break
+                                    except:
+                                        print("INFO: Input 't' to try again evaluating the board")
+                                        print("ERROR: The reward must be a float")
+                                break
+                            elif "o" == command:
+                                reward = 0
+                                break
+                            elif "t" == command:
+                                pass
+
+                print ("reward = {}".format(reward))      
                 algorithm.set_reward(reward)
             loss = algorithm.finish_episode()
 

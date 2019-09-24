@@ -50,8 +50,8 @@ def talker(input_folder="latest", tot_time_nsecs=9000000000, is_simulation=False
         if not is_learning:
             with open(input_folder, 'r') as f:
                 data = f.read()
-
-    rospy.init_node('myWriter', anonymous=True)
+    if not is_learning:
+        rospy.init_node('myWriter', anonymous=True)
     rate = rospy.Rate(0.1)  # hz
 
     print ("Waiting for '/panda/franka_gripper/move_service' service...")
@@ -109,10 +109,10 @@ def talker(input_folder="latest", tot_time_nsecs=9000000000, is_simulation=False
     #     eef_pose["origin"]["z"].append(values["origin"]["z"])
 
     # go to the real initial point and open the gripper
-    gripper_move_message = MoveActionGoal()
-    gripper_move_message.goal.width = 0.09
-    gripper_move_message.goal.speed = 0.05
-    gripper_move_pub.publish(gripper_move_message)
+    # gripper_move_message = MoveActionGoal()
+    # gripper_move_message.goal.width = 0.09
+    # gripper_move_message.goal.speed = 0.05
+    # gripper_move_pub.publish(gripper_move_message)
     
     for i in range(len(joint_trajectories)):
         joint_goal[i] = joint_trajectories[i][0]
@@ -166,11 +166,11 @@ def talker(input_folder="latest", tot_time_nsecs=9000000000, is_simulation=False
             deceleration["joints_positions"].append(list(map(lambda vel1, vel2, initial_position: initial_position + (vel1+vel2)/2 * deceleration_dt, deceleration["joints_velocities"][i], deceleration["joints_velocities"][i-1], deceleration["joints_positions"][-1])))
         # deceleration["joints_positions"] = trajectories["ds"][-1]
         # deceleration["joints_velocities"] = trajectories["joint_trajectory"]
-    print (deceleration["joints_velocities"])
-    print (deceleration["joints_positions"])
+    # print (deceleration["joints_velocities"])
+    # print (deceleration["joints_positions"])
     
-    for i in range(len(trajectories["joint_velocity"])):
-        print ('trajectories["joint_velocity"][' + str(i) + '] = ' + str(trajectories["joint_velocity"][i]))
+    # for i in range(len(trajectories["joint_velocity"])):
+    #     print ('trajectories["joint_velocity"][' + str(i) + '] = ' + str(trajectories["joint_velocity"][i]))
 
     # print("=== Press `Enter` to grasp ===")
     print("=== Press `Enter` to position the gripper ===")
@@ -264,7 +264,7 @@ def talker(input_folder="latest", tot_time_nsecs=9000000000, is_simulation=False
 
     
     message_to_write.goal.trajectory.points = temp_points
-    rospy.loginfo(message_to_write)
+    # rospy.loginfo(message_to_write)
     print("=== Press `Enter` to publish ===")
     raw_input()
     pub.publish(message_to_write)
@@ -280,13 +280,13 @@ def talker(input_folder="latest", tot_time_nsecs=9000000000, is_simulation=False
         adjusted_release_time["nsecs"] -= 1000000000
 
     # wait for the release time and then open the gripper
-    print("=== Wating to reach the adjusted release time ===")
-    print("adjusted_release_time:")
-    print("\tadjusted_release_time['secs'] = " + str(adjusted_release_time["secs"]))
-    print("\tadjusted_release_time['nsecs'] = " + str(adjusted_release_time["nsecs"]))
-    print("release_time_from_start:")
-    print("\trelease_time_from_start['secs'] = " + str(release_time_from_start["secs"]))
-    print("\trelease_time_from_start['nsecs'] = " + str(release_time_from_start["nsecs"]))
+    # print("=== Wating to reach the adjusted release time ===")
+    # print("adjusted_release_time:")
+    # print("\tadjusted_release_time['secs'] = " + str(adjusted_release_time["secs"]))
+    # print("\tadjusted_release_time['nsecs'] = " + str(adjusted_release_time["nsecs"]))
+    # print("release_time_from_start:")
+    # print("\trelease_time_from_start['secs'] = " + str(release_time_from_start["secs"]))
+    # print("\trelease_time_from_start['nsecs'] = " + str(release_time_from_start["nsecs"]))
     gripper_move_message = MoveActionGoal()
     gripper_move_message.goal.width = 0.09
     gripper_move_message.goal.speed = 0.05
@@ -302,9 +302,9 @@ def talker(input_folder="latest", tot_time_nsecs=9000000000, is_simulation=False
     while (now.secs <= adjusted_release_time["secs"] and (now.secs < adjusted_release_time["secs"] or now.nsecs < adjusted_release_time["nsecs"])):
         now = rospy.get_rostime()
 
-    print("[BEFORE]Opening the gripper at:")
-    print("\tnow.secs = " + str(now.secs))
-    print("\tnow.nsecs = " + str(now.nsecs))
+    # print("[BEFORE]Opening the gripper at:")
+    # print("\tnow.secs = " + str(now.secs))
+    # print("\tnow.nsecs = " + str(now.nsecs))
     # ======================== THROW =====================================
     # gripper_move_pub.publish(gripper_move_message)
     # 
@@ -317,12 +317,12 @@ def talker(input_folder="latest", tot_time_nsecs=9000000000, is_simulation=False
     # 
     # =============================================================
 
-    print("secs_waited = " + str(secs_waited))
-    print("secs = " + str(secs))
-    now = rospy.get_rostime()
-    print("[AFTER]Opening the gripper at:")
-    print("\tnow.secs = " + str(now.secs))
-    print("\tnow.nsecs = " + str(now.nsecs))
+    # print("secs_waited = " + str(secs_waited))
+    # print("secs = " + str(secs))
+    # now = rospy.get_rostime()
+    # print("[AFTER]Opening the gripper at:")
+    # print("\tnow.secs = " + str(now.secs))
+    # print("\tnow.nsecs = " + str(now.nsecs))
     
 
 class my_point:

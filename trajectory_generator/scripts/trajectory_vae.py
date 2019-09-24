@@ -98,6 +98,8 @@ parser.add_argument('--vae-dim', default=5,
                     help='set the dimension of the latent space of the VAE used to encode the trajectories')
 parser.add_argument('--safety-check-script', default="safety_check_client",
                     help='script for the trajectory safety check')
+parser.add_argument('--no-noise', nargs='?', const=True, default=False,
+                    help='whether to sample from the low dimensional disrtibution or just return the mean')
 
 args, unknown = parser.parse_known_args()
 # args = parser.parse_args()
@@ -775,7 +777,7 @@ if __name__ == "__main__":
                 print ("Checking safety for train trajectories...")
                 for batch_idx, (data, label, m, c, index) in enumerate(my_train_set_loader):
                     mu, logvar = vae_model.encode(data.view(-1, 700))
-                    latent_space_sample = vae_model.reparameterize(mu, logvar, no_noise=False)
+                    latent_space_sample = vae_model.reparameterize(mu, logvar, no_noise=args.no_noise)
                     for n, s in enumerate(latent_space_sample):
                         if ((batch_idx * args.batch_size) + n) % 500 == 0:
                             print ((batch_idx * args.batch_size) + n)
@@ -787,7 +789,7 @@ if __name__ == "__main__":
                             safe_list.append("Unsafe")
                         avg_dist_list.append(avg_distance)
                         unsafe_list.append(unsafe_pts)
-                    # latent_space_train = torch.cat((latent_space_train, vae_model.reparameterize(mu, logvar, no_noise=False)), 0)
+                    # latent_space_train = torch.cat((latent_space_train, vae_model.reparameterize(mu, logvar, no_noise=args.no_noise)), 0)
                     latent_space_train = torch.cat((latent_space_train, latent_space_sample), 0)
                     original_data = torch.cat((original_data, data.view(-1, 700)), 0)
                     # labels = labels.append(pd.Series(m), ignore_index=True)
@@ -802,7 +804,7 @@ if __name__ == "__main__":
                 print ("Checking safety for test trajectories...")
                 for batch_idx, (data, label, m, c, index) in enumerate(my_test_set_loader):
                     mu, logvar = vae_model.encode(data.view(-1, 700))
-                    latent_space_test_sample = vae_model.reparameterize(mu, logvar, no_noise=False)
+                    latent_space_test_sample = vae_model.reparameterize(mu, logvar, no_noise=args.no_noise)
                     for n, s in enumerate(latent_space_test_sample):
                         if ((batch_idx * args.batch_size) + n) % 500 == 0:
                             print ((batch_idx * args.batch_size) + n)
@@ -880,7 +882,7 @@ if __name__ == "__main__":
                 # ax0 = fig.add_subplot(1, 1, 1)
                 fig.suptitle('t-sne algorithm over ' + str(len(my_train_set_loader.dataset)) + ' trajectories:\nEncoded ' + str(vae_model.fc22.out_features) + ' dimensional data using ' + args.loss_type.upper() + ' loss', fontsize=14)
                 ax0 = plt.subplot(1, 1, 1)
-                fig_double = plt.figure("tsne_plot_unsafe_alt", figsize=(16,10))
+                fig_double = plt.figure("tsne_unsafe_alt", figsize=(16,10))
                 fig_double.suptitle('t-sne algorithm over ' + str(len(my_train_set_loader.dataset)) + ' trajectories:\nEncoded ' + str(vae_model.fc22.out_features) + ' dimensional data using ' + args.loss_type.upper() + ' loss', fontsize=14)
                 
                 ax2 = fig_double.add_subplot(1, 1, 1)
@@ -916,10 +918,10 @@ if __name__ == "__main__":
             ax0.set_title("ALPHA = " + str(args.alpha) + "  BETA = " + str(args.beta) + "  z_lower_bound = " + str(z_lower_bound) + "  z_upper_bound = " + str(z_upper_bound))
             g = sns.scatterplot(
                 x="tsne-train-encoded-" + str(vae_model.fc22.out_features) + "d-one", y="tsne-train-encoded-" + str(vae_model.fc22.out_features) + "d-two",
-                # hue="vel",
-                # palette=sns.color_palette("hls", data_to_plot['vel'].nunique()),
-                hue="avg_dist",
-                palette=sns.color_palette("hls", data_to_plot['avg_dist'].nunique()),
+                hue="vel",
+                palette=sns.color_palette("hls", data_to_plot['vel'].nunique()),
+                # hue="avg_dist",
+                # palette=sns.color_palette("hls", data_to_plot['avg_dist'].nunique()),
                 style="is_safe",
                 markers=safe_markers,
                 data=data_to_plot,
@@ -1000,9 +1002,9 @@ if __name__ == "__main__":
                         a.set_ylabel(None)
                     if i != latent_space_dimension-1:
                         a.set_xlabel(None)
-                    if i == 0 and 11 == latent_space_dimension-1:
-                        a.legend = True
-                        a.legend(bbox_to_anchor=(1.01, 1), loc=2, borderaxespad=0., ncol=1)
+                    # if i == 0 and 11 == latent_space_dimension-1:
+                    #     a.legend = True
+                    #     a.legend(bbox_to_anchor=(1.01, 1), loc=2, borderaxespad=0., ncol=1)
 
     if args.wmb != False:
 
@@ -1023,12 +1025,12 @@ if __name__ == "__main__":
             for batch_idx, (data, label, m, c, index) in enumerate(temp_train_set_loader):
                 recon_batch, mu, logvar = vae_model(data, False)
                 loss, recon_loss, kld_loss = loss_function(recon_batch, data, mu, logvar, label)
-                train_traj_loss.append((data[0], recon_batch.view(len(data[0]), -1), loss))
+                train_traj_loss.append((data[0], recon_batch.view(len(data[0]), -1), loss, mu, logvar))
 
             for batch_idx, (data, label, m, c, index) in enumerate(temp_test_set_loader):
                 recon_batch, mu, logvar = vae_model(data, False)
                 loss, recon_loss, kld_loss = loss_function(recon_batch, data, mu, logvar, label)
-                test_traj_loss.append((data[0], recon_batch.view(len(data[0]), -1), loss))
+                test_traj_loss.append((data[0], recon_batch.view(len(data[0]), -1), loss, mu, logvar))
             
             train_traj_loss.sort(key=sort_third)
             test_traj_loss.sort(key=sort_third)
