@@ -19,7 +19,7 @@ import rospkg
 rospack = rospkg.RosPack()
 
 deceleration_frames = 5     # number of frames used to decelerate
-deceleration_time = 0.7    # deceleration time in seconds
+deceleration_time = 0.9    # deceleration time in seconds
 # deceleration_time = 0.25    # deceleration time in seconds
 deceleration_dt = float(deceleration_time) / deceleration_frames
 
@@ -84,6 +84,7 @@ def talker(input_folder="latest", tot_time_nsecs=9000000000, is_simulation=False
         trajectories = ast.literal_eval(json.dumps(trajectories))
     else:
         trajectories = t
+        
     joint_trajectories = {}
     for i in range(len(trajectories["joint_trajectory"][0])):
         joint_trajectories[i] = []

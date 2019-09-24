@@ -6,6 +6,8 @@ import importlib
 import rospy
 # rospy.init_node('main_learning_loop', anonymous=True)
 
+import plotter_from_generated as plotter_module
+
 import rospkg
 rospack = rospkg.RosPack()
 package_path = rospack.get_path("trajectory_generator")
@@ -1015,13 +1017,17 @@ test2 = []
 for point in test:
     test2.extend(point)
 
-latent_space_means = [-0.95741573,  0.60835766,  0.03808778, -0.70411791,  0.15081754]
-latent_space_stds = [0.14915584, 0.77813671, 0.15265675, 0.17448557, 0.12238263]
+mc_latent_space_means = [-0.95741573,  0.60835766,  0.03808778, -0.70411791,  0.15081754]
+mc_latent_space_stds = [0.14915584, 0.77813671, 0.15265675, 0.17448557, 0.12238263]
+mc_best_mean = [-0.9914,  0.7875,  0.0775, -0.6818,  0.1817]
+mc_best_std = [0.0538, 0.0181, 0.3415, 0.0175, 0.2323]
+mc_best_mean_faster = [-1.0914,  1.0875,  0.0775, -0.5818,  0.1817]
+mc_fastest = [-1.2, 1.9, 0.3, -0.4, 0.4]
 
-best_mean = [-0.9914,  0.7875,  0.0775, -0.6818,  0.1817]
-best_std = [0.0538, 0.0181, 0.3415, 0.0175, 0.2323]
-
-best_mean_faster = [-1.0914,  1.0875,  0.0775, -0.5818,  0.1817]
+ll_latent_space_means = [-1.54930503,  0.25162958,  0.05412535, -1.4289467 , -0.06778317]
+ll_latent_space_stds = [0.42513496, 0.01628749, 0.06014936, 0.02778022, 0.51911289]
+ll_best_mean = [-1.3671,  0.2444,  0.0290, -1.4391,  0.1555]
+ll_best_std = [0.0204, 0.2391, 0.2653, 0.0247, 0.0492]
 
 def main(args):
     try:
@@ -1031,8 +1037,8 @@ def main(args):
         algorithm = algorithm_module.ALGORITHM(args.state_dim, args.action_dim, args.learning_rate, plot=True)
         # algorithm = algorithm_module.ALGORITHM(plot=False)
         items.append(algorithm)
-        # algorithm.plot = False
-        algorithm.pre_train(args.pre_train_epochs, args.pre_train_batch_size, args.pre_train_log_interval, target=torch.tensor(best_mean_faster))
+        algorithm.plot = False
+        # algorithm.pre_train(args.pre_train_epochs, args.pre_train_batch_size, args.pre_train_log_interval, target=torch.tensor(mc_fastest))
         print ("pre train over")
         algorithm.plot = True
         ret = [0, 0]
@@ -1051,6 +1057,7 @@ def main(args):
                 action, mean = algorithm.select_action(state)
                 # action = get_dummy_action(algorithm.policy.out_dim)
                 trajectory = decoder_model.decode(action)
+                # plotter_module.main(trajectory.view(100, -1).tolist())
                 is_safe, avg_distance, unsafe_pts, fk_z = safety_check_module.check(trajectory.tolist())
                 if is_safe:
                     print("Action to execute:")
