@@ -316,9 +316,12 @@ def data_split(input_dataset, test_percentage, validation_percentage):
     return train_set, test_set, validation_set
 
 
-def joints_plot (last_data, last_recon_data, title):
+def joints_plot (last_data, last_recon_data, title, t=False):
     joints_ranges_list = list(joints_ranges.items())
-    fig = plt.figure()
+    if t and t[-1] in ["w", "m", "b"]:
+        fig = plt.figure(t)
+    else:
+        fig = plt.figure()
     if title == None:
         fig.suptitle('Decoded vs Original', fontsize=10)
     else:
@@ -828,10 +831,12 @@ if __name__ == "__main__":
             data_to_plot['is_safe'] = is_safe
             data_to_plot['unsafe_points'] = unsafe_points
             data_to_plot['avg_dist'] = avg_dist
+            data_to_plot['latent_space'] = latent_space_train.tolist()
             test_data_to_plot['test_vel'] = test_labels
             test_data_to_plot['test_is_safe'] = test_is_safe
             test_data_to_plot['test_unsafe_points'] = test_unsafe_points
             test_data_to_plot['test_avg_dist'] = test_avg_dist
+            test_data_to_plot['test_latent_space'] = latent_space_test.tolist()
 
         if args.tsne != False:
             print ("\nApplying the t-sne algorithm to the latent space train subset...")
@@ -1036,18 +1041,18 @@ if __name__ == "__main__":
             test_traj_loss.sort(key=sort_third)
 
             title = "Train sample with the lowest erorr\nError = "+str(train_traj_loss[0][2].item())
-            joints_plot(train_traj_loss[0][0], train_traj_loss[0][1], title)
+            joints_plot(train_traj_loss[0][0], train_traj_loss[0][1], title, t="train_b")
             title = "Train sample with the median erorr\nError = "+str(train_traj_loss[int(len(train_traj_loss)/2)][2].item())
-            joints_plot(train_traj_loss[int(len(train_traj_loss)/2)][0], train_traj_loss[int(len(train_traj_loss)/2)][1], title)
+            joints_plot(train_traj_loss[int(len(train_traj_loss)/2)][0], train_traj_loss[int(len(train_traj_loss)/2)][1], title, t="train_m")
             title = "Train sample with the highest erorr\nError = "+str(train_traj_loss[-1][2].item())
-            joints_plot(train_traj_loss[-1][0], train_traj_loss[-1][1], title)
+            joints_plot(train_traj_loss[-1][0], train_traj_loss[-1][1], title, t="train_w")
             
             title = "Test sample with the lowest erorr\nError = "+str(test_traj_loss[0][2].item())
-            joints_plot(test_traj_loss[0][0], test_traj_loss[0][1], title)
+            joints_plot(test_traj_loss[0][0], test_traj_loss[0][1], title, t="test_b")
             title = "Test sample with the median erorr\nError = "+str(test_traj_loss[int(len(test_traj_loss)/2)][2].item())
-            joints_plot(test_traj_loss[int(len(test_traj_loss)/2)][0], test_traj_loss[int(len(test_traj_loss)/2)][1], title)
+            joints_plot(test_traj_loss[int(len(test_traj_loss)/2)][0], test_traj_loss[int(len(test_traj_loss)/2)][1], title, t="test_m")
             title = "Test sample with the highest erorr\nError = "+str(test_traj_loss[-1][2].item())
-            joints_plot(test_traj_loss[-1][0], test_traj_loss[-1][1], title)
+            joints_plot(test_traj_loss[-1][0], test_traj_loss[-1][1], title, t="test_w")
 
     if args.write != False:
         True

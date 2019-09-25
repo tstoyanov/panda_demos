@@ -145,6 +145,8 @@ class ALGORITHM:
         # print ("mean = {} - var = {}".format(mean.data, torch.exp(log_var).data))
 
         cov_matrix = torch.diag(torch.tensor([0.001]*self.policy.out_dim))
+
+        # cov_matrix = torch.diag(torch.tensor([0]*self.policy.out_dim))
         # cov_matrix = torch.diag(torch.exp(log_var))
         dist = MultivariateNormal(mean, cov_matrix)
 
@@ -208,10 +210,13 @@ class ALGORITHM:
         fig.canvas.flush_events()
 
     def update_graphs(self):
-        self.update_graph(self.live_plots["loss"]["fig"], self.live_plots["loss"]["ax"], self.live_plots["loss"]["line1"], (self.current_epoch+1)*args.batch_size, self.policy.losses_history[-1].item())
-        self.update_graph(self.live_plots["reward"]["fig"], self.live_plots["reward"]["ax"], self.live_plots["reward"]["line1"], (self.current_epoch+1)*args.batch_size, self.policy.rewards_history[-1])
-        for i in range(self.action_dim):
-            self.update_graph(self.live_plots["theta"]["fig"][i], self.live_plots["theta"]["ax"][i], self.live_plots["theta"]["lines"][i], (self.current_epoch+1)*args.batch_size, self.policy.means_history[-1][i].item())
+        if len(self.policy.losses_history) > 0:
+            self.update_graph(self.live_plots["loss"]["fig"], self.live_plots["loss"]["ax"], self.live_plots["loss"]["line1"], (self.current_epoch+1)*args.batch_size, self.policy.losses_history[-1].item())
+        if len(self.policy.rewards_history) > 0:
+            self.update_graph(self.live_plots["reward"]["fig"], self.live_plots["reward"]["ax"], self.live_plots["reward"]["line1"], (self.current_epoch+1)*args.batch_size, self.policy.rewards_history[-1])
+        if len(self.policy.means_history) > 0:
+            for i in range(self.action_dim):
+                self.update_graph(self.live_plots["theta"]["fig"][i], self.live_plots["theta"]["ax"][i], self.live_plots["theta"]["lines"][i], (self.current_epoch+1)*args.batch_size, self.policy.means_history[-1][i].item())
     
     def execute_action(self, action, target=None):
         error = False

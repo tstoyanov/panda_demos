@@ -226,5 +226,30 @@ def main(t=None):
     #     plt.plot(ts, positions[joint_name], marker='o', linewidth=2)
     # plt.show()
 
+def plot_joints(t):
+    joints_trajectory = []
+    figs = []
+    for joint in range(len(t[0])):
+        joints_trajectory.append([row[joint] for row in t])
+        steps = range(len(t))
+        # figs.append(plt.figure("joint_" + str(joint+1)))
+        # figs[joint].subplot(1, 1, 1)
+        # plt.plot(steps, joints_trajectory[joint], 'o-g', label="joint_" + str(joint+1) + " trajectory")
+        # plt.ylabel("pos [rad]")
+        # plt.xlabel('steps')
+        # plt.legend()
+
+        plt.figure("joint_" + str(joint+1))
+        plt.subplot(1, 1, 1)
+        plt.plot(steps, joints_trajectory[joint], 'o-g', label="joint_" + str(joint+1) + " trajectory")
+        plt.ylabel("pos [rad]")
+        plt.xlabel('steps')
+        plt.legend()
+        # figs[0].show()
+
+    plt.show()
+    raw_input("Press enter to close all joints plots")
+    plt.close("all")
+
 if __name__ == "__main__":
     main()

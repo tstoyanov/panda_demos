@@ -362,9 +362,10 @@ class image_converter:
             # draw a filled, yellow rectangle on the overlay copy
             x_max = overlay.shape[1]
             y_max = overlay.shape[0]
-            cv2.circle(overlay, (x, y), 150, (0,96,255), 2)
-            cv2.circle(overlay, (x, y), 100, (0,255,255), 2)
-            cv2.circle(overlay, (x, y), 50, (0,255,0), 2)
+            cv2.circle(overlay, (x, y), 400, (0,0,255), 2)
+            cv2.circle(overlay, (x, y), 300, (0,96,255), 2)
+            cv2.circle(overlay, (x, y), 200, (0,255,255), 2)
+            cv2.circle(overlay, (x, y), 100, (0,255,0), 2)
 
             # blend the overlay with the source image
             cv2.addWeighted(overlay, alpha, source, 1 - alpha, 0, source);
