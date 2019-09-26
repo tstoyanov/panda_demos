@@ -298,7 +298,7 @@ class image_converter:
             if isinstance(circles, np.ndarray):
                 circles_nr = len(circles[0])
                 circles = np.uint16(np.around(circles))
-                print("The number of circles found in iteration " + str(self.iteration) + " is: " + str(circles_nr))
+                # print("The number of circles found in iteration " + str(self.iteration) + " is: " + str(circles_nr))
                 for stone in circles[0,:]:
                     # draw the outer circle
                     center_x = stone[0]

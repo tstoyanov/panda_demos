@@ -77,7 +77,7 @@ class Policy(nn.Module):
 
 
 class ALGORITHM:
-    def __init__(self, state_dim, action_dim, lr, plot=True):
+    def __init__(self, state_dim, action_dim, lr, plot=True, batch_size=None):
         self.live_plots = {
             "loss": {
                 "fig": None,
@@ -103,6 +103,10 @@ class ALGORITHM:
         self.policy = Policy(self.state_dim, self.action_dim)
         self.optimizer = optim.Adam(self.policy.parameters(), lr=self.lr)
         self.eps = np.finfo(np.float32).eps.item()
+        if batch_size is not None:
+            self.batch_size = batch_size
+        else:
+            self.batch_size = args.batch_size
 
         if self.plot:
             plt.ion()
@@ -138,19 +142,26 @@ class ALGORITHM:
         return loaded_model
         # return VAE().to(device).load_state_dict(torch.load(load_path)).eval()
 
-    def select_action(self, state):
+    def select_action(self, state, cov_mat=None, target_action=None):
         mean, log_var = self.policy(state)
         std = torch.exp(0.5*log_var)
         # print ("mean = {}".format(mean.data))
         # print ("mean = {} - var = {}".format(mean.data, torch.exp(log_var).data))
 
-        cov_matrix = torch.diag(torch.tensor([0.001]*self.policy.out_dim))
+        if cov_mat is not None:
+            cov_matrix = cov_mat
+        else:
+            cov_matrix = torch.diag(torch.tensor([0.0001]*self.policy.out_dim))
 
         # cov_matrix = torch.diag(torch.tensor([0]*self.policy.out_dim))
         # cov_matrix = torch.diag(torch.exp(log_var))
         dist = MultivariateNormal(mean, cov_matrix)
 
-        action_sample = dist.sample()
+
+        if target_action is not None:
+            action_sample = target_action
+        else:
+            action_sample = dist.sample()
 
         log_prob = dist.log_prob(action_sample)
         self.policy.saved_log_probs.append(log_prob)
@@ -161,7 +172,7 @@ class ALGORITHM:
         return action_sample, mean
 
 
-    def finish_episode(self):
+    def finish_episode(self, pre_training=False):
         R = 0
         policy_loss = []
         returns = []
@@ -170,8 +181,8 @@ class ALGORITHM:
             # returns.insert(0, R)
             returns.insert(0, r)
         returns = torch.FloatTensor(returns)
-        # returns = (returns - returns.mean()) # baseline
         # print ("batch mean = {} . batch std = {}".format(returns.mean(), returns.std()))
+        # returns = (returns - returns.mean()) # baseline
         returns = (returns - returns.mean()) / (returns.std() + self.eps) # baseline and normalization
         for log_prob, R in zip(self.policy.saved_log_probs, returns):
             policy_loss.append(-log_prob * R)
@@ -179,7 +190,8 @@ class ALGORITHM:
         policy_loss = torch.stack(policy_loss).sum()
         policy_loss.backward()
         self.policy.losses_history.append(policy_loss)
-        self.optimizer.step()
+        for i in range(5):
+            self.optimizer.step()
         del self.policy.rewards[:]
         del self.policy.saved_log_probs[:]
         return policy_loss
@@ -211,12 +223,12 @@ class ALGORITHM:
 
     def update_graphs(self):
         if len(self.policy.losses_history) > 0:
-            self.update_graph(self.live_plots["loss"]["fig"], self.live_plots["loss"]["ax"], self.live_plots["loss"]["line1"], (self.current_epoch+1)*args.batch_size, self.policy.losses_history[-1].item())
+            self.update_graph(self.live_plots["loss"]["fig"], self.live_plots["loss"]["ax"], self.live_plots["loss"]["line1"], (self.current_epoch+1)*self.batch_size, self.policy.losses_history[-1].item())
         if len(self.policy.rewards_history) > 0:
-            self.update_graph(self.live_plots["reward"]["fig"], self.live_plots["reward"]["ax"], self.live_plots["reward"]["line1"], (self.current_epoch+1)*args.batch_size, self.policy.rewards_history[-1])
+            self.update_graph(self.live_plots["reward"]["fig"], self.live_plots["reward"]["ax"], self.live_plots["reward"]["line1"], (self.current_epoch+1)*self.batch_size, self.policy.rewards_history[-1])
         if len(self.policy.means_history) > 0:
             for i in range(self.action_dim):
-                self.update_graph(self.live_plots["theta"]["fig"][i], self.live_plots["theta"]["ax"][i], self.live_plots["theta"]["lines"][i], (self.current_epoch+1)*args.batch_size, self.policy.means_history[-1][i].item())
+                self.update_graph(self.live_plots["theta"]["fig"][i], self.live_plots["theta"]["ax"][i], self.live_plots["theta"]["lines"][i], (self.current_epoch+1)*self.batch_size, self.policy.means_history[-1][i].item())
     
     def execute_action(self, action, target=None):
         error = False
@@ -231,7 +243,7 @@ class ALGORITHM:
 
         return error, reward
 
-    def pre_train(self, epochs, batch_size, log_interval, target=None):
+    def pre_train(self, epochs, batch_size, log_interval, target=None, target_action=None):
         for epoch in range(epochs):
             reward = 0
             for t in range(0, batch_size):  # Don't infinite loop while learning
@@ -239,12 +251,15 @@ class ALGORITHM:
                 starting_state = torch.ones(self.policy.in_dim)
                 # starting_state = torch.zeros(self.policy.in_dim)
                 # starting_state = torch.randn(self.policy.in_dim)
-                action, mean = self.select_action(starting_state)
-                error, reward = self.execute_action(action, target)
+                if target_action is not None:
+                    action, mean = self.select_action(starting_state, target_action=target_action)
+                else:
+                    action, mean = self.select_action(starting_state)
+                error, reward = self.execute_action(action, target=target)
                 self.policy.rewards.append(reward)
                 self.policy.rewards_history.append(reward)
 
-            loss = self.finish_episode()
+            loss = self.finish_episode(pre_training=True)
 
             if epoch % log_interval == 0:
                 print('Episode {}\tLast reward: {:.2f}'.format(
@@ -260,7 +275,7 @@ class ALGORITHM:
         del self.policy.means_history[:]
         del self.policy.losses_history[:]
         self.current_epoch = 0
-        # self.optimizer = optim.Adam(self.policy.parameters(), lr=self.learning_rate)
+        self.optimizer = optim.Adam(self.policy.parameters(), lr=self.lr)
 
     def close(self):
         plt.close("all")

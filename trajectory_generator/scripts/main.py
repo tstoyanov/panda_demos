@@ -7,6 +7,9 @@ import rospy
 # rospy.init_node('main_learning_loop', anonymous=True)
 
 import plotter_from_generated as plotter_module
+from torch.distributions.multivariate_normal import MultivariateNormal
+
+from datetime import datetime
 
 import rospkg
 rospack = rospkg.RosPack()
@@ -18,12 +21,12 @@ parser.add_argument('--seed', type=int, default=543, metavar='N', help='random s
 parser.add_argument('--no-cuda', action='store_true', default=False, help='enables CUDA training')
 
 parser.add_argument('--pre-train-log-interval', type=int, default=10, metavar='N', help='interval between training status logs (default: 100)')
-parser.add_argument('--pre-train-epochs', type=int, default=200, help='number of epochs for training (default: 1000)')
+parser.add_argument('--pre-train-epochs', type=int, default=100, help='number of epochs for training (default: 1000)')
 parser.add_argument('--pre-train-batch-size', type=int, default=100, metavar='N', help='input batch size for training (default: 1000)')
 parser.add_argument('--log-interval', type=int, default=1, metavar='N', help='interval between training status logs (default: 1)')
-parser.add_argument('--epochs', type=int, default=300, help='number of epochs for training (default: 15)')
-parser.add_argument('--batch-size', type=int, default=4, metavar='N', help='input batch size for training (default: 12)')
-parser.add_argument('--action-repetition', type=int, default=10 , help='number of times to  repeat the same action')
+parser.add_argument('--epochs', type=int, default=10, help='number of epochs for training (default: 10)')
+parser.add_argument('--batch-size', type=int, default=6, metavar='N', help='input batch size for training (default: 12)')
+parser.add_argument('--action-repetition', type=int, default=3 , help='number of times to  repeat the same action')
 
 parser.add_argument('--state-dim', type=int, default=4, help='policy input dimension (default: 4)')
 parser.add_argument('--action-dim', type=int, default=5, help='policy output dimension (default: 5)')
@@ -46,7 +49,7 @@ parser.add_argument('--trajectory-writer-script', default="writer_from_generated
 
 parser.add_argument('--no-plot', nargs='?', const=True, default=False, help='whether to plot data or not')
 parser.add_argument('--safe-execution-time', type=int, default=9000000000, help='safe execution time in nanoseconds')
-parser.add_argument('--execution-time', type=int, default=1800000000, help='execution time in nanoseconds')
+parser.add_argument('--execution-time', type=int, default=1500000000, help='execution time in nanoseconds')
 parser.add_argument('--release-frame', type=int, default=95, help='release frame')
 
 parser.add_argument('--save-dir', default=package_path + "/saved_models/policy_network/", help='directory where to save the policy model once trained')
@@ -64,6 +67,11 @@ args.trajectory_folder = package_path + "/generated_trajectories/cpp/" + args.tr
 args.cuda = not args.no_cuda and torch.cuda.is_available()
 # device = torch.device("cuda" if args.cuda else "cpu")
 device = "cpu"
+
+if args.save_file != False:
+    save_path = args.save_dir+args.save_file
+else:
+    save_path = args.save_dir+datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
 
 items = []
 
@@ -1031,12 +1039,15 @@ mc_best_mean = [-0.9914,  0.7875,  0.0775, -0.6818,  0.1817]
 mc_best_std = [0.0538, 0.0181, 0.3415, 0.0175, 0.2323]
 mc_best_mean_faster = [-1.0914,  1.0875,  0.0775, -0.5818,  0.1817]
 mc_fastest = [-1.2, 1.9, 0.3, -0.4, 0.4]
+
 mc_13_means = [-0.79844596, -0.23713676, -0.12888897, -0.87707188,  0.01480127]
 mc_14_means = [-0.8877851 ,  0.24533824, -0.02885615, -0.79018154,  0.09704519]
 mc_15_means = [-0.97981189,  0.71057909,  0.05748677, -0.69583368,  0.17542016]
 mc_16_means = [-1.0606842 ,  1.14844979,  0.14893559, -0.59407567,  0.23862324]
 mc_17_means = [-1.13784433,  1.55074548,  0.22355699, -0.49421183,  0.28466991]
 mc_18_means = [-1.1728737 ,  1.76443983,  0.26582965, -0.45975538,  0.30441109]
+
+initial_means = [mc_13_means] + [mc_14_means] + [mc_15_means] + [mc_16_means] + [mc_17_means] + [mc_18_means]
 
 mc_latent_space_means_b0 = [-2.3453495 ,  1.87199709,  0.66421834, -2.87626281,  1.57093551]
 mc_latent_space_stds_b0 = [0.41007773, 1.01831094, 0.45268615, 0.01925819, 0.65967075]
@@ -1058,7 +1069,8 @@ def main(args):
         # algorithm = algorithm_module.ALGORITHM(plot=False)
         items.append(algorithm)
         algorithm.plot = False
-        algorithm.pre_train(args.pre_train_epochs, args.pre_train_batch_size, args.pre_train_log_interval, target=torch.tensor(mc_13_means))
+        # algorithm.pre_train(args.pre_train_epochs, args.pre_train_batch_size, args.pre_train_log_interval, target=torch.tensor(mc_latent_space_means), target_action=torch.tensor(mc_18_means))
+        algorithm.pre_train(args.pre_train_epochs, args.pre_train_batch_size, args.pre_train_log_interval, target=torch.tensor(mc_latent_space_means))
         print ("pre train over")
         algorithm.plot = True
         ret = [0, 0]
@@ -1068,22 +1080,32 @@ def main(args):
             "joint_names": joint_names,
             "realease_frame": args.release_frame
         }
+        # var = torch.tensor(mc_latent_space_stds)**2
         for epoch in range(args.epochs):
             for t in range(args.batch_size):
                 print ("t = {}".format(t))
                 state = get_dummy_state(algorithm.policy.in_dim)
-                action, mean = algorithm.select_action(state)
-                if epoch == 0 and t == 0 and algorithm.plot:
+
+                # cov_mat = torch.diag(var)
+                # var = var/10
+                if epoch == 0:
+                    action, mean = algorithm.select_action(state, target_action=torch.tensor(initial_means[t]))
+                else:
+                    action, mean = algorithm.select_action(state)
+                # action, mean = algorithm.select_action(state, cov_mat=cov_mat)
+                if epoch % args.log_interval == 0 and algorithm.plot:
                     algorithm.update_graphs()
                 # action = get_dummy_action(algorithm.policy.out_dim)
                 trajectory = decoder_model.decode(action)
-                # trajectory = decoder_model.decode(torch.tensor(mc_best_mean))
+
+                # trajectory = decoder_model.decode(torch.tensor(mc_13_means))
+
                 is_safe, avg_distance, unsafe_pts, fk_z = safety_check_module.check(trajectory.tolist())
                 smooth_trajectory = []
                 for i in range(joints_number):
                     smooth_trajectory.append(trajectory[i])
                 for i, point in enumerate(trajectory[joints_number:], joints_number):
-                    smooth_trajectory.append(0.5*smooth_trajectory[i-joints_number]+0.5*point)
+                    smooth_trajectory.append(0.6*smooth_trajectory[i-joints_number]+0.4*point)
                 # smooth_trajectory = map(lambda p1, p2: 0.5*p1+0.5*p2, trajectory[:-joints_number], trajectory[joints_number:])
                 # for i in reversed(range(joints_number)):
                 #     smooth_trajectory.insert(0, trajectory[i])
@@ -1097,7 +1119,7 @@ def main(args):
                     # trajectory_dict["joint_trajectory"] = trajectory.view(100, -1).tolist()
                     trajectory_dict["joint_trajectory"] = smooth_trajectory.view(100, -1).tolist()
                     if plot_joints:
-                        plotter_module.plot_joints(trajectory.view(100, -1).tolist())
+                        plotter_module.plot_joints(trajectory_dict["joint_trajectory"])
                     
                     cumulative_reward = 0
                     for n in range(args.action_repetition):
@@ -1149,11 +1171,13 @@ def main(args):
                 algorithm.set_reward(reward)
             loss = algorithm.finish_episode()
 
+            print("Saving policy model...")
+            algorithm.save_model_state_dict(save_path)
+            print("Policy model saved...")
+
             if epoch % args.log_interval == 0:
                 print('Episode {}\tLast reward: {:.2f}'.format(
                     epoch, reward))
-                if algorithm.plot:
-                    algorithm.update_graphs()
 
         close_all(items)
 
