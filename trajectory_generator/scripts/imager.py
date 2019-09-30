@@ -417,9 +417,9 @@ class image_converter:
         while self.single_serach_flag:
             pass
         if len(self.so.stones) == 1:
-            return self.so.stones[0].get_distance_from_center()
+            return self.so.stones[0].get_distance_from_center(), self.so.stones[0].x, self.so.stones[0].y
         else:
-            return -1
+            return -1, False, False
 
 def main(args):
     ic = image_converter()

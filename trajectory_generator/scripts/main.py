@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import sys
+import math
 import torch
 import argparse
 import importlib
@@ -53,9 +54,11 @@ parser.add_argument('--execution-time', type=int, default=1500000000, help='exec
 parser.add_argument('--release-frame', type=int, default=95, help='release frame')
 
 parser.add_argument('--save-dir', default=package_path + "/saved_models/policy_network/", help='directory where to save the policy model once trained')
+parser.add_argument('--save-checkpoint', default=package_path + "/saved_models/policy_network/checkpoint/", help='directory where to save the policy model once trained')
 parser.add_argument('--save-file', default=False, help='name of the file to save the policy model once trained')
 parser.add_argument('--load-dir', default=package_path + "/saved_models/policy_network/", help='directory from where to load the trained policy model')
-parser.add_argument('--load-file', default=False, help='name of the file of the trained policy model')
+parser.add_argument('--load-checkpoint', default=False, help='name of the file containing the checkpoint of the trained policy model')
+parser.add_argument('--load-file', default=False, help='name of the file containing the state dictionary of the trained policy model')
 
 parser.add_argument('--trajectory-folder', default="latest", help='folder where to look for the trajectory to execute')
 parser.add_argument('--trajectory-file', default="trajectories.txt", help='file describing the trajectory to follow')
@@ -1058,6 +1061,8 @@ ll_latent_space_means = [-1.54930503,  0.25162958,  0.05412535, -1.4289467 , -0.
 ll_latent_space_stds = [0.42513496, 0.01628749, 0.06014936, 0.02778022, 0.51911289]
 ll_best_mean = [-1.3671,  0.2444,  0.0290, -1.4391,  0.1555]
 ll_best_std = [0.0204, 0.2391, 0.2653, 0.0247, 0.0492]
+def get_angle(x, y):
+    return (math.atan2(y, x)*180/math.pi + 360) % 360
 
 def main(args):
     try:
@@ -1065,14 +1070,17 @@ def main(args):
         image_reader = image_reader_module.image_converter()
         items.append(image_reader)
         image_reader.initialize_board()
-        algorithm = algorithm_module.ALGORITHM(args.state_dim, args.action_dim, args.learning_rate, plot=True)
-        # algorithm = algorithm_module.ALGORITHM(plot=False)
+        algorithm = algorithm_module.ALGORITHM(args.state_dim, args.action_dim, args.learning_rate, plot=True, batch_size=args.batch_size)
         items.append(algorithm)
-        algorithm.plot = False
-        # algorithm.pre_train(args.pre_train_epochs, args.pre_train_batch_size, args.pre_train_log_interval, target=torch.tensor(mc_latent_space_means), target_action=torch.tensor(mc_18_means))
-        algorithm.pre_train(args.pre_train_epochs, args.pre_train_batch_size, args.pre_train_log_interval, target=torch.tensor(mc_latent_space_means))
-        print ("pre train over")
-        algorithm.plot = True
+        if args.load_file != False:
+            algorithm.load_model_state_dict(args.load_dir+args.load_file)
+        elif args.load_checkpoint != False:
+            algorithm.load_checkpoint(args.load_dir+"checkpoint/"+args.load_checkpoint)
+        else:
+            algorithm.plot = False
+            algorithm.pre_train(args.pre_train_epochs, args.pre_train_batch_size, args.pre_train_log_interval, target=torch.tensor(mc_latent_space_means))
+            print ("Pre train over")
+            algorithm.plot = True
         ret = [0, 0]
         reward = None
         trajectory_dict = {
@@ -1080,20 +1088,16 @@ def main(args):
             "joint_names": joint_names,
             "realease_frame": args.release_frame
         }
-        # var = torch.tensor(mc_latent_space_stds)**2
         for epoch in range(args.epochs):
             for t in range(args.batch_size):
                 print ("t = {}".format(t))
                 state = get_dummy_state(algorithm.policy.in_dim)
-
-                # cov_mat = torch.diag(var)
-                # var = var/10
                 if epoch == 0:
                     action, mean = algorithm.select_action(state, target_action=torch.tensor(initial_means[t]))
                 else:
                     action, mean = algorithm.select_action(state)
                 # action, mean = algorithm.select_action(state, cov_mat=cov_mat)
-                if epoch % args.log_interval == 0 and algorithm.plot:
+                if epoch % args.log_interval == 0 and t == 0 and algorithm.plot:
                     algorithm.update_graphs()
                 # action = get_dummy_action(algorithm.policy.out_dim)
                 trajectory = decoder_model.decode(action)
@@ -1101,22 +1105,20 @@ def main(args):
                 # trajectory = decoder_model.decode(torch.tensor(mc_13_means))
 
                 is_safe, avg_distance, unsafe_pts, fk_z = safety_check_module.check(trajectory.tolist())
+                
                 smooth_trajectory = []
                 for i in range(joints_number):
                     smooth_trajectory.append(trajectory[i])
                 for i, point in enumerate(trajectory[joints_number:], joints_number):
                     smooth_trajectory.append(0.6*smooth_trajectory[i-joints_number]+0.4*point)
-                # smooth_trajectory = map(lambda p1, p2: 0.5*p1+0.5*p2, trajectory[:-joints_number], trajectory[joints_number:])
-                # for i in reversed(range(joints_number)):
-                #     smooth_trajectory.insert(0, trajectory[i])
                 smooth_trajectory = torch.tensor(smooth_trajectory)
+                
                 if is_safe:
                     print("Distribution mean:")
                     print(mean)
                     print("Action to execute:")
                     print(action)
                     ret[0] += 1
-                    # trajectory_dict["joint_trajectory"] = trajectory.view(100, -1).tolist()
                     trajectory_dict["joint_trajectory"] = smooth_trajectory.view(100, -1).tolist()
                     if plot_joints:
                         plotter_module.plot_joints(trajectory_dict["joint_trajectory"])
@@ -1126,11 +1128,15 @@ def main(args):
                         print("\nn = {}".format(n+1))
                         # execute_action(input_folder=False, tot_time_nsecs=args.safe_execution_time, is_simulation=False, is_learning=True, t=trajectory_dict)
                         execute_action(input_folder=False, tot_time_nsecs=args.execution_time, is_simulation=False, is_learning=True, t=trajectory_dict)
-                        raw_input("Press enter to evaluate the board")
+                        command = raw_input("Press enter to evaluate the board\n")
+                        if "print rewards_history" == command:
+                            print ("rewards_history:")
+                            print (algorithm.policy.rewards_history)
                         while True:
-                            distance = image_reader.evaluate_board()
+                            distance, stone_x, stone_y = image_reader.evaluate_board()
                             if distance != -1:
                                 reward = max(0, 4 - distance//100)
+                                angle = get_angle(stone_x, stone_y)
                                 # if distance > 350:
                                 #     reward = 0
                                 # else:
@@ -1146,6 +1152,8 @@ def main(args):
                                             r = raw_input("Set the reward: ")
                                             if "q" != r:
                                                 reward = float(r)
+                                                distance = "set"
+                                                angle = "set"
                                             break
                                         except:
                                             print("INFO: Input 't' to try again evaluating the board")
@@ -1153,10 +1161,13 @@ def main(args):
                                     break
                                 elif "o" == command:
                                     reward = 0
+                                    distance = "out"
+                                    angle = "out"
                                     break
                                 elif "t" == command:
                                     pass
                         cumulative_reward += reward
+                        algorithm.set_stone_position(distance, angle)
                         print ("distance = {}".format(distance))
                         print ("reward = {}".format(reward))
                         print ("cumulative_reward = {}".format(cumulative_reward))
@@ -1164,6 +1175,7 @@ def main(args):
                 else:
                     ret[1] += 1
                     reward = -unsafe_pts
+                    algorithm.set_stone_position("unsafe", "unsafe")
                 print (ret)
                 print ("unsafe_pts = " + str(unsafe_pts))
 
@@ -1173,12 +1185,15 @@ def main(args):
 
             print("Saving policy model...")
             algorithm.save_model_state_dict(save_path)
+            checkpoint_save_path = args.save_dir+"checkpoint/"+datetime.now().strftime("%Y-%m-%d_%H:%M:%S")+".tar"
+            algorithm.save_checkpoint(checkpoint_save_path)
             print("Policy model saved...")
 
             if epoch % args.log_interval == 0:
                 print('Episode {}\tLast reward: {:.2f}'.format(
                     epoch, reward))
 
+        raw_input("Execution finished, press enter to close the program.")
         close_all(items)
 
     except KeyboardInterrupt:

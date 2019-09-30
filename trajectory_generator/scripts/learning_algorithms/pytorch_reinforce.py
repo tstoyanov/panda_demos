@@ -103,6 +103,10 @@ class ALGORITHM:
         self.policy = Policy(self.state_dim, self.action_dim)
         self.optimizer = optim.Adam(self.policy.parameters(), lr=self.lr)
         self.eps = np.finfo(np.float32).eps.item()
+        self.stones_positions = {
+            "distance": [],
+            "angle": [],
+        }
         if batch_size is not None:
             self.batch_size = batch_size
         else:
@@ -132,7 +136,6 @@ class ALGORITHM:
     def save_model_state_dict(self, save_path):
         torch.save(self.policy.state_dict(), save_path)
 
-
     def load_model_state_dict(self, load_path):
         model_sd = torch.load(load_path)
         loaded_model = Policy(self.state_dim, self.action_dim)
@@ -141,6 +144,60 @@ class ALGORITHM:
         self.policy = loaded_model
         return loaded_model
         # return VAE().to(device).load_state_dict(torch.load(load_path)).eval()
+    
+    def save_checkpoint(self, save_path):
+        torch.save({
+            "algorithm": {
+                'model_state_dict': self.policy.state_dict(),
+                'optimizer_state_dict': self.optimizer.state_dict(),
+                "lr": self.lr,
+                "current_epoch": self.current_epoch,
+                "state_dim": self.state_dim,
+                "action_dim": self.action_dim,
+                "eps": self.eps,
+                "batch_size": self.batch_size,
+                "stones_positions": self.stones_positions,
+            },
+            "policy": {
+                "in_dim": self.policy.in_dim,
+                "out_dim": self.policy.out_dim,
+
+                "saved_log_probs": self.policy.saved_log_probs,
+                "rewards": self.policy.rewards,
+                
+                "actions_history": self.policy.actions_history,
+                "log_probs_history": self.policy.log_probs_history,
+                "rewards_history": self.policy.rewards_history,
+                "means_history": self.policy.means_history,
+                "losses_history": self.policy.losses_history,
+            }
+        }, save_path)
+
+    def load_checkpoint(self, load_path):
+        checkpoint = torch.load(load_path)
+
+        self.lr = checkpoint["algorithm"]["lr"]
+        self.current_epoch = checkpoint["algorithm"]["current_epoch"]
+        self.state_dim = checkpoint["algorithm"]["state_dim"]
+        self.action_dim = checkpoint["algorithm"]["action_dim"]
+        self.eps = checkpoint["algorithm"]["eps"]
+        self.batch_size = checkpoint["algorithm"]["batch_size"]
+        self.stones_positions = checkpoint["algorithm"]["stones_positions"]
+
+        self.policy.in_dim = checkpoint["policy"]["in_dim"]
+        self.policy.out_dim = checkpoint["policy"]["out_dim"]
+        self.policy.saved_log_probs = checkpoint["policy"]["saved_log_probs"]
+        self.policy.rewards = checkpoint["policy"]["rewards"]      
+        self.policy.actions_history = checkpoint["policy"]["actions_history"]
+        self.policy.log_probs_history = checkpoint["policy"]["log_probs_history"]
+        self.policy.rewards_history = checkpoint["policy"]["rewards_history"]
+        self.policy.means_history = checkpoint["policy"]["means_history"]
+        self.policy.losses_history = checkpoint["policy"]["losses_history"]
+
+        self.policy.load_state_dict(checkpoint["algorithm"]['model_state_dict'])
+        self.optimizer.load_state_dict(checkpoint["algorithm"]['optimizer_state_dict'])
+
+        self.policy.train()
 
     def select_action(self, state, cov_mat=None, target_action=None):
         mean, log_var = self.policy(state)
@@ -194,6 +251,7 @@ class ALGORITHM:
             self.optimizer.step()
         del self.policy.rewards[:]
         del self.policy.saved_log_probs[:]
+        self.current_epoch += 1
         return policy_loss
 
     def exp_lr_scheduler(self, optimizer, epoch, lr_decay=0.1, lr_decay_epoch=2):
@@ -208,7 +266,10 @@ class ALGORITHM:
     def set_reward(self, reward):
         self.policy.rewards.append(reward)
         self.policy.rewards_history.append(reward)
-        self.current_epoch += 1
+
+    def set_stone_position(self, distance, angle):
+        self.stones_positions["distance"].append(distance)
+        self.stones_positions["angle"].append(angle)
 
     def update(self):
         True
@@ -223,12 +284,12 @@ class ALGORITHM:
 
     def update_graphs(self):
         if len(self.policy.losses_history) > 0:
-            self.update_graph(self.live_plots["loss"]["fig"], self.live_plots["loss"]["ax"], self.live_plots["loss"]["line1"], (self.current_epoch+1)*self.batch_size, self.policy.losses_history[-1].item())
+            self.update_graph(self.live_plots["loss"]["fig"], self.live_plots["loss"]["ax"], self.live_plots["loss"]["line1"], (self.current_epoch)*self.batch_size, self.policy.losses_history[-1].item())
         if len(self.policy.rewards_history) > 0:
-            self.update_graph(self.live_plots["reward"]["fig"], self.live_plots["reward"]["ax"], self.live_plots["reward"]["line1"], (self.current_epoch+1)*self.batch_size, self.policy.rewards_history[-1])
+            self.update_graph(self.live_plots["reward"]["fig"], self.live_plots["reward"]["ax"], self.live_plots["reward"]["line1"], (self.current_epoch)*self.batch_size, self.policy.rewards_history[-1])
         if len(self.policy.means_history) > 0:
             for i in range(self.action_dim):
-                self.update_graph(self.live_plots["theta"]["fig"][i], self.live_plots["theta"]["ax"][i], self.live_plots["theta"]["lines"][i], (self.current_epoch+1)*self.batch_size, self.policy.means_history[-1][i].item())
+                self.update_graph(self.live_plots["theta"]["fig"][i], self.live_plots["theta"]["ax"][i], self.live_plots["theta"]["lines"][i], (self.current_epoch)*self.batch_size, self.policy.means_history[-1][i].item())
     
     def execute_action(self, action, target=None):
         error = False

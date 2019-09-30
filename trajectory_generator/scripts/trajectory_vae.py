@@ -320,6 +320,8 @@ def joints_plot (last_data, last_recon_data, title, t=False):
     joints_ranges_list = list(joints_ranges.items())
     if t and t[-1] in ["w", "m", "b"]:
         fig = plt.figure(t)
+    elif title == "transformation_plot":
+        fig = plt.figure(title)
     else:
         fig = plt.figure()
     if title == None:
@@ -715,8 +717,8 @@ if __name__ == "__main__":
 
         # Turn these into an object that can be used to map time values to colors and
         # can be passed to plt.colorbar().
-        # cpick = cm.ScalarMappable(norm=cnorm,cmap=cm1)
-        cpick = cm.ScalarMappable(norm=cnorm,cmap=plt.get_cmap("hsv"))
+        cpick = cm.ScalarMappable(norm=cnorm,cmap=cm1)
+        # cpick = cm.ScalarMappable(norm=cnorm,cmap=plt.get_cmap("hsv"))
         cpick.set_array([])
         
         # F = plt.figure()
@@ -854,7 +856,10 @@ if __name__ == "__main__":
             # test_data_to_plot['tsne-test-encoded-' + str(model.fc22.out_features) + 'd-one'] = tsne_results[:,0]
             # test_data_to_plot['tsne-test-encoded-' + str(model.fc22.out_features) + 'd-two'] = tsne_results[:,1]
 
-            fig = plt.figure("tsne_safe_unsafe", figsize=(16,10))
+            if args.no_noise:
+                fig = plt.figure("tsne_safe_unsafe_no_noise", figsize=(16,10))
+            else:
+                fig = plt.figure("tsne_safe_unsafe", figsize=(16,10))
             if "BOTH" == str(args.tsne).upper():
                 fig.suptitle('t-sne algorithm over ' + str(len(my_train_set_loader.dataset)) + ' trajectories:\nEncoded ' + str(vae_model.fc22.out_features) + ' dimensional data using ' + args.loss_type.upper() + ' loss (left) vs Original ' + str(vae_model.fc1.in_features) + ' dimensional data (right)', fontsize=14)
                 print ("\nApplying the t-sne algorithm to the original data subset...")
