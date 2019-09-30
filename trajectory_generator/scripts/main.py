@@ -11,6 +11,7 @@ import plotter_from_generated as plotter_module
 from torch.distributions.multivariate_normal import MultivariateNormal
 
 from datetime import datetime
+import ast
 
 import rospkg
 rospack = rospkg.RosPack()
@@ -1043,6 +1044,8 @@ mc_best_std = [0.0538, 0.0181, 0.3415, 0.0175, 0.2323]
 mc_best_mean_faster = [-1.0914,  1.0875,  0.0775, -0.5818,  0.1817]
 mc_fastest = [-1.2, 1.9, 0.3, -0.4, 0.4]
 
+test_action = [-0.79844596, -0.63713676, -0.12888897, -0.97707188,  0.01480127]
+
 mc_13_means = [-0.79844596, -0.23713676, -0.12888897, -0.87707188,  0.01480127]
 mc_14_means = [-0.8877851 ,  0.24533824, -0.02885615, -0.79018154,  0.09704519]
 mc_15_means = [-0.97981189,  0.71057909,  0.05748677, -0.69583368,  0.17542016]
@@ -1051,6 +1054,7 @@ mc_17_means = [-1.13784433,  1.55074548,  0.22355699, -0.49421183,  0.28466991]
 mc_18_means = [-1.1728737 ,  1.76443983,  0.26582965, -0.45975538,  0.30441109]
 
 initial_means = [mc_13_means] + [mc_14_means] + [mc_15_means] + [mc_16_means] + [mc_17_means] + [mc_18_means]
+reversed_initial_means = [mc_18_means] + [mc_17_means] + [mc_16_means] + [mc_15_means] + [mc_14_means] + [mc_13_means]
 
 mc_latent_space_means_b0 = [-2.3453495 ,  1.87199709,  0.66421834, -2.87626281,  1.57093551]
 mc_latent_space_stds_b0 = [0.41007773, 1.01831094, 0.45268615, 0.01925819, 0.65967075]
@@ -1061,6 +1065,7 @@ ll_latent_space_means = [-1.54930503,  0.25162958,  0.05412535, -1.4289467 , -0.
 ll_latent_space_stds = [0.42513496, 0.01628749, 0.06014936, 0.02778022, 0.51911289]
 ll_best_mean = [-1.3671,  0.2444,  0.0290, -1.4391,  0.1555]
 ll_best_std = [0.0204, 0.2391, 0.2653, 0.0247, 0.0492]
+
 def get_angle(x, y):
     return (math.atan2(y, x)*180/math.pi + 360) % 360
 
@@ -1092,10 +1097,24 @@ def main(args):
             for t in range(args.batch_size):
                 print ("t = {}".format(t))
                 state = get_dummy_state(algorithm.policy.in_dim)
-                if epoch == 0:
-                    action, mean = algorithm.select_action(state, target_action=torch.tensor(initial_means[t]))
-                else:
-                    action, mean = algorithm.select_action(state)
+                command = raw_input("Enter command (leave blank to execute action): ")
+                if "" != command:
+                    if "set_action" == command:
+                        while True:
+                            try:
+                                a = raw_input("Input the action in the form of a list ('q' to quit): ")
+                                if "q" == a:
+                                    break
+                                action = torch.tensor(ast.literal_eval(a))
+                                mean = torch.tensor(ast.literal_eval(a))
+                                break
+                            except:
+                                print ("The action must be a python list\nEg: [1, 2, 3, 4, 5]")
+                if "set_action" != command:
+                    if epoch == 0:
+                        action, mean = algorithm.select_action(state, target_action=torch.tensor(reversed_initial_means[t]))
+                    else:
+                        action, mean = algorithm.select_action(state)
                 # action, mean = algorithm.select_action(state, cov_mat=cov_mat)
                 if epoch % args.log_interval == 0 and t == 0 and algorithm.plot:
                     algorithm.update_graphs()
@@ -1132,6 +1151,7 @@ def main(args):
                         if "print rewards_history" == command:
                             print ("rewards_history:")
                             print (algorithm.policy.rewards_history)
+
                         while True:
                             distance, stone_x, stone_y = image_reader.evaluate_board()
                             if distance != -1:

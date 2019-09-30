@@ -100,6 +100,12 @@ parser.add_argument('--safety-check-script', default="safety_check_client",
                     help='script for the trajectory safety check')
 parser.add_argument('--no-noise', nargs='?', const=True, default=False,
                     help='whether to sample from the low dimensional disrtibution or just return the mean')
+parser.add_argument('--safety-test', nargs='?', const=True, default=False,
+                    help='whether to test the model for safety or not')
+parser.add_argument('--ioff', nargs='?', const=True, default=False,
+                    help='disables interactive plotting of the train and test error')
+parser.add_argument('--parameters-search', nargs='?', const=True, default=False,
+                    help='wether to perform parameter search or not')
 
 args, unknown = parser.parse_known_args()
 # args = parser.parse_args()
@@ -117,7 +123,7 @@ if args.deg:
 else:
     coeff = 1
 
-get_encoded_data = args.tsne != False or args.matrix_plot != False
+get_encoded_data = args.tsne != False or args.matrix_plot != False or args.safety_test != False
 
 device = torch.device("cuda" if args.cuda else "cpu")
 
@@ -450,10 +456,6 @@ class MyDataset(Dataset):
 #         z = self.reparameterize(mu, logvar, no_noise)
 #         return self.decode(z), mu, logvar
 
-vae_model = VAE(int(args.vae_dim)).to(device)
-vae_optimizer = optim.Adam(vae_model.parameters(), lr=1e-3)
-
-
 # Reconstruction + KL divergence losses summed over all elements and batch
 def loss_function(recon_x, x, mu, logvar, label):
     # see Appendix B from VAE paper:
@@ -560,6 +562,8 @@ def my_train(epoch, loss_plots):
 
     print('====> Epoch: {} Average loss: {:.4f}'.format(
           epoch, train_loss / len(my_train_set_loader.dataset)))
+    
+    latest_train_loss = train_loss / len(my_train_set_loader.dataset)
 
 
 def my_test(epoch, loss_plots):
@@ -591,6 +595,7 @@ def my_test(epoch, loss_plots):
                 joints_plot(abs(data[0] - recon_batch.view(len(recon_batch), 100, 7)[0]), abs(data[0] - recon_data.view(1, 100, 7)[0]), title)
 
     test_loss /= len(my_test_set_loader.dataset)
+    args.latest_test_loss = copy.deepcopy(test_loss)
     print('====> Test set loss: {:.4f}'.format(test_loss))
     if loss_plots != None:
         update_graph(loss_plots["test_loss"]["fig"], loss_plots["test_loss"]["ax"], loss_plots["test_loss"]["line1"], len(my_train_set_loader) + epoch*len(my_train_set_loader), test_loss)
@@ -627,67 +632,129 @@ if args.debug:
     my_validation_set_loader.num_workers = 0
 
 if __name__ == "__main__":
-    plt.ion()
+    if args.ioff != True:
+        plt.ion()
     if args.load_file != False:
         vae_model = load_model_state_dict(args.load_dir+args.load_file)
         my_test("loaded_model", None)
     else:
-        loss_plots = {
-            "loss": {
-                "fig": None,
-                "ax": None,
-                "line1": None
-            },
-            "recon_loss": {
-                "fig": None,
-                "ax": None,
-                "line1": None
-            },
-            "kld_loss": {
-                "fig": None,
-                "ax": None,
-                "line1": None
-            },
-            "test_loss": {
-                "fig": None,
-                "ax": None,
-                "line1": None
+        if args.parameters_search == True:
+            alpha_list = [1, 2, 5, 10, 25, 50, 100, 250, 500, 100, 200, 50, 100, 1, 1, 1, 1, 1, 1, 1, 1, 0.1, 0.1, 0.01, 0.01]
+            beta_list = [1, 1, 1, 1, 1, 1, 1, 1, 1, 0.1, 0.1, 0.01, 0.01, 2, 5, 10, 25, 50, 100, 250, 500, 100, 200, 50, 100]
+            # alpha_list = [200, 0.1, 200]
+            # beta_list = [0.1, 1, 0.01]
+        else:
+            alpha_list = [args.alpha]
+            beta_list = [args.beta]
+
+        for i, _ in enumerate(alpha_list):
+            vae_model = VAE(int(args.vae_dim)).to(device)
+            vae_optimizer = optim.Adam(vae_model.parameters(), lr=1e-3)
+
+            args.alpha = alpha_list[i]
+            args.beta = beta_list[i]
+
+            args.latest_train_loss = None
+            args.latest_test_loss = 1
+            best_train_loss = None
+            best_test_loss = None
+
+            alpha = float(args.alpha)
+            beta = float(args.beta)
+            e_alpha = 0
+            e_beta = 0
+            while alpha < 1:
+                alpha *= 10
+                e_alpha += 1
+            alpha = int(alpha)
+            if e_alpha > 0:
+                alpha_str = "a"+str(alpha)+"e-"+str(e_alpha)
+            else:
+                alpha_str = "a"+str(alpha)
+            while beta < 1:
+                beta *= 10
+                e_beta += 1
+            beta = int(beta)
+            if e_beta > 0:
+                beta_str = "b"+str(beta)+"e-"+str(e_beta)
+            else:
+                beta_str = "b"+str(beta)
+            save_path = args.save_dir + alpha_str + "_" + beta_str + "_" + str(args.epochs) + "e/model.pt"
+            os.makedirs(os.path.dirname(save_path), exist_ok=True)
+
+            loss_plots = {
+                "loss": {
+                    "fig": None,
+                    "ax": None,
+                    "line1": None
+                },
+                "recon_loss": {
+                    "fig": None,
+                    "ax": None,
+                    "line1": None
+                },
+                "kld_loss": {
+                    "fig": None,
+                    "ax": None,
+                    "line1": None
+                },
+                "test_loss": {
+                    "fig": None,
+                    "ax": None,
+                    "line1": None
+                }
             }
-        }
-        
-        loss_plots["loss"]["fig"] = plt.figure("Loss")
-        loss_plots["loss"]["fig"].suptitle('Loss', fontsize=10)
-        loss_plots["loss"]["ax"] = loss_plots["loss"]["fig"].add_subplot(1, 1, 1)
-        loss_plots["loss"]["line1"], = loss_plots["loss"]["ax"].plot([], [], 'o-r', label="TRAIN Loss")
+            
+            loss_plots["loss"]["fig"] = plt.figure("Loss")
+            loss_plots["loss"]["fig"].suptitle('Loss', fontsize=10)
+            loss_plots["loss"]["ax"] = loss_plots["loss"]["fig"].add_subplot(1, 1, 1)
+            loss_plots["loss"]["line1"], = loss_plots["loss"]["ax"].plot([], [], 'o-r', label="TRAIN Loss")
 
-        # loss_plots["recon_loss"]["fig"] = loss_plots["loss"]["fig"]
-        # loss_plots["recon_loss"]["ax"] = loss_plots["loss"]["ax"]
-        # loss_plots["recon_loss"]["line1"], = loss_plots["loss"]["ax"].plot([], [], '-g', label="Reconstruction Loss")
+            # loss_plots["recon_loss"]["fig"] = loss_plots["loss"]["fig"]
+            # loss_plots["recon_loss"]["ax"] = loss_plots["loss"]["ax"]
+            # loss_plots["recon_loss"]["line1"], = loss_plots["loss"]["ax"].plot([], [], '-g', label="Reconstruction Loss")
 
-        # loss_plots["kld_loss"]["fig"] = loss_plots["loss"]["fig"]
-        # loss_plots["kld_loss"]["ax"] = loss_plots["loss"]["ax"]
-        # loss_plots["kld_loss"]["line1"], = loss_plots["loss"]["ax"].plot([], [], '-k', label="KLD Loss")
+            # loss_plots["kld_loss"]["fig"] = loss_plots["loss"]["fig"]
+            # loss_plots["kld_loss"]["ax"] = loss_plots["loss"]["ax"]
+            # loss_plots["kld_loss"]["line1"], = loss_plots["loss"]["ax"].plot([], [], '-k', label="KLD Loss")
 
-        loss_plots["test_loss"]["fig"] = loss_plots["loss"]["fig"]
-        loss_plots["test_loss"]["ax"] = loss_plots["loss"]["ax"]
-        loss_plots["test_loss"]["line1"], = loss_plots["loss"]["ax"].plot([], [], 'x-b', label="TEST Loss")
+            loss_plots["test_loss"]["fig"] = loss_plots["loss"]["fig"]
+            loss_plots["test_loss"]["ax"] = loss_plots["loss"]["ax"]
+            loss_plots["test_loss"]["line1"], = loss_plots["loss"]["ax"].plot([], [], 'x-b', label="TEST Loss")
 
-        loss_plots["loss"]["ax"].legend()
+            loss_plots["loss"]["ax"].legend()
 
-        for epoch in range(1, args.epochs + 1):
-            my_train(epoch, loss_plots)
-            my_test(epoch, loss_plots)
+            manager = plt.get_current_fig_manager()
+            manager.resize(*manager.window.maxsize())
+            plt.show()
 
-            # random generation of samples to decode
-            # with torch.no_grad():
-            #     sample = torch.randn(1, 20).to(device)
-            #     sample = model.decode(sample).cpu()
-                # for i in range(len(sample)):
-                #     print (sample[i])
-          
+            for epoch in range(1, args.epochs + 1):
+                my_train(epoch, loss_plots)
+                my_test(epoch, loss_plots)
 
-        if args.save_file != False:
-            save_model_state_dict(args.save_dir+args.save_file)
+                # random generation of samples to decode
+                # with torch.no_grad():
+                #     sample = torch.randn(1, 20).to(device)
+                #     sample = model.decode(sample).cpu()
+                    # for i in range(len(sample)):
+                    #     print (sample[i])
+                if args.parameters_search != False:
+                    if epoch == 1:
+                        best_test_loss = args.latest_test_loss
+                    elif args.latest_test_loss < best_test_loss:
+                        save_model_state_dict(os.path.dirname(save_path) + "/best_model_" + str(epoch) + "e.pt")
+                        best_test_loss = args.latest_test_loss
+            
+
+            if args.save_file != False:
+                save_model_state_dict(args.save_dir+args.save_file)
+            
+            if args.parameters_search != False:
+                save_model_state_dict(save_path)
+                loss_plots["loss"]["ax"].set_title("ALPHA = " + str(args.alpha) + "   BETA = " + str(args.beta))
+                loss_plots["loss"]["fig"].savefig(os.path.dirname(save_path) + "/loss.svg", format="svg", bbox_inches='tight')
+                loss_plots["loss"]["fig"].savefig(os.path.dirname(save_path) + "/loss.png", format="png", bbox_inches='tight')
+                plt.close(loss_plots["loss"]["fig"])
     
     if args.transformation_plot != False:
         test_data_1 = torch.tensor([])
@@ -1063,5 +1130,5 @@ if __name__ == "__main__":
         True
 
     plt.show()
-
+    True
     input("Press Enter to close...")
