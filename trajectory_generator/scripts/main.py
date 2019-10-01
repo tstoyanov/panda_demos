@@ -26,9 +26,10 @@ parser.add_argument('--pre-train-log-interval', type=int, default=10, metavar='N
 parser.add_argument('--pre-train-epochs', type=int, default=100, help='number of epochs for training (default: 1000)')
 parser.add_argument('--pre-train-batch-size', type=int, default=100, metavar='N', help='input batch size for training (default: 1000)')
 parser.add_argument('--log-interval', type=int, default=1, metavar='N', help='interval between training status logs (default: 1)')
-parser.add_argument('--epochs', type=int, default=10, help='number of epochs for training (default: 10)')
-parser.add_argument('--batch-size', type=int, default=6, metavar='N', help='input batch size for training (default: 12)')
+parser.add_argument('--epochs', type=int, default=12, help='number of epochs for training (default: 10)')
+parser.add_argument('--batch-size', type=int, default=5, metavar='N', help='input batch size for training (default: 12)')
 parser.add_argument('--action-repetition', type=int, default=3 , help='number of times to  repeat the same action')
+parser.add_argument('--safe-throws', type=int, default=180 , help='number of safe throws to execute before stopping the learning loop')
 
 parser.add_argument('--state-dim', type=int, default=4, help='policy input dimension (default: 4)')
 parser.add_argument('--action-dim', type=int, default=5, help='policy output dimension (default: 5)')
@@ -51,7 +52,7 @@ parser.add_argument('--trajectory-writer-script', default="writer_from_generated
 
 parser.add_argument('--no-plot', nargs='?', const=True, default=False, help='whether to plot data or not')
 parser.add_argument('--safe-execution-time', type=int, default=9000000000, help='safe execution time in nanoseconds')
-parser.add_argument('--execution-time', type=int, default=1500000000, help='execution time in nanoseconds')
+parser.add_argument('--execution-time', type=int, default=1600000000, help='execution time in nanoseconds')
 parser.add_argument('--release-frame', type=int, default=95, help='release frame')
 
 parser.add_argument('--save-dir', default=package_path + "/saved_models/policy_network/", help='directory where to save the policy model once trained')
@@ -1055,6 +1056,7 @@ mc_18_means = [-1.1728737 ,  1.76443983,  0.26582965, -0.45975538,  0.30441109]
 
 initial_means = [mc_13_means] + [mc_14_means] + [mc_15_means] + [mc_16_means] + [mc_17_means] + [mc_18_means]
 reversed_initial_means = [mc_18_means] + [mc_17_means] + [mc_16_means] + [mc_15_means] + [mc_14_means] + [mc_13_means]
+shuffled_initial_means = [mc_18_means] + [mc_15_means] + [mc_13_means] + [mc_17_means] + [mc_14_means] + [mc_16_means]
 
 mc_latent_space_means_b0 = [-2.3453495 ,  1.87199709,  0.66421834, -2.87626281,  1.57093551]
 mc_latent_space_stds_b0 = [0.41007773, 1.01831094, 0.45268615, 0.01925819, 0.65967075]
@@ -1093,7 +1095,12 @@ def main(args):
             "joint_names": joint_names,
             "realease_frame": args.release_frame
         }
-        for epoch in range(args.epochs):
+        safe_throws = 0
+        epoch = 0
+        while safe_throws < args.safe_throws:
+        # for epoch in range(args.epochs):
+            # t = 0
+            # while t < args.batch_size:
             for t in range(args.batch_size):
                 print ("t = {}".format(t))
                 state = get_dummy_state(algorithm.policy.in_dim)
@@ -1112,7 +1119,7 @@ def main(args):
                                 print ("The action must be a python list\nEg: [1, 2, 3, 4, 5]")
                 if "set_action" != command:
                     if epoch == 0:
-                        action, mean = algorithm.select_action(state, target_action=torch.tensor(reversed_initial_means[t]))
+                        action, mean = algorithm.select_action(state, target_action=torch.tensor(shuffled_initial_means[t]))
                     else:
                         action, mean = algorithm.select_action(state)
                 # action, mean = algorithm.select_action(state, cov_mat=cov_mat)
@@ -1123,14 +1130,15 @@ def main(args):
 
                 # trajectory = decoder_model.decode(torch.tensor(mc_13_means))
 
-                is_safe, avg_distance, unsafe_pts, fk_z = safety_check_module.check(trajectory.tolist())
-                
                 smooth_trajectory = []
                 for i in range(joints_number):
                     smooth_trajectory.append(trajectory[i])
                 for i, point in enumerate(trajectory[joints_number:], joints_number):
                     smooth_trajectory.append(0.6*smooth_trajectory[i-joints_number]+0.4*point)
                 smooth_trajectory = torch.tensor(smooth_trajectory)
+
+                is_safe, avg_distance, unsafe_pts, fk_z = safety_check_module.check(smooth_trajectory.tolist())
+                # is_safe, avg_distance, unsafe_pts, fk_z = safety_check_module.check(trajectory.tolist())
                 
                 if is_safe:
                     print("Distribution mean:")
@@ -1144,6 +1152,7 @@ def main(args):
                     
                     cumulative_reward = 0
                     for n in range(args.action_repetition):
+                        safe_throws += 1
                         print("\nn = {}".format(n+1))
                         # execute_action(input_folder=False, tot_time_nsecs=args.safe_execution_time, is_simulation=False, is_learning=True, t=trajectory_dict)
                         execute_action(input_folder=False, tot_time_nsecs=args.execution_time, is_simulation=False, is_learning=True, t=trajectory_dict)
@@ -1163,7 +1172,7 @@ def main(args):
                                 #     reward = (1-(distance/350.0))**2
                                 break
                             else:
-                                command = raw_input("'c'=continue\n's'=set reward\n't'=try again\n'o'=out of bounds (reward = -(400^2)\n\nInput command: ")
+                                command = raw_input("'c'=continue\n's'=set reward\n't'=try again\n'o'=out of bounds\n\nInput command: ")
                                 if "c" == command:
                                     break
                                 elif "s" == command:
@@ -1212,6 +1221,7 @@ def main(args):
             if epoch % args.log_interval == 0:
                 print('Episode {}\tLast reward: {:.2f}'.format(
                     epoch, reward))
+            epoch += 1
 
         raw_input("Execution finished, press enter to close the program.")
         close_all(items)
