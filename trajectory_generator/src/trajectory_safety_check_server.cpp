@@ -104,11 +104,11 @@ int main(int argc, char **argv)
 
     KDL::ChainFkSolverPos_recursive chainFkSolverPos{my_chain};
 
-    if (!node_handle.getParam("/panda/franka_control/robot_ip", robot_ip))
-    {
-        ROS_ERROR("%s: Could not parse robot_ip parameter", node_name.c_str());
-        return -1;
-    }
+    // if (!node_handle.getParam("/panda/franka_control/robot_ip", robot_ip))
+    // {
+    //     ROS_ERROR("%s: Could not parse robot_ip parameter", node_name.c_str());
+    //     return -1;
+    // }
 
     double z_lower_limit;
     if (!node_handle.getParam("/trajectory_safety_check_server/z_lower_limit", z_lower_limit) && !node_handle.getParam("/panda/trajectory_safety_check_server/z_lower_limit", z_lower_limit))
