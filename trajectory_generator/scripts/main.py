@@ -30,6 +30,7 @@ parser.add_argument('--epochs', type=int, default=12, help='number of epochs for
 parser.add_argument('--batch-size', type=int, default=5, metavar='N', help='input batch size for training (default: 12)')
 parser.add_argument('--action-repetition', type=int, default=3 , help='number of times to  repeat the same action')
 parser.add_argument('--safe-throws', type=int, default=180 , help='number of safe throws to execute before stopping the learning loop')
+parser.add_argument('--reward-type', default="discrete" , help='type of reward function to use during learning')
 
 parser.add_argument('--state-dim', type=int, default=4, help='policy input dimension (default: 4)')
 parser.add_argument('--action-dim', type=int, default=5, help='policy output dimension (default: 5)')
@@ -96,6 +97,10 @@ if not args.algorithm:
     sys.exit(2)
 else:
     algorithm_module = importlib.import_module(args.algorithm_dir + "." + args.algorithm)
+
+if args.reward_type.upper() not in ["DISCRETE", "CONTINUOUS", "D", "C"]:
+    print("argument --reward-type not valid")
+    sys.exit(2)
 
 action_script = importlib.import_module(args.action_script)
 image_reader_module = importlib.import_module(args.image_reader)
@@ -1038,7 +1043,8 @@ test2 = []
 for point in test:
     test2.extend(point)
 
-mc_latent_space_means = [-0.95741573,  0.60835766,  0.03808778, -0.70411791,  0.15081754]
+# ========== a200_b01_mc ==========
+a200_b01_mc_latent_space_means = [-0.95741573,  0.60835766,  0.03808778, -0.70411791,  0.15081754]
 mc_latent_space_stds = [0.14915584, 0.77813671, 0.15265675, 0.17448557, 0.12238263]
 mc_best_mean = [-0.9914,  0.7875,  0.0775, -0.6818,  0.1817]
 mc_best_std = [0.0538, 0.0181, 0.3415, 0.0175, 0.2323]
@@ -1047,16 +1053,48 @@ mc_fastest = [-1.2, 1.9, 0.3, -0.4, 0.4]
 
 test_action = [-0.79844596, -0.63713676, -0.12888897, -0.97707188,  0.01480127]
 
-mc_13_means = [-0.79844596, -0.23713676, -0.12888897, -0.87707188,  0.01480127]
-mc_14_means = [-0.8877851 ,  0.24533824, -0.02885615, -0.79018154,  0.09704519]
-mc_15_means = [-0.97981189,  0.71057909,  0.05748677, -0.69583368,  0.17542016]
-mc_16_means = [-1.0606842 ,  1.14844979,  0.14893559, -0.59407567,  0.23862324]
-mc_17_means = [-1.13784433,  1.55074548,  0.22355699, -0.49421183,  0.28466991]
-mc_18_means = [-1.1728737 ,  1.76443983,  0.26582965, -0.45975538,  0.30441109]
+a200_b01_mc_13_means = [-0.79844596, -0.23713676, -0.12888897, -0.87707188,  0.01480127]
+a200_b01_mc_14_means = [-0.8877851 ,  0.24533824, -0.02885615, -0.79018154,  0.09704519]
+a200_b01_mc_15_means = [-0.97981189,  0.71057909,  0.05748677, -0.69583368,  0.17542016]
+a200_b01_mc_16_means = [-1.0606842 ,  1.14844979,  0.14893559, -0.59407567,  0.23862324]
+a200_b01_mc_17_means = [-1.13784433,  1.55074548,  0.22355699, -0.49421183,  0.28466991]
+a200_b01_mc_18_means = [-1.1728737 ,  1.76443983,  0.26582965, -0.45975538,  0.30441109]
 
-initial_means = [mc_13_means] + [mc_14_means] + [mc_15_means] + [mc_16_means] + [mc_17_means] + [mc_18_means]
-reversed_initial_means = [mc_18_means] + [mc_17_means] + [mc_16_means] + [mc_15_means] + [mc_14_means] + [mc_13_means]
-shuffled_initial_means = [mc_18_means] + [mc_15_means] + [mc_13_means] + [mc_17_means] + [mc_14_means] + [mc_16_means]
+a200_b01_initial_means = [a200_b01_mc_13_means] + [a200_b01_mc_14_means] + [a200_b01_mc_15_means] + [a200_b01_mc_16_means] + [a200_b01_mc_17_means] + [a200_b01_mc_18_means]
+a200_b01_reversed_initial_means = [a200_b01_mc_18_means] + [a200_b01_mc_17_means] + [a200_b01_mc_16_means] + [a200_b01_mc_15_means] + [a200_b01_mc_14_means] + [a200_b01_mc_13_means]
+a200_b01_shuffled_initial_means = [a200_b01_mc_18_means] + [a200_b01_mc_15_means] + [a200_b01_mc_13_means] + [a200_b01_mc_17_means] + [a200_b01_mc_14_means] + [a200_b01_mc_16_means]
+
+# ========== a100_b001_mc ==========
+a100_b001_mc_latent_space_means = [-2.4141, -3.1220,  1.2711,  0.9376,  1.6012]
+
+a100_b001_mc_12_means = [-2.1728, -2.6527,  1.1599,  0.3008,  1.9964]
+a100_b001_mc_13_means = [-2.2477, -2.7988,  1.1962,  0.5003,  1.8728]
+a100_b001_mc_14_means = [-2.3427, -2.9834,  1.2388,  0.7525,  1.7158]
+a100_b001_mc_15_means = [-2.4349, -3.1625,  1.2817,  0.9947,  1.5658]
+a100_b001_mc_16_means = [-2.5211, -3.3298,  1.3201,  1.2193,  1.4266]
+a100_b001_mc_17_means = [-2.5993, -3.4820,  1.3547,  1.4220,  1.3003]
+a100_b001_mc_18_means = [-2.6392, -3.5588,  1.3718,  1.5257,  1.2370]
+
+a100_b001_initial_means = [a100_b001_mc_13_means] + [a100_b001_mc_14_means] + [a100_b001_mc_15_means] + [a100_b001_mc_16_means] + [a100_b001_mc_17_means] + [a100_b001_mc_18_means]
+a100_b001_reversed_initial_means = [a100_b001_mc_18_means] + [a100_b001_mc_17_means] + [a100_b001_mc_16_means] + [a100_b001_mc_15_means] + [a100_b001_mc_14_means] + [a100_b001_mc_13_means]
+a100_b001_shuffled_initial_means = [a100_b001_mc_17_means] + [a100_b001_mc_15_means] + [a100_b001_mc_13_means] + [a100_b001_mc_18_means] + [a100_b001_mc_14_means] + [a100_b001_mc_16_means]
+
+
+# ========== a100_b01_mc ==========
+a100_b01_mc_latent_space_means = [ 0.5667, -0.6089,  1.9060,  0.1249,  3.5259]
+
+a100_b01_mc_12_means = [ 0.5394, -0.3650,  0.9511,  1.0091,  3.5482]
+a100_b01_mc_13_means = [ 0.5467, -0.4432,  1.2512,  0.7295,  3.5419]
+a100_b01_mc_14_means = [ 0.5606, -0.5378,  1.6244,  0.3809,  3.5326]
+a100_b01_mc_15_means = [ 0.5681, -0.6324,  1.9864,  0.0460,  3.5243]
+a100_b01_mc_16_means = [ 0.5789, -0.7149,  2.3237, -0.2643,  3.5159]
+a100_b01_mc_17_means = [ 0.5883, -0.7942,  2.6396, -0.5471,  3.5080]
+a100_b01_mc_18_means = [ 0.5913, -0.8299,  2.8025, -0.6876,  3.5046]
+
+a100_b01_initial_means = [a100_b01_mc_13_means] + [a100_b01_mc_14_means] + [a100_b01_mc_15_means] + [a100_b01_mc_16_means] + [a100_b01_mc_17_means] + [a100_b01_mc_18_means]
+a100_b01_reversed_initial_means = [a100_b01_mc_18_means] + [a100_b01_mc_17_means] + [a100_b01_mc_16_means] + [a100_b01_mc_15_means] + [a100_b01_mc_14_means] + [a100_b01_mc_13_means]
+a100_b01_shuffled_initial_means = [a100_b01_mc_17_means] + [a100_b01_mc_15_means] + [a100_b01_mc_13_means] + [a100_b01_mc_14_means] + [a100_b01_mc_16_means] + [a100_b01_mc_12_means]
+
 
 mc_latent_space_means_b0 = [-2.3453495 ,  1.87199709,  0.66421834, -2.87626281,  1.57093551]
 mc_latent_space_stds_b0 = [0.41007773, 1.01831094, 0.45268615, 0.01925819, 0.65967075]
@@ -1085,7 +1123,7 @@ def main(args):
             algorithm.load_checkpoint(args.load_dir+"checkpoint/"+args.load_checkpoint)
         else:
             algorithm.plot = False
-            algorithm.pre_train(args.pre_train_epochs, args.pre_train_batch_size, args.pre_train_log_interval, target=torch.tensor(mc_latent_space_means))
+            algorithm.pre_train(args.pre_train_epochs, args.pre_train_batch_size, args.pre_train_log_interval, target=torch.tensor(a200_b01_mc_latent_space_means))
             print ("Pre train over")
             algorithm.plot = True
         ret = [0, 0]
@@ -1119,7 +1157,7 @@ def main(args):
                                 print ("The action must be a python list\nEg: [1, 2, 3, 4, 5]")
                 if "set_action" != command:
                     if epoch == 0:
-                        action, mean = algorithm.select_action(state, target_action=torch.tensor(shuffled_initial_means[t]))
+                        action, mean = algorithm.select_action(state, target_action=torch.tensor(a200_b01_shuffled_initial_means[t]))
                     else:
                         action, mean = algorithm.select_action(state)
                 # action, mean = algorithm.select_action(state, cov_mat=cov_mat)
@@ -1137,8 +1175,8 @@ def main(args):
                     smooth_trajectory.append(0.6*smooth_trajectory[i-joints_number]+0.4*point)
                 smooth_trajectory = torch.tensor(smooth_trajectory)
 
-                is_safe, avg_distance, unsafe_pts, fk_z = safety_check_module.check(smooth_trajectory.tolist())
-                # is_safe, avg_distance, unsafe_pts, fk_z = safety_check_module.check(trajectory.tolist())
+                # is_safe, avg_distance, unsafe_pts, fk_z = safety_check_module.check(smooth_trajectory.tolist())
+                is_safe, avg_distance, unsafe_pts, fk_z = safety_check_module.check(trajectory.tolist())
                 
                 if is_safe:
                     print("Distribution mean:")
@@ -1164,7 +1202,11 @@ def main(args):
                         while True:
                             distance, stone_x, stone_y = image_reader.evaluate_board()
                             if distance != -1:
-                                reward = max(0, 4 - distance//100)
+                                if args.reward_type.upper() in ["D", "DISCRETE"]:
+                                    reward = max(0, 4 - distance//100)
+                                elif args.reward_type.upper() in ["C", "CONTINUOUS"]:
+                                    reward = max(0, 4 - float(distance)/100)
+
                                 angle = get_angle(stone_x, stone_y)
                                 # if distance > 350:
                                 #     reward = 0

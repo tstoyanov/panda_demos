@@ -641,8 +641,8 @@ if __name__ == "__main__":
         if args.parameters_search == True:
             # alpha_list = [1, 2, 5, 10, 25, 50, 100, 250, 500, 100, 200, 50, 100, 1, 1, 1, 1, 1, 1, 1, 1, 0.1, 0.1, 0.01, 0.01]
             # beta_list = [1, 1, 1, 1, 1, 1, 1, 1, 1, 0.1, 0.1, 0.01, 0.01, 2, 5, 10, 25, 50, 100, 250, 500, 100, 200, 50, 100]
-            alpha_list = [100, 100, 50]
-            beta_list = [0.1, 0.01, 0.01]
+            alpha_list = [200, 100, 100, 50]
+            beta_list = [0.1, 0.1, 0.01, 0.01]
         else:
             alpha_list = [args.alpha]
             beta_list = [args.beta]

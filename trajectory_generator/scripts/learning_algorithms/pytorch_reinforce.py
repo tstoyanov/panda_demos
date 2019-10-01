@@ -208,7 +208,7 @@ class ALGORITHM:
         if cov_mat is not None:
             cov_matrix = cov_mat
         else:
-            cov_matrix = torch.diag(torch.tensor([0.0001]*self.policy.out_dim))
+            cov_matrix = torch.diag(torch.tensor([0.001]*self.policy.out_dim))
 
         # cov_matrix = torch.diag(torch.tensor([0]*self.policy.out_dim))
         # cov_matrix = torch.diag(torch.exp(log_var))
@@ -247,7 +247,7 @@ class ALGORITHM:
         policy_loss = torch.stack(policy_loss).sum()
         policy_loss.backward()
         self.policy.losses_history.append(policy_loss)
-        for i in range(5):
+        for i in range(2):
             self.optimizer.step()
         del self.policy.rewards[:]
         del self.policy.saved_log_probs[:]
