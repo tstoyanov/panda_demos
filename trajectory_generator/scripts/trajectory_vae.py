@@ -655,7 +655,7 @@ if __name__ == "__main__":
             args.beta = beta_list[i]
 
             args.latest_train_loss = None
-            args.latest_test_loss = 1
+            args.latest_test_loss = None
             best_train_loss = None
             best_test_loss = None
 
