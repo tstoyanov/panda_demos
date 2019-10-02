@@ -227,6 +227,10 @@ class ALGORITHM:
         self.policy.log_probs_history.append(log_prob)
         self.policy.means_history.append(mean)
         return action_sample, mean
+    
+    def get_policy_mean(self, state):
+        mean, log_var = self.policy(state)
+        return mean
 
 
     def finish_episode(self, pre_training=False):

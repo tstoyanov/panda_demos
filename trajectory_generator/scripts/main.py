@@ -62,6 +62,7 @@ parser.add_argument('--save-file', default=False, help='name of the file to save
 parser.add_argument('--load-dir', default=package_path + "/saved_models/policy_network/", help='directory from where to load the trained policy model')
 parser.add_argument('--load-checkpoint', default=False, help='name of the file containing the checkpoint of the trained policy model')
 parser.add_argument('--load-file', default=False, help='name of the file containing the state dictionary of the trained policy model')
+parser.add_argument('--measure-performance', nargs='?', const=True, default=False, help='whether or not to test the performance of the policy')
 
 parser.add_argument('--trajectory-folder', default="latest", help='folder where to look for the trajectory to execute')
 parser.add_argument('--trajectory-file', default="trajectories.txt", help='file describing the trajectory to follow')
@@ -117,24 +118,6 @@ joint_names = [
     "panda_joint7"
 ]
 joints_number = len(joint_names)
-
-def get_dummy_state(dim):
-    # return torch.randn(dim)
-    return torch.ones(dim)
-    # return torch.zeros(dim)
-
-def get_dummy_action(dim):
-    # return torch.tensor([-1.0398e+00,  1.2563e+00,  8.3643e-02, -5.1169e-01,  1.4186e-01])
-    return torch.zeros(dim)
-    # return torch.randn(dim)
-    # return torch.ones(dim)
-
-def execute_action(input_folder, tot_time_nsecs, is_simulation, is_learning, t):
-    trajectory_writer_module.talker(input_folder, tot_time_nsecs, is_simulation, is_learning, t)
-
-def close_all(items):
-    for item in items:
-        item.close()
 
 test = [
 		[
@@ -1131,8 +1114,120 @@ ll_latent_space_stds = [0.42513496, 0.01628749, 0.06014936, 0.02778022, 0.519112
 ll_best_mean = [-1.3671,  0.2444,  0.0290, -1.4391,  0.1555]
 ll_best_std = [0.0204, 0.2391, 0.2653, 0.0247, 0.0492]
 
+initial_means = a200_b01_10000e_mc_latent_space_means
+initial_stds = a200_b01_10000e_mc_latent_space_stds
+initial_actions = a200_b01_10000_shuffled_initial_means
+
+def get_dummy_state(dim):
+    # return torch.randn(dim)
+    return torch.ones(dim)
+    # return torch.zeros(dim)
+
+def get_dummy_action(dim):
+    # return torch.tensor([-1.0398e+00,  1.2563e+00,  8.3643e-02, -5.1169e-01,  1.4186e-01])
+    return torch.zeros(dim)
+    # return torch.randn(dim)
+    # return torch.ones(dim)
+
+def execute_action(input_folder, tot_time_nsecs, is_simulation, is_learning, t):
+    trajectory_writer_module.talker(input_folder, tot_time_nsecs, is_simulation, is_learning, t)
+
+def close_all(items):
+    for item in items:
+        item.close()
+
 def get_angle(x, y):
     return (math.atan2(y, x)*180/math.pi + 360) % 360
+
+def evaluate_board(image_reader=None):
+	while True:
+		distance, stone_x, stone_y = image_reader.evaluate_board()
+		if distance != -1:
+			if args.reward_type.upper() in ["D", "DISCRETE"]:
+				reward = max(0, 4 - distance//100)
+			elif args.reward_type.upper() in ["C", "CONTINUOUS"]:
+				reward = max(0, 4 - float(distance)/100)
+
+			angle = get_angle(stone_x, stone_y)
+			# if distance > 350:
+			#     reward = 0
+			# else:
+			#     reward = (1-(distance/350.0))**2
+			break
+		else:
+			command = raw_input("'c'=continue\n's'=set reward\n't'=try again\n'o'=out of bounds\n\nInput command: ")
+			if "c" == command:
+				break
+			elif "s" == command:
+				while True:
+					try:
+						r = raw_input("Set the reward: ")
+						if "q" != r:
+							reward = float(r)
+							distance = "set"
+							angle = "set"
+						break
+					except:
+						print("INFO: Input 't' to try again evaluating the board")
+						print("ERROR: The reward must be a float")
+				break
+			elif "o" == command:
+				reward = 0
+				distance = "out"
+				angle = "out"
+				break
+			elif "t" == command:
+				pass
+	return reward, distance, angle
+
+def measure_performance(image_reader=None, trajectory_dict=None):
+	performance_50 = 0
+	performance_115 = 0
+	for n in range(10):
+		raw_input("Press enter to measure performance")
+		execute_action(input_folder=False, tot_time_nsecs=args.execution_time, is_simulation=False, is_learning=True, t=trajectory_dict)
+		raw_input("Press enter to evaluate the board")
+		reward, distance, angle = evaluate_board(image_reader=image_reader)
+		try:
+			if int(distance) < 50:
+				performance_50 += 1
+				performance_115 += 1
+			elif int(distance) < 115:
+				performance_115 += 1
+		except ValueError:
+			pass
+	print("Red circle hit: {}\nBlue circle hit: {}".format(performance_50, performance_115))
+
+def test_policy(image_reader=None, algorithm=None, decoder_model=None, state=None, trajectory_dict=None):
+	test_reward = 0
+	mean = algorithm.get_policy_mean(state)
+	trajectory = decoder_model.decode(mean)
+	smooth_trajectory = []
+	for i in range(joints_number):
+		smooth_trajectory.append(trajectory[i])
+	for i, point in enumerate(trajectory[joints_number:], joints_number):
+		smooth_trajectory.append(0.6*smooth_trajectory[i-joints_number]+0.4*point)
+	smooth_trajectory = torch.tensor(smooth_trajectory)
+	smooth_trajectory = []
+	for i in range(joints_number):
+		smooth_trajectory.append(trajectory[i])
+	for i, point in enumerate(trajectory[joints_number:], joints_number):
+		smooth_trajectory.append(0.6*smooth_trajectory[i-joints_number]+0.4*point)
+	smooth_trajectory = torch.tensor(smooth_trajectory)
+	trajectory_dict["joint_trajectory"] = smooth_trajectory.view(100, -1).tolist()
+	is_safe, avg_distance, unsafe_pts, fk_z = safety_check_module.check(trajectory.tolist())
+	if is_safe:
+		for n in range(args.action_repetition):
+			raw_input("Press enter to execute a trajectory from the policy mean")
+			execute_action(input_folder=False, tot_time_nsecs=args.execution_time, is_simulation=False, is_learning=True, t=trajectory_dict)
+			raw_input("Press enter to evaluate the board")
+			reward, distance, angle = evaluate_board(image_reader=image_reader)
+			test_reward += reward
+		test_reward /= args.action_repetition
+	else:
+		test_reward = -1
+	print ("Average reward of deterministic policy = {}".format(test_reward))
+	return test_reward
 
 def main(args):
     try:
@@ -1148,7 +1243,7 @@ def main(args):
             algorithm.load_checkpoint(args.load_dir+"checkpoint/"+args.load_checkpoint)
         else:
             algorithm.plot = False
-            algorithm.pre_train(args.pre_train_epochs, args.pre_train_batch_size, args.pre_train_log_interval, target=torch.tensor(a200_b01_10000e_mc_latent_space_means))
+            algorithm.pre_train(args.pre_train_epochs, args.pre_train_batch_size, args.pre_train_log_interval, target=torch.tensor(initial_means))
             print ("Pre train over")
             algorithm.plot = True
         ret = [0, 0]
@@ -1158,6 +1253,24 @@ def main(args):
             "joint_names": joint_names,
             "realease_frame": args.release_frame
         }
+
+        if args.measure_performance != False:
+			state = get_dummy_state(algorithm.policy.in_dim)
+			mean = algorithm.get_policy_mean(state)
+			trajectory = decoder_model.decode(mean)
+			smooth_trajectory = []
+			for i in range(joints_number):
+				smooth_trajectory.append(trajectory[i])
+			for i, point in enumerate(trajectory[joints_number:], joints_number):
+				smooth_trajectory.append(0.6*smooth_trajectory[i-joints_number]+0.4*point)
+			smooth_trajectory = torch.tensor(smooth_trajectory)
+			trajectory_dict["joint_trajectory"] = smooth_trajectory.view(100, -1).tolist()
+			is_safe, avg_distance, unsafe_pts, fk_z = safety_check_module.check(trajectory.tolist())
+			if is_safe:
+				measure_performance(image_reader=image_reader, trajectory_dict=trajectory_dict)
+			else:
+				print("Unsafe trajectory")
+
         safe_throws = 0
         epoch = 0
         while safe_throws < args.safe_throws:
@@ -1180,10 +1293,14 @@ def main(args):
                                 break
                             except:
                                 print ("The action must be a python list\nEg: [1, 2, 3, 4, 5]")
+                    if "test_policy" == command:
+						test_policy(image_reader, algorithm, decoder_model, state, trajectory_dict)
                 if "set_action" != command:
-                    cov_mat = torch.diag(torch.tensor([0.3]*args.action_dim))
+                    cov_mat = torch.diag((torch.tensor(initial_stds)/2)*math.pow(0.5, epoch))
+                    print("cov_mat: ")
+                    print(cov_mat)
                     if epoch == 0:
-                        action, mean = algorithm.select_action(state, cov_mat=cov_mat, target_action=torch.tensor(a200_b01_10000_shuffled_initial_means[t]))
+                        action, mean = algorithm.select_action(state, cov_mat=cov_mat, target_action=torch.tensor(initial_actions[t]))
                     else:
                         action, mean = algorithm.select_action(state, cov_mat=cov_mat)
                 # action, mean = algorithm.select_action(state, cov_mat=cov_mat)
@@ -1224,45 +1341,45 @@ def main(args):
                         if "print rewards_history" == command:
                             print ("rewards_history:")
                             print (algorithm.policy.rewards_history)
+                        reward, distance, angle = evaluate_board(image_reader=image_reader)
+                        # while True:
+                        #     distance, stone_x, stone_y = image_reader.evaluate_board()
+                        #     if distance != -1:
+                        #         if args.reward_type.upper() in ["D", "DISCRETE"]:
+                        #             reward = max(0, 4 - distance//100)
+                        #         elif args.reward_type.upper() in ["C", "CONTINUOUS"]:
+                        #             reward = max(0, 4 - float(distance)/100)
 
-                        while True:
-                            distance, stone_x, stone_y = image_reader.evaluate_board()
-                            if distance != -1:
-                                if args.reward_type.upper() in ["D", "DISCRETE"]:
-                                    reward = max(0, 4 - distance//100)
-                                elif args.reward_type.upper() in ["C", "CONTINUOUS"]:
-                                    reward = max(0, 4 - float(distance)/100)
-
-                                angle = get_angle(stone_x, stone_y)
-                                # if distance > 350:
-                                #     reward = 0
-                                # else:
-                                #     reward = (1-(distance/350.0))**2
-                                break
-                            else:
-                                command = raw_input("'c'=continue\n's'=set reward\n't'=try again\n'o'=out of bounds\n\nInput command: ")
-                                if "c" == command:
-                                    break
-                                elif "s" == command:
-                                    while True:
-                                        try:
-                                            r = raw_input("Set the reward: ")
-                                            if "q" != r:
-                                                reward = float(r)
-                                                distance = "set"
-                                                angle = "set"
-                                            break
-                                        except:
-                                            print("INFO: Input 't' to try again evaluating the board")
-                                            print("ERROR: The reward must be a float")
-                                    break
-                                elif "o" == command:
-                                    reward = 0
-                                    distance = "out"
-                                    angle = "out"
-                                    break
-                                elif "t" == command:
-                                    pass
+                        #         angle = get_angle(stone_x, stone_y)
+                        #         # if distance > 350:
+                        #         #     reward = 0
+                        #         # else:
+                        #         #     reward = (1-(distance/350.0))**2
+                        #         break
+                        #     else:
+                        #         command = raw_input("'c'=continue\n's'=set reward\n't'=try again\n'o'=out of bounds\n\nInput command: ")
+                        #         if "c" == command:
+                        #             break
+                        #         elif "s" == command:
+                        #             while True:
+                        #                 try:
+                        #                     r = raw_input("Set the reward: ")
+                        #                     if "q" != r:
+                        #                         reward = float(r)
+                        #                         distance = "set"
+                        #                         angle = "set"
+                        #                     break
+                        #                 except:
+                        #                     print("INFO: Input 't' to try again evaluating the board")
+                        #                     print("ERROR: The reward must be a float")
+                        #             break
+                        #         elif "o" == command:
+                        #             reward = 0
+                        #             distance = "out"
+                        #             angle = "out"
+                        #             break
+                        #         elif "t" == command:
+                        #             pass
                         cumulative_reward += reward
                         algorithm.set_stone_position(distance, angle)
                         print ("distance = {}".format(distance))
@@ -1285,6 +1402,9 @@ def main(args):
             checkpoint_save_path = args.save_dir+"checkpoint/"+datetime.now().strftime("%Y-%m-%d_%H:%M:%S")+".tar"
             algorithm.save_checkpoint(checkpoint_save_path)
             print("Policy model saved...")
+
+            raw_input("Press enter to test the policy")
+            test_policy(image_reader, algorithm, decoder_model, state, trajectory_dict)
 
             if epoch % args.log_interval == 0:
                 print('Episode {}\tLast reward: {:.2f}'.format(
