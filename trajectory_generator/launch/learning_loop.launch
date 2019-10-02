@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <launch>
     <group ns="panda">
-        <node pkg="trajectory_generator" name="learning_loop" type="main.py" output="screen" args="--decoder-sd a200_b1e-1_1000e.pt --reward-type continuous" />
+        <node pkg="trajectory_generator" name="learning_loop" type="main.py" output="screen" args="--decoder-sd a200_b1e-1_10000e/a200_b1e-1_10000e.pt --reward-type c" />
     </group>
 </launch>

@@ -34,7 +34,7 @@ parser.add_argument('--reward-type', default="discrete" , help='type of reward f
 
 parser.add_argument('--state-dim', type=int, default=4, help='policy input dimension (default: 4)')
 parser.add_argument('--action-dim', type=int, default=5, help='policy output dimension (default: 5)')
-parser.add_argument('--learning-rate', type=float, default=0.01, help='learning rate of the optimizer')
+parser.add_argument('--learning-rate', type=float, default=0.1, help='learning rate of the optimizer')
 
 parser.add_argument('--models-dir', default="nn_models", help='directory from where to load the network shape of the action decoder')
 parser.add_argument('--decoder-model-file', default="model_trajectory_vae", help='file from where to load the network shape of the action decoder')
@@ -1080,6 +1080,31 @@ a100_b001_reversed_initial_means = [a100_b001_mc_18_means] + [a100_b001_mc_17_me
 a100_b001_shuffled_initial_means = [a100_b001_mc_17_means] + [a100_b001_mc_15_means] + [a100_b001_mc_13_means] + [a100_b001_mc_18_means] + [a100_b001_mc_14_means] + [a100_b001_mc_16_means]
 
 
+# ========== a200_b01_10000e_mc ==========
+a200_b01_10000e_mc_latent_space_means = [0.0260, 0.0046, 0.0036, 0.0586, 0.0040]
+a200_b01_10000e_mc_latent_space_stds = [0.9983, 1.0437, 1.0033, 0.9555, 0.9893]
+
+a200_b01_10000e_mc_12_means = [ 0.0070, -1.6013, -0.0356,  0.6396,  0.0168]
+a200_b01_10000e_mc_13_means = [ 0.0063, -1.1037,  0.0251,  0.1639,  0.0351]
+a200_b01_10000e_mc_14_means = [ 0.0502, -0.4833, -0.0348, -0.0588, -0.0115]
+a200_b01_10000e_mc_15_means = [ 0.0277,  0.1102,  0.0260, -0.0783, -0.0032]
+a200_b01_10000e_mc_16_means = [0.0413, 0.6655, 0.0220, 0.0987, 0.0118]
+a200_b01_10000e_mc_17_means = [ 0.0274,  1.2638,  0.0055,  0.0380, -0.0135]
+a200_b01_10000e_mc_18_means = [-4.7113e-03,  1.6995e+00,  1.2287e-04, -5.7070e-01, -1.5765e-02]
+
+a200_b01_10000e_mc_12_stds = [1.0318, 0.2006, 1.0162, 0.8498, 0.9931]
+a200_b01_10000e_mc_13_stds = [1.0135, 0.2658, 1.0060, 0.8723, 0.9812]
+a200_b01_10000e_mc_14_stds = [0.9669, 0.2571, 1.0099, 0.9603, 0.9775]
+a200_b01_10000e_mc_15_stds = [1.0045, 0.2394, 0.9775, 0.9668, 0.9815]
+a200_b01_10000e_mc_16_stds = [1.0096, 0.2401, 0.9847, 1.0167, 0.9816]
+a200_b01_10000e_mc_17_stds = [0.9731, 0.3234, 1.0264, 0.9017, 1.0077]
+a200_b01_10000e_mc_18_stds = [1.0058, 0.2461, 1.0151, 0.6494, 1.0328]
+
+a200_b01_10000_initial_means = [a200_b01_10000e_mc_13_means] + [a200_b01_10000e_mc_14_means] + [a200_b01_10000e_mc_15_means] + [a200_b01_10000e_mc_16_means] + [a200_b01_10000e_mc_17_means] + [a200_b01_10000e_mc_18_means]
+a200_b01_10000_reversed_initial_means = [a200_b01_10000e_mc_18_means] + [a200_b01_10000e_mc_17_means] + [a200_b01_10000e_mc_16_means] + [a200_b01_10000e_mc_15_means] + [a200_b01_10000e_mc_14_means] + [a200_b01_10000e_mc_13_means]
+a200_b01_10000_shuffled_initial_means = [a200_b01_10000e_mc_17_means] + [a200_b01_10000e_mc_15_means] + [a200_b01_10000e_mc_13_means] + [a200_b01_10000e_mc_18_means] + [a200_b01_10000e_mc_14_means] + [a200_b01_10000e_mc_16_means]
+
+
 # ========== a100_b01_mc ==========
 a100_b01_mc_latent_space_means = [ 0.5667, -0.6089,  1.9060,  0.1249,  3.5259]
 
@@ -1123,7 +1148,7 @@ def main(args):
             algorithm.load_checkpoint(args.load_dir+"checkpoint/"+args.load_checkpoint)
         else:
             algorithm.plot = False
-            algorithm.pre_train(args.pre_train_epochs, args.pre_train_batch_size, args.pre_train_log_interval, target=torch.tensor(a200_b01_mc_latent_space_means))
+            algorithm.pre_train(args.pre_train_epochs, args.pre_train_batch_size, args.pre_train_log_interval, target=torch.tensor(a200_b01_10000e_mc_latent_space_means))
             print ("Pre train over")
             algorithm.plot = True
         ret = [0, 0]
@@ -1156,10 +1181,11 @@ def main(args):
                             except:
                                 print ("The action must be a python list\nEg: [1, 2, 3, 4, 5]")
                 if "set_action" != command:
+                    cov_mat = torch.diag(torch.tensor([0.3]*args.action_dim))
                     if epoch == 0:
-                        action, mean = algorithm.select_action(state, target_action=torch.tensor(a200_b01_shuffled_initial_means[t]))
+                        action, mean = algorithm.select_action(state, cov_mat=cov_mat, target_action=torch.tensor(a200_b01_10000_shuffled_initial_means[t]))
                     else:
-                        action, mean = algorithm.select_action(state)
+                        action, mean = algorithm.select_action(state, cov_mat=cov_mat)
                 # action, mean = algorithm.select_action(state, cov_mat=cov_mat)
                 if epoch % args.log_interval == 0 and t == 0 and algorithm.plot:
                     algorithm.update_graphs()

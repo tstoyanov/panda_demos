@@ -247,7 +247,7 @@ class ALGORITHM:
         policy_loss = torch.stack(policy_loss).sum()
         policy_loss.backward()
         self.policy.losses_history.append(policy_loss)
-        for i in range(2):
+        for i in range(1):
             self.optimizer.step()
         del self.policy.rewards[:]
         del self.policy.saved_log_probs[:]

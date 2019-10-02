@@ -60,7 +60,7 @@ parser.add_argument('--debug', nargs='?', const=True, default=False,
                     help='debug flag')
 parser.add_argument('--save-dir', default=package_path + "/saved_models/trajectory_vae/",
                     help='directory where to save the model once trained')
-parser.add_argument('--save-file', default=False,
+parser.add_argument('--save-file', default=True,
                     help='name of the file to save the model once trained')
 parser.add_argument('--load-dir', default=package_path + "/saved_models/trajectory_vae/",
                     help='directory from where to load the trained model')
@@ -741,16 +741,16 @@ if __name__ == "__main__":
                 #     sample = model.decode(sample).cpu()
                     # for i in range(len(sample)):
                     #     print (sample[i])
-                if args.parameters_search != False:
-                    if epoch == 1:
-                        best_test_loss = args.latest_test_loss
-                    elif args.latest_test_loss < best_test_loss:
-                        save_model_state_dict(os.path.dirname(save_path) + "/best_model_" + str(epoch) + "e.pt")
-                        best_test_loss = args.latest_test_loss
+                if epoch == 1:
+                    best_test_loss = args.latest_test_loss
+                elif args.latest_test_loss < best_test_loss:
+                    save_model_state_dict(os.path.dirname(save_path) + "/best_model.pt")
+                    best_test_loss = args.latest_test_loss
             
 
             if args.save_file != False:
-                save_model_state_dict(args.save_dir+args.save_file)
+                save_model_state_dict(save_path)
+                # save_model_state_dict(args.save_dir+args.save_file)
             
             if args.parameters_search != False:
                 save_model_state_dict(save_path)
@@ -904,6 +904,12 @@ if __name__ == "__main__":
             data_to_plot['unsafe_points'] = unsafe_points
             data_to_plot['avg_dist'] = avg_dist
             data_to_plot['latent_space'] = latent_space_train.tolist()
+            # mean = latent_space_train.mean(0)
+            # std = latent_space_train.std(0)
+            # v15 = data_to_plot.loc[data_to_plot.vel == 1.5]["vel"].tolist()
+            # t15 = torch.FloatTensor(v15)
+            # m15 = t15.mean(0)
+            # std15 = t15.std(0)
             test_data_to_plot['test_vel'] = test_labels
             test_data_to_plot['test_is_safe'] = test_is_safe
             test_data_to_plot['test_unsafe_points'] = test_unsafe_points
