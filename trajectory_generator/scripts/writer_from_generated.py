@@ -29,8 +29,8 @@ def talker(input_folder="latest", tot_time_nsecs=9000000000, is_simulation=False
 
     if is_simulation:
         print("SIMULATION MODE")
-        robot_desctiption_str = "robot_description"
-        namespace = ""
+        # robot_desctiption_str = "robot_description"
+        # namespace = ""
         pub = rospy.Publisher('/position_joint_trajectory_controller/follow_joint_trajectory/goal',
                             FollowJointTrajectoryActionGoal, queue_size=10)
         grasp_pub = rospy.Publisher('/franka_gripper/grasp/goal',
@@ -43,8 +43,8 @@ def talker(input_folder="latest", tot_time_nsecs=9000000000, is_simulation=False
             with open(package_path + "/generated_trajectories/cpp/" + input_folder + "/trajectories.txt", 'r') as f:
                 data = f.read()
     else:
-        robot_desctiption_str = "/panda/robot_description"
-        namespace = "panda"
+        # robot_desctiption_str = "/panda/robot_description"
+        # namespace = "panda"
         pub = rospy.Publisher('/panda/position_joint_trajectory_controller/follow_joint_trajectory/goal',
                             FollowJointTrajectoryActionGoal, queue_size=10)
         grasp_pub = rospy.Publisher('/panda/franka_gripper/grasp/goal',
@@ -70,7 +70,8 @@ def talker(input_folder="latest", tot_time_nsecs=9000000000, is_simulation=False
 
     moveit_commander.roscpp_initialize(sys.argv)
     group_name = "panda_arm"
-    group = moveit_commander.MoveGroupCommander(group_name, robot_description=robot_desctiption_str, ns=namespace)
+    group = moveit_commander.MoveGroupCommander(group_name)
+    # group = moveit_commander.MoveGroupCommander(group_name, robot_description=robot_desctiption_str, ns=namespace)
 
     joint_goal = group.get_current_joint_values()
     start = [-0.448036147657, 0.328661662868, -0.622003205874, -1.82402771276, 0.269721323163, 2.1145116905, -1.94276850845]

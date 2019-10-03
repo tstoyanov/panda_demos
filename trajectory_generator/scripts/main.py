@@ -29,6 +29,7 @@ parser.add_argument('--log-interval', type=int, default=1, metavar='N', help='in
 parser.add_argument('--epochs', type=int, default=12, help='number of epochs for training (default: 10)')
 parser.add_argument('--batch-size', type=int, default=5, metavar='N', help='input batch size for training (default: 12)')
 parser.add_argument('--action-repetition', type=int, default=3 , help='number of times to  repeat the same action')
+parser.add_argument('--test-repetition', type=int, default=5 , help='number of times to  repeat the same action while testing the deterministic policy')
 parser.add_argument('--safe-throws', type=int, default=180 , help='number of safe throws to execute before stopping the learning loop')
 parser.add_argument('--reward-type', default="discrete" , help='type of reward function to use during learning')
 
@@ -1118,6 +1119,8 @@ initial_means = a200_b01_10000e_mc_latent_space_means
 initial_stds = a200_b01_10000e_mc_latent_space_stds
 initial_actions = a200_b01_10000_shuffled_initial_means
 
+best_det_reward = None
+
 def get_dummy_state(dim):
     # return torch.randn(dim)
     return torch.ones(dim)
@@ -1180,23 +1183,46 @@ def evaluate_board(image_reader=None):
 				pass
 	return reward, distance, angle
 
-def measure_performance(image_reader=None, trajectory_dict=None):
-	performance_50 = 0
-	performance_115 = 0
-	for n in range(10):
-		raw_input("Press enter to measure performance")
-		execute_action(input_folder=False, tot_time_nsecs=args.execution_time, is_simulation=False, is_learning=True, t=trajectory_dict)
-		raw_input("Press enter to evaluate the board")
-		reward, distance, angle = evaluate_board(image_reader=image_reader)
-		try:
-			if int(distance) < 50:
-				performance_50 += 1
-				performance_115 += 1
-			elif int(distance) < 115:
-				performance_115 += 1
-		except ValueError:
-			pass
-	print("Red circle hit: {}\nBlue circle hit: {}".format(performance_50, performance_115))
+def measure_performance(image_reader=None, trajectory_dict=None, algorithm=None, decoder_model=None, safety_check_module=None):
+	state = get_dummy_state(algorithm.policy.in_dim)
+	mean = algorithm.get_policy_mean(state)
+	print ("mean: {}".format(mean))
+	trajectory = decoder_model.decode(mean)
+	smooth_trajectory = []
+	for i in range(joints_number):
+		smooth_trajectory.append(trajectory[i])
+	for i, point in enumerate(trajectory[joints_number:], joints_number):
+		smooth_trajectory.append(0.6*smooth_trajectory[i-joints_number]+0.4*point)
+	smooth_trajectory = torch.tensor(smooth_trajectory)
+	trajectory_dict["joint_trajectory"] = smooth_trajectory.view(100, -1).tolist()
+	is_safe, avg_distance, unsafe_pts, fk_z = safety_check_module.check(trajectory.tolist())
+	if is_safe:
+		performance_50 = 0
+		performance_115 = 0
+		for n in range(100):
+			command = raw_input("Press enter to measure performance")
+			if "" != command:
+				while True:
+					if "print_means_history" == command:
+						print("means_history:")
+						print(algorithm.policy.means_history)
+					if "q" == command:
+						break
+					command = raw_input("Insert command:\n")
+			execute_action(input_folder=False, tot_time_nsecs=args.execution_time, is_simulation=False, is_learning=True, t=trajectory_dict)
+			raw_input("Press enter to evaluate the board")
+			reward, distance, angle = evaluate_board(image_reader=image_reader)
+			try:
+				if 0 <= int(distance) <= 50:
+					performance_50 += 1
+					performance_115 += 1
+				elif 50 < int(distance) <= 115:
+					performance_115 += 1
+			except ValueError:
+				pass
+		print("Red circle hit: {}\nBlue circle hit: {}".format(performance_50, performance_115))
+	else:
+		print("Unsafe trajectory")
 
 def test_policy(image_reader=None, algorithm=None, decoder_model=None, state=None, trajectory_dict=None):
 	test_reward = 0
@@ -1217,17 +1243,17 @@ def test_policy(image_reader=None, algorithm=None, decoder_model=None, state=Non
 	trajectory_dict["joint_trajectory"] = smooth_trajectory.view(100, -1).tolist()
 	is_safe, avg_distance, unsafe_pts, fk_z = safety_check_module.check(trajectory.tolist())
 	if is_safe:
-		for n in range(args.action_repetition):
+		for n in range(args.test_repetition):
 			raw_input("Press enter to execute a trajectory from the policy mean")
 			execute_action(input_folder=False, tot_time_nsecs=args.execution_time, is_simulation=False, is_learning=True, t=trajectory_dict)
 			raw_input("Press enter to evaluate the board")
 			reward, distance, angle = evaluate_board(image_reader=image_reader)
 			test_reward += reward
-		test_reward /= args.action_repetition
+		test_reward /= args.test_repetition
 	else:
 		test_reward = -1
 	print ("Average reward of deterministic policy = {}".format(test_reward))
-	return test_reward
+	return test_reward, mean
 
 def main(args):
     try:
@@ -1240,7 +1266,7 @@ def main(args):
         if args.load_file != False:
             algorithm.load_model_state_dict(args.load_dir+args.load_file)
         elif args.load_checkpoint != False:
-            algorithm.load_checkpoint(args.load_dir+"checkpoint/"+args.load_checkpoint)
+            algorithm.load_checkpoint(args.load_dir+args.load_checkpoint)
         else:
             algorithm.plot = False
             algorithm.pre_train(args.pre_train_epochs, args.pre_train_batch_size, args.pre_train_log_interval, target=torch.tensor(initial_means))
@@ -1255,21 +1281,7 @@ def main(args):
         }
 
         if args.measure_performance != False:
-			state = get_dummy_state(algorithm.policy.in_dim)
-			mean = algorithm.get_policy_mean(state)
-			trajectory = decoder_model.decode(mean)
-			smooth_trajectory = []
-			for i in range(joints_number):
-				smooth_trajectory.append(trajectory[i])
-			for i, point in enumerate(trajectory[joints_number:], joints_number):
-				smooth_trajectory.append(0.6*smooth_trajectory[i-joints_number]+0.4*point)
-			smooth_trajectory = torch.tensor(smooth_trajectory)
-			trajectory_dict["joint_trajectory"] = smooth_trajectory.view(100, -1).tolist()
-			is_safe, avg_distance, unsafe_pts, fk_z = safety_check_module.check(trajectory.tolist())
-			if is_safe:
-				measure_performance(image_reader=image_reader, trajectory_dict=trajectory_dict)
-			else:
-				print("Unsafe trajectory")
+			measure_performance(image_reader=image_reader, trajectory_dict=trajectory_dict, algorithm=algorithm, decoder_model=decoder_model, safety_check_module=safety_check_module)
 
         safe_throws = 0
         epoch = 0
@@ -1277,6 +1289,7 @@ def main(args):
         # for epoch in range(args.epochs):
             # t = 0
             # while t < args.batch_size:
+            episode_reward = 0
             for t in range(args.batch_size):
                 print ("t = {}".format(t))
                 state = get_dummy_state(algorithm.policy.in_dim)
@@ -1296,7 +1309,7 @@ def main(args):
                     if "test_policy" == command:
 						test_policy(image_reader, algorithm, decoder_model, state, trajectory_dict)
                 if "set_action" != command:
-                    cov_mat = torch.diag((torch.tensor(initial_stds)/2)*math.pow(0.5, epoch))
+                    cov_mat = torch.diag((torch.tensor(initial_stds))*math.pow(0.5, epoch))
                     print("cov_mat: ")
                     print(cov_mat)
                     if epoch == 0:
@@ -1395,22 +1408,32 @@ def main(args):
 
                 print ("reward = {}".format(reward))      
                 algorithm.set_reward(reward)
+                episode_reward += reward
+			
+            episode_reward /= int(args.batch_size)
+            algorithm.set_episode_reward(episode_reward)
             loss = algorithm.finish_episode()
+
+            raw_input("Press enter to test the policy")
+            latest_det_reward, latest_det_mean = test_policy(image_reader, algorithm, decoder_model, state, trajectory_dict)
+            algorithm.set_deterministic_policy_reward(latest_det_reward)
+            algorithm.set_deterministic_policy_mean(latest_det_mean)
 
             print("Saving policy model...")
             algorithm.save_model_state_dict(save_path)
-            checkpoint_save_path = args.save_dir+"checkpoint/"+datetime.now().strftime("%Y-%m-%d_%H:%M:%S")+".tar"
+            checkpoint_save_path = args.save_dir+"checkpoint/"+datetime.now().strftime("%Y-%m-%d_%H:%M:%S")+"_r"+str(round(latest_det_reward, 3))+".tar"
             algorithm.save_checkpoint(checkpoint_save_path)
             print("Policy model saved...")
 
-            raw_input("Press enter to test the policy")
-            test_policy(image_reader, algorithm, decoder_model, state, trajectory_dict)
-
             if epoch % args.log_interval == 0:
-                print('Episode {}\tLast reward: {:.2f}'.format(
-                    epoch, reward))
+                print('Episode {}\tEpisode avg reward: {:.2f}'.format(
+                    epoch, episode_reward))
             epoch += 1
 
+        algorithm.update_graphs()
+        raw_input("Execution finished, press enter to close the program.")
+        raw_input("Execution finished, press enter to close the program.")
+        raw_input("Execution finished, press enter to close the program.")
         raw_input("Execution finished, press enter to close the program.")
         close_all(items)
 

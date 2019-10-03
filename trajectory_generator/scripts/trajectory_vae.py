@@ -607,7 +607,7 @@ def save_model_state_dict(save_path):
 
 
 def load_model_state_dict(load_path):
-    model_sd = torch.load(load_path)
+    model_sd = torch.load(load_path, map_location=torch.device('cpu'))
     loaded_model = VAE(len(model_sd["fc21.bias"])).to(device)
     loaded_model.load_state_dict(model_sd)
     loaded_model.eval()
@@ -683,7 +683,7 @@ if __name__ == "__main__":
                 save_path = args.save_dir + str(args.vae_dim) + "_dim/" + alpha_str + "_" + beta_str + "_" + str(args.epochs) + "e/model.pt"
             else:
                 save_path = args.save_dir + alpha_str + "_" + beta_str + "_" + str(args.epochs) + "e/model.pt"
-            os.makedirs(os.path.dirname(save_path), exist_ok=True)
+            # os.makedirs(os.path.dirname(save_path), exist_ok=True)
 
             loss_plots = {
                 "loss": {

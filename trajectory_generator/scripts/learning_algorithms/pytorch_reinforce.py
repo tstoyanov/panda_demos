@@ -58,6 +58,9 @@ class Policy(nn.Module):
         self.actions_history = []
         self.log_probs_history = []
         self.rewards_history = []
+        self.deterministic_policy_rewards_history = []
+        self.deterministic_policy_means_history = []
+        self.episode_rewards_history = []
         self.means_history = []
         self.losses_history = []
     
@@ -168,6 +171,9 @@ class ALGORITHM:
                 "actions_history": self.policy.actions_history,
                 "log_probs_history": self.policy.log_probs_history,
                 "rewards_history": self.policy.rewards_history,
+                "deterministic_policy_rewards_history": self.policy.deterministic_policy_rewards_history,
+                "deterministic_policy_means_history": self.policy.deterministic_policy_means_history,
+                "episode_rewards_history": self.policy.episode_rewards_history,
                 "means_history": self.policy.means_history,
                 "losses_history": self.policy.losses_history,
             }
@@ -175,27 +181,53 @@ class ALGORITHM:
 
     def load_checkpoint(self, load_path):
         checkpoint = torch.load(load_path)
+        if checkpoint.has_key("algorithm"):
+            if checkpoint["policy"].has_key("lr"):
+                self.lr = checkpoint["algorithm"]["lr"]
+            if checkpoint["policy"].has_key("current_epoch"):
+                self.current_epoch = checkpoint["algorithm"]["current_epoch"]
+            if checkpoint["policy"].has_key("state_dim"):
+                self.state_dim = checkpoint["algorithm"]["state_dim"]
+            if checkpoint["policy"].has_key("action_dim"):
+                self.action_dim = checkpoint["algorithm"]["action_dim"]
+            if checkpoint["policy"].has_key("eps"):
+                self.eps = checkpoint["algorithm"]["eps"]
+            if checkpoint["policy"].has_key("batch_size"):
+                self.batch_size = checkpoint["algorithm"]["batch_size"]
+            if checkpoint["policy"].has_key("stones_positions"):
+                self.stones_positions = checkpoint["algorithm"]["stones_positions"]
+            
+            if checkpoint["policy"].has_key("model_state_dict"):
+                self.policy.load_state_dict(checkpoint["algorithm"]['model_state_dict'])
+            if checkpoint["policy"].has_key("optimizer_state_dict"):
+                self.optimizer.load_state_dict(checkpoint["algorithm"]['optimizer_state_dict'])
 
-        self.lr = checkpoint["algorithm"]["lr"]
-        self.current_epoch = checkpoint["algorithm"]["current_epoch"]
-        self.state_dim = checkpoint["algorithm"]["state_dim"]
-        self.action_dim = checkpoint["algorithm"]["action_dim"]
-        self.eps = checkpoint["algorithm"]["eps"]
-        self.batch_size = checkpoint["algorithm"]["batch_size"]
-        self.stones_positions = checkpoint["algorithm"]["stones_positions"]
+        if checkpoint.has_key("policy"):
+            if checkpoint["policy"].has_key("in_dim"):
+                self.policy.in_dim = checkpoint["policy"]["in_dim"]
+            if checkpoint["policy"].has_key("out_dim"):
+                self.policy.out_dim = checkpoint["policy"]["out_dim"]
+            if checkpoint["policy"].has_key("saved_log_probs"):
+                self.policy.saved_log_probs = checkpoint["policy"]["saved_log_probs"]
+            if checkpoint["policy"].has_key("rewards"):
+                self.policy.rewards = checkpoint["policy"]["rewards"]      
+            if checkpoint["policy"].has_key("actions_history"):
+                self.policy.actions_history = checkpoint["policy"]["actions_history"]
+            if checkpoint["policy"].has_key("log_probs_history"):
+                self.policy.log_probs_history = checkpoint["policy"]["log_probs_history"]
+            if checkpoint["policy"].has_key("rewards_history"):
+                self.policy.rewards_history = checkpoint["policy"]["rewards_history"]
+            if checkpoint["policy"].has_key("deterministic_policy_rewards_history"):
+                self.policy.deterministic_policy_rewards_history = checkpoint["policy"]["deterministic_policy_rewards_history"]
+            if checkpoint["policy"].has_key("deterministic_policy_means_history"):
+                self.policy.deterministic_policy_means_history = checkpoint["policy"]["deterministic_policy_means_history"]
+            if checkpoint["policy"].has_key("episode_rewards_history"):
+                self.policy.episode_rewards_history = checkpoint["policy"]["episode_rewards_history"]
+            if checkpoint["policy"].has_key("means_history"):
+                self.policy.means_history = checkpoint["policy"]["means_history"]
+            if checkpoint["policy"].has_key("losses_history"):
+                self.policy.losses_history = checkpoint["policy"]["losses_history"]
 
-        self.policy.in_dim = checkpoint["policy"]["in_dim"]
-        self.policy.out_dim = checkpoint["policy"]["out_dim"]
-        self.policy.saved_log_probs = checkpoint["policy"]["saved_log_probs"]
-        self.policy.rewards = checkpoint["policy"]["rewards"]      
-        self.policy.actions_history = checkpoint["policy"]["actions_history"]
-        self.policy.log_probs_history = checkpoint["policy"]["log_probs_history"]
-        self.policy.rewards_history = checkpoint["policy"]["rewards_history"]
-        self.policy.means_history = checkpoint["policy"]["means_history"]
-        self.policy.losses_history = checkpoint["policy"]["losses_history"]
-
-        self.policy.load_state_dict(checkpoint["algorithm"]['model_state_dict'])
-        self.optimizer.load_state_dict(checkpoint["algorithm"]['optimizer_state_dict'])
 
         self.policy.train()
 
@@ -270,6 +302,15 @@ class ALGORITHM:
     def set_reward(self, reward):
         self.policy.rewards.append(reward)
         self.policy.rewards_history.append(reward)
+    
+    def set_deterministic_policy_reward(self, reward):
+        self.policy.deterministic_policy_rewards_history.append(reward)
+    
+    def set_deterministic_policy_mean(self, reward):
+        self.policy.deterministic_policy_means_history.append(reward)
+    
+    def set_episode_reward(self, reward):
+        self.policy.episode_rewards_history.append(reward)
 
     def set_stone_position(self, distance, angle):
         self.stones_positions["distance"].append(distance)
@@ -289,8 +330,8 @@ class ALGORITHM:
     def update_graphs(self):
         if len(self.policy.losses_history) > 0:
             self.update_graph(self.live_plots["loss"]["fig"], self.live_plots["loss"]["ax"], self.live_plots["loss"]["line1"], (self.current_epoch)*self.batch_size, self.policy.losses_history[-1].item())
-        if len(self.policy.rewards_history) > 0:
-            self.update_graph(self.live_plots["reward"]["fig"], self.live_plots["reward"]["ax"], self.live_plots["reward"]["line1"], (self.current_epoch)*self.batch_size, self.policy.rewards_history[-1])
+        if len(self.policy.episode_rewards_history) > 0:
+            self.update_graph(self.live_plots["reward"]["fig"], self.live_plots["reward"]["ax"], self.live_plots["reward"]["line1"], (self.current_epoch)*self.batch_size, self.policy.episode_rewards_history[-1])
         if len(self.policy.means_history) > 0:
             for i in range(self.action_dim):
                 self.update_graph(self.live_plots["theta"]["fig"][i], self.live_plots["theta"]["ax"][i], self.live_plots["theta"]["lines"][i], (self.current_epoch)*self.batch_size, self.policy.means_history[-1][i].item())
