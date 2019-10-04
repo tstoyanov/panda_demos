@@ -411,8 +411,10 @@ class MyDataset(Dataset):
                 ret.append(list(map(lambda joint_value, joint_name: (joint_value-joints_ranges[joint_name]["min"])/(joints_ranges[joint_name]["max"]-joints_ranges[joint_name]["min"]), joints_positions, joints_ranges)))
             return torch.tensor(ret), torch.tensor(round(self.dataset["eef_velocity_magnitude"][index], 1)), torch.tensor(round(self.dataset["m"][index], 4)), torch.tensor(round(self.dataset["c"][index], 4)), index
         else:
-            discretized_m = (self.dataset["m"][index]*100 // 0.3) * 0.3
-            discretized_c = (self.dataset["c"][index]*100 // 0.3) * 0.3
+            discretized_m = (self.dataset["m"][index]*100 // 1)
+            discretized_c = (self.dataset["c"][index]*100 // 1)
+            # discretized_m = (self.dataset["m"][index]*100 // 0.3) * 0.3
+            # discretized_c = (self.dataset["c"][index]*100 // 0.3) * 0.3
             return torch.tensor(self.dataset["joints_positions"][index]), torch.tensor(round(self.dataset["eef_velocity_magnitude"][index], 1)), torch.tensor(discretized_m), torch.tensor(discretized_c), index
             # return torch.tensor(self.dataset["joints_positions"][index]), torch.tensor(round(self.dataset["eef_velocity_magnitude"][index], 1)), torch.tensor(round(self.dataset["m"][index]*100, 1)), torch.tensor(round(self.dataset["c"][index]*100, 1)), index
 
@@ -659,6 +661,10 @@ if __name__ == "__main__":
             best_train_loss = None
             best_test_loss = None
 
+            head, tail = os.path.split(args.dataset_dir)
+            head, tail = os.path.split(head)
+            dataset_str = tail
+
             alpha = float(args.alpha)
             beta = float(args.beta)
             e_alpha = 0
@@ -680,9 +686,9 @@ if __name__ == "__main__":
             else:
                 beta_str = "b"+str(beta)
             if int(args.vae_dim) != 5:
-                save_path = args.save_dir + str(args.vae_dim) + "_dim/" + alpha_str + "_" + beta_str + "_" + str(args.epochs) + "e/model.pt"
+                save_path = args.save_dir + str(args.vae_dim) + "_dim/" + alpha_str + "_" + beta_str + "_" + str(args.epochs) + "e_" + dataset_str + "/model.pt"
             else:
-                save_path = args.save_dir + alpha_str + "_" + beta_str + "_" + str(args.epochs) + "e/model.pt"
+                save_path = args.save_dir + alpha_str + "_" + beta_str + "_" + str(args.epochs) + "e_" + dataset_str + "/model.pt"
             # os.makedirs(os.path.dirname(save_path), exist_ok=True)
 
             loss_plots = {
@@ -867,7 +873,7 @@ if __name__ == "__main__":
                     # latent_space_train = torch.cat((latent_space_train, vae_model.reparameterize(mu, logvar, no_noise=args.no_noise)), 0)
                     latent_space_train = torch.cat((latent_space_train, latent_space_sample), 0)
                     original_data = torch.cat((original_data, data.view(-1, 700)), 0)
-                    # labels = labels.append(pd.Series(m), ignore_index=True)
+                    angular_coefficient = labels.append(pd.Series(m), ignore_index=True)
                     labels = labels.append(pd.Series(label), ignore_index=True)
                 
 
@@ -893,24 +899,26 @@ if __name__ == "__main__":
                         unsafe_list.append(unsafe_pts)
                     latent_space_test = torch.cat((latent_space_test, latent_space_test_sample), 0)
                     # latent_space_test = torch.cat((latent_space_test, vae_model.reparameterize(mu, logvar, False)), 0)
-                    # test_labels = test_labels.append(pd.Series(m), ignore_index=True)
+                    test_angular_coefficient = test_labels.append(pd.Series(m), ignore_index=True)
                     test_labels = test_labels.append(pd.Series(label), ignore_index=True)
                 test_is_safe.append(pd.Series(safe_list), ignore_index=True)
                 test_unsafe_points = test_unsafe_points.append(pd.Series(unsafe_list), ignore_index=True)
                 test_avg_dist = test_avg_dist.append(pd.Series(avg_dist_list), ignore_index=True)
 
             data_to_plot['vel'] = labels
+            data_to_plot['m'] = angular_coefficient
             data_to_plot['is_safe'] = is_safe
             data_to_plot['unsafe_points'] = unsafe_points
             data_to_plot['avg_dist'] = avg_dist
             data_to_plot['latent_space'] = latent_space_train.tolist()
             # mean = latent_space_train.mean(0)
             # std = latent_space_train.std(0)
-            # v15 = data_to_plot.loc[data_to_plot.vel == 1.5]["vel"].tolist()
+            # v15 = data_to_plot.loc[data_to_plot.vel == 1.5]["latent_space"].tolist()
             # t15 = torch.FloatTensor(v15)
             # m15 = t15.mean(0)
             # std15 = t15.std(0)
             test_data_to_plot['test_vel'] = test_labels
+            test_data_to_plot['test_m'] = test_angular_coefficient
             test_data_to_plot['test_is_safe'] = test_is_safe
             test_data_to_plot['test_unsafe_points'] = test_unsafe_points
             test_data_to_plot['test_avg_dist'] = test_avg_dist
@@ -963,7 +971,7 @@ if __name__ == "__main__":
                     if i != 0:
                         label_text.set_text(round(float(label_text.get_text()), 1))
 
-            elif "DOUBLE" == str(args.tsne).upper():
+            elif str(args.tsne).upper() in ["DOUBLE", "TRIPLE"]:
                 # fig = plt.figure("tsne_plot", figsize=(16,10))
                 # ax0 = fig.add_subplot(1, 1, 1)
                 fig.suptitle('t-sne algorithm over ' + str(len(my_train_set_loader.dataset)) + ' trajectories:\nEncoded ' + str(vae_model.fc22.out_features) + ' dimensional data using ' + args.loss_type.upper() + ' loss', fontsize=14)
@@ -986,6 +994,37 @@ if __name__ == "__main__":
                     # legend="brief",
                     alpha=0.5,
                     ax=ax2
+                )
+                legend = g.legend_
+                for i, label_text in enumerate(legend.texts):
+                    try:
+                        label_text.set_text(round(float(label_text.get_text()), 2))
+                    except ValueError:
+                        pass
+
+            if "TRIPLE" == str(args.tsne).upper():
+                # fig = plt.figure("tsne_plot", figsize=(16,10))
+                # ax0 = fig.add_subplot(1, 1, 1)
+                # fig.suptitle('t-sne algorithm over ' + str(len(my_train_set_loader.dataset)) + ' trajectories:\nEncoded ' + str(vae_model.fc22.out_features) + ' dimensional data using ' + args.loss_type.upper() + ' loss', fontsize=14)
+                # ax0 = plt.subplot(1, 1, 1)
+                fig_triple = plt.figure("tsne_unsafe_m", figsize=(16,10))
+                fig_triple.suptitle('t-sne algorithm over ' + str(len(my_train_set_loader.dataset)) + ' trajectories:\nEncoded ' + str(vae_model.fc22.out_features) + ' dimensional data using ' + args.loss_type.upper() + ' loss', fontsize=14)
+                
+                ax3 = fig_triple.add_subplot(1, 1, 1)
+                ax3.set_title("ALPHA = " + str(args.alpha) + "  BETA = " + str(args.beta) + "  z_lower_bound = " + str(z_lower_bound) + "  z_upper_bound = " + str(z_upper_bound))
+                g = sns.scatterplot(
+                    x="tsne-train-encoded-" + str(vae_model.fc22.out_features) + "d-one", y="tsne-train-encoded-" + str(vae_model.fc22.out_features) + "d-two",
+                    # hue="unsafe_points",
+                    # palette=sns.color_palette("hls", data_to_plot['unsafe_points'].nunique()),
+                    hue="m",
+                    palette=sns.color_palette("hls", data_to_plot['m'].nunique()),
+                    style="is_safe",
+                    markers=safe_markers,
+                    data=data_to_plot,
+                    legend="full",
+                    # legend="brief",
+                    alpha=0.5,
+                    ax=ax3
                 )
                 legend = g.legend_
                 for i, label_text in enumerate(legend.texts):
@@ -1045,6 +1084,7 @@ if __name__ == "__main__":
         if args.matrix_plot != False:
             dataset_data_to_plot = pd.DataFrame()
             dataset_data_to_plot['vel'] = pd.concat([data_to_plot['vel'], test_data_to_plot['test_vel']], ignore_index=True)
+            dataset_data_to_plot['m'] = pd.concat([data_to_plot['m'], test_data_to_plot['test_m']], ignore_index=True)
             dataset_data_to_plot['is_safe'] = pd.concat([data_to_plot['is_safe'], test_data_to_plot['test_is_safe']], ignore_index=True)
             latent_space_dataset = torch.cat((latent_space_train, latent_space_test), 0)
             latent_space_dimension = len(latent_space_dataset[0])
@@ -1079,6 +1119,28 @@ if __name__ == "__main__":
                         x="latent-space-"+str(ii+1), y="latent-space-"+str(i+1),
                         hue="is_safe",
                         palette=sns.color_palette("colorblind", dataset_data_to_plot['is_safe'].nunique()),
+                        data=dataset_data_to_plot,
+                        legend=False,
+                        alpha=0.3,
+                        ax=ax0
+                    )
+                    if ii != 0:
+                        a.set_ylabel(None)
+                    if i != latent_space_dimension-1:
+                        a.set_xlabel(None)
+                    # if i == 0 and 11 == latent_space_dimension-1:
+                    #     a.legend = True
+                    #     a.legend(bbox_to_anchor=(1.01, 1), loc=2, borderaxespad=0., ncol=1)
+
+            fig = plt.figure("matrix_plot_safe_unsafe_m", figsize=(16,10))
+            fig.suptitle("ALPHA = " + str(args.alpha) + "  BETA = " + str(args.beta) + "  z_lower_bound = " + str(z_lower_bound) + "  z_upper_bound = " + str(z_upper_bound))
+            for i in range(latent_space_dimension):
+                for ii in range(latent_space_dimension):
+                    ax0 = plt.subplot(latent_space_dimension, latent_space_dimension, i*latent_space_dimension + ii + 1)
+                    a = sns.scatterplot(
+                        x="latent-space-"+str(ii+1), y="latent-space-"+str(i+1),
+                        hue="m",
+                        palette=sns.color_palette("hls", dataset_data_to_plot['m'].nunique()),
                         data=dataset_data_to_plot,
                         legend=False,
                         alpha=0.3,

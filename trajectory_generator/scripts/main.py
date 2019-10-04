@@ -30,6 +30,7 @@ parser.add_argument('--epochs', type=int, default=12, help='number of epochs for
 parser.add_argument('--batch-size', type=int, default=5, metavar='N', help='input batch size for training (default: 12)')
 parser.add_argument('--action-repetition', type=int, default=3 , help='number of times to  repeat the same action')
 parser.add_argument('--test-repetition', type=int, default=5 , help='number of times to  repeat the same action while testing the deterministic policy')
+parser.add_argument('--performance-repetition', type=int, default=5 , help='number of times to  repeat the same action while testing the performance metric of the deterministic policy')
 parser.add_argument('--safe-throws', type=int, default=180 , help='number of safe throws to execute before stopping the learning loop')
 parser.add_argument('--reward-type', default="discrete" , help='type of reward function to use during learning')
 
@@ -1088,6 +1089,57 @@ a200_b01_10000_initial_means = [a200_b01_10000e_mc_13_means] + [a200_b01_10000e_
 a200_b01_10000_reversed_initial_means = [a200_b01_10000e_mc_18_means] + [a200_b01_10000e_mc_17_means] + [a200_b01_10000e_mc_16_means] + [a200_b01_10000e_mc_15_means] + [a200_b01_10000e_mc_14_means] + [a200_b01_10000e_mc_13_means]
 a200_b01_10000_shuffled_initial_means = [a200_b01_10000e_mc_17_means] + [a200_b01_10000e_mc_15_means] + [a200_b01_10000e_mc_13_means] + [a200_b01_10000e_mc_18_means] + [a200_b01_10000e_mc_14_means] + [a200_b01_10000e_mc_16_means]
 
+# ========== a200_b001_20000e_mc ==========
+a200_b001_20000e_mc_latent_space_means = [0.0260, 0.0046, 0.0036, 0.0586, 0.0040]
+a200_b001_20000e_mc_latent_space_stds = [0.9983, 1.0437, 1.0033, 0.9555, 0.9893]
+
+a200_b001_20000e_mc_12_means = [ 0.0070, -1.6013, -0.0356,  0.6396,  0.0168]
+a200_b001_20000e_mc_13_means = [ 0.0063, -1.1037,  0.0251,  0.1639,  0.0351]
+a200_b001_20000e_mc_14_means = [ 0.0502, -0.4833, -0.0348, -0.0588, -0.0115]
+a200_b001_20000e_mc_15_means = [ 0.0277,  0.1102,  0.0260, -0.0783, -0.0032]
+a200_b001_20000e_mc_16_means = [0.0413, 0.6655, 0.0220, 0.0987, 0.0118]
+a200_b001_20000e_mc_17_means = [ 0.0274,  1.2638,  0.0055,  0.0380, -0.0135]
+a200_b001_20000e_mc_18_means = [-4.7113e-03,  1.6995e+00,  1.2287e-04, -5.7070e-01, -1.5765e-02]
+
+a200_b001_20000e_mc_12_stds = [1.0318, 0.2006, 1.0162, 0.8498, 0.9931]
+a200_b001_20000e_mc_13_stds = [1.0135, 0.2658, 1.0060, 0.8723, 0.9812]
+a200_b001_20000e_mc_14_stds = [0.9669, 0.2571, 1.0099, 0.9603, 0.9775]
+a200_b001_20000e_mc_15_stds = [1.0045, 0.2394, 0.9775, 0.9668, 0.9815]
+a200_b001_20000e_mc_16_stds = [1.0096, 0.2401, 0.9847, 1.0167, 0.9816]
+a200_b001_20000e_mc_17_stds = [0.9731, 0.3234, 1.0264, 0.9017, 1.0077]
+a200_b001_20000e_mc_18_stds = [1.0058, 0.2461, 1.0151, 0.6494, 1.0328]
+
+a200_b001_20000_initial_means = [a200_b001_20000e_mc_13_means] + [a200_b001_20000e_mc_14_means] + [a200_b001_20000e_mc_15_means] + [a200_b001_20000e_mc_16_means] + [a200_b001_20000e_mc_17_means] + [a200_b001_20000e_mc_18_means]
+a200_b001_20000_reversed_initial_means = [a200_b001_20000e_mc_18_means] + [a200_b001_20000e_mc_17_means] + [a200_b001_20000e_mc_16_means] + [a200_b001_20000e_mc_15_means] + [a200_b001_20000e_mc_14_means] + [a200_b001_20000e_mc_13_means]
+a200_b001_20000_shuffled_initial_means = [a200_b001_20000e_mc_17_means] + [a200_b001_20000e_mc_15_means] + [a200_b001_20000e_mc_13_means] + [a200_b001_20000e_mc_18_means] + [a200_b001_20000e_mc_14_means] + [a200_b001_20000e_mc_16_means]
+
+# ========== a200_b01_10000e_too_fast ==========
+a200_b01_10000e_too_fast_latent_space_means = [-1.1826, -0.0662, -0.0697, -0.8120,  0.0305]
+a200_b01_10000e_too_fast_latent_space_stds = [0.2744, 0.2454, 0.2452, 0.1368, 0.5081]
+
+a200_b01_10000e_too_fast_17_means = [-0.8152,  0.0060, -0.1689, -0.9157,  0.7256]
+a200_b01_10000e_too_fast_18_means = [-0.7959,  0.0349, -0.1959, -0.9898,  0.7883]
+a200_b01_10000e_too_fast_19_means = [-0.9128,  0.0084, -0.1584, -0.9440,  0.5655]
+a200_b01_10000e_too_fast_20_means = [-1.0634, -0.0176, -0.1007, -0.8691,  0.2605]
+a200_b01_10000e_too_fast_21_means = [-1.2206, -0.0691, -0.0603, -0.7937, -0.0463]
+a200_b01_10000e_too_fast_22_means = [-1.3617, -0.1189, -0.0196, -0.7266, -0.3216]
+a200_b01_10000e_too_fast_23_means = [-1.4939, -0.1716,  0.0350, -0.6624, -0.5779]
+a200_b01_10000e_too_fast_24_means = [-1.5595, -0.1616,  0.0558, -0.6396, -0.7130]
+
+a200_b01_10000e_too_fast_17_stds = [0.1217, 0.2218, 0.2218, 0.0919, 0.1779]
+a200_b01_10000e_too_fast_18_stds = [0.1204, 0.2367, 0.2245, 0.0695, 0.1477]
+a200_b01_10000e_too_fast_19_stds = [0.1299, 0.2309, 0.2433, 0.0774, 0.1813]
+a200_b01_10000e_too_fast_20_stds = [0.1243, 0.2357, 0.2364, 0.0723, 0.1677]
+a200_b01_10000e_too_fast_21_stds = [0.1265, 0.2402, 0.2247, 0.0722, 0.1666]
+a200_b01_10000e_too_fast_22_stds = [0.1256, 0.2362, 0.2336, 0.0757, 0.1682]
+a200_b01_10000e_too_fast_23_stds = [0.1178, 0.2273, 0.2278, 0.0693, 0.1472]
+a200_b01_10000e_too_fast_24_stds = [0.1037, 0.2391, 0.2293, 0.0615, 0.1116]
+
+
+a200_b01_10000_too_fast_initial_means = [a200_b01_10000e_too_fast_17_means] + [a200_b01_10000e_too_fast_18_means] + [a200_b01_10000e_too_fast_19_means] + [a200_b01_10000e_too_fast_20_means] + [a200_b01_10000e_too_fast_21_means] + [a200_b01_10000e_too_fast_22_means]
+a200_b01_10000_too_fast_reversed_initial_means = [a200_b01_10000e_too_fast_24_means] + [a200_b01_10000e_too_fast_23_means] + [a200_b01_10000e_too_fast_22_means] + [a200_b01_10000e_too_fast_21_means] + [a200_b01_10000e_too_fast_20_means] + [a200_b01_10000e_too_fast_19_means]
+a200_b01_10000_too_fast_shuffled_initial_means = [a200_b01_10000e_too_fast_23_means] + [a200_b01_10000e_too_fast_21_means] + [a200_b01_10000e_too_fast_17_means] + [a200_b01_10000e_too_fast_24_means] + [a200_b01_10000e_too_fast_22_means] + [a200_b01_10000e_too_fast_18_means]
+
 
 # ========== a100_b01_mc ==========
 a100_b01_mc_latent_space_means = [ 0.5667, -0.6089,  1.9060,  0.1249,  3.5259]
@@ -1110,13 +1162,13 @@ mc_latent_space_stds_b0 = [0.41007773, 1.01831094, 0.45268615, 0.01925819, 0.659
 mc_best_mean_b0 = [-1.5954519510269165, -0.0013902420178055763, -0.16062034666538239, -2.9057390689849854, 0.356065958738327]
 mc_best_std_b0 = [0.008678837679326534, 0.016342472285032272, 0.016840659081935883, 0.004060306120663881, 0.00893393438309431]
 
-ll_latent_space_means = [-1.54930503,  0.25162958,  0.05412535, -1.4289467 , -0.06778317]
-ll_latent_space_stds = [0.42513496, 0.01628749, 0.06014936, 0.02778022, 0.51911289]
-ll_best_mean = [-1.3671,  0.2444,  0.0290, -1.4391,  0.1555]
-ll_best_std = [0.0204, 0.2391, 0.2653, 0.0247, 0.0492]
+vel_latent_space_means = [-1.54930503,  0.25162958,  0.05412535, -1.4289467 , -0.06778317]
+vel_latent_space_stds = [0.42513496, 0.01628749, 0.06014936, 0.02778022, 0.51911289]
+vel_best_mean = [-1.3671,  0.2444,  0.0290, -1.4391,  0.1555]
+vel_best_std = [0.0204, 0.2391, 0.2653, 0.0247, 0.0492]
 
-initial_means = a200_b01_10000e_mc_latent_space_means
-initial_stds = a200_b01_10000e_mc_latent_space_stds
+initial_means = a200_b01_10000e_ll_latent_space_means
+initial_stds = a200_b01_10000e_ll_latent_space_stds
 initial_actions = a200_b01_10000_shuffled_initial_means
 
 best_det_reward = None
@@ -1197,9 +1249,12 @@ def measure_performance(image_reader=None, trajectory_dict=None, algorithm=None,
 	trajectory_dict["joint_trajectory"] = smooth_trajectory.view(100, -1).tolist()
 	is_safe, avg_distance, unsafe_pts, fk_z = safety_check_module.check(trajectory.tolist())
 	if is_safe:
-		performance_50 = 0
-		performance_115 = 0
-		for n in range(100):
+		performance = {
+			"tot": 0,
+			"50": 0,
+			"115": 0
+		}
+		for n in range(args.performance_repetition):
 			command = raw_input("Press enter to measure performance")
 			if "" != command:
 				while True:
@@ -1214,13 +1269,14 @@ def measure_performance(image_reader=None, trajectory_dict=None, algorithm=None,
 			reward, distance, angle = evaluate_board(image_reader=image_reader)
 			try:
 				if 0 <= int(distance) <= 50:
-					performance_50 += 1
-					performance_115 += 1
+					performance["50"] += 1
+					performance["115"] += 1
 				elif 50 < int(distance) <= 115:
-					performance_115 += 1
+					performance["115"] += 1
+				performance["tot"] += 1
 			except ValueError:
 				pass
-		print("Red circle hit: {}\nBlue circle hit: {}".format(performance_50, performance_115))
+		print("Red circle hit: {}\nBlue circle hit: {}".format(performance["50"], performance["115"]))
 	else:
 		print("Unsafe trajectory")
 
@@ -1242,18 +1298,33 @@ def test_policy(image_reader=None, algorithm=None, decoder_model=None, state=Non
 	smooth_trajectory = torch.tensor(smooth_trajectory)
 	trajectory_dict["joint_trajectory"] = smooth_trajectory.view(100, -1).tolist()
 	is_safe, avg_distance, unsafe_pts, fk_z = safety_check_module.check(trajectory.tolist())
+	performance = {
+		"tot": 0,
+		"50": 0,
+		"115": 0
+	}
 	if is_safe:
-		for n in range(args.test_repetition):
+		for n in range(max(args.performance_repetition, args.test_repetition)):
 			raw_input("Press enter to execute a trajectory from the policy mean")
 			execute_action(input_folder=False, tot_time_nsecs=args.execution_time, is_simulation=False, is_learning=True, t=trajectory_dict)
 			raw_input("Press enter to evaluate the board")
 			reward, distance, angle = evaluate_board(image_reader=image_reader)
+			try:
+				if 0 <= int(distance) <= 50:
+					performance["50"] += 1
+					performance["115"] += 1
+				elif 50 < int(distance) <= 115:
+					performance["115"] += 1
+				performance["tot"] += 1
+			except ValueError:
+				pass
 			test_reward += reward
-		test_reward /= args.test_repetition
+		test_reward /= max(args.performance_repetition, args.test_repetition)
 	else:
 		test_reward = -1
+	print("Red circle hit: {}\nBlue circle hit: {}".format(performance["50"], performance["115"]))	
 	print ("Average reward of deterministic policy = {}".format(test_reward))
-	return test_reward, mean
+	return test_reward, mean, performance
 
 def main(args):
     try:
@@ -1415,7 +1486,8 @@ def main(args):
             loss = algorithm.finish_episode()
 
             raw_input("Press enter to test the policy")
-            latest_det_reward, latest_det_mean = test_policy(image_reader, algorithm, decoder_model, state, trajectory_dict)
+            latest_det_reward, latest_det_mean, performance = test_policy(image_reader, algorithm, decoder_model, state, trajectory_dict)
+            algorithm.set_deterministic_policy_performance(performance)
             algorithm.set_deterministic_policy_reward(latest_det_reward)
             algorithm.set_deterministic_policy_mean(latest_det_mean)
 

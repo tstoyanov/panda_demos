@@ -4,10 +4,8 @@
         <node 
             pkg="trajectory_generator" name="learning_loop" type="main.py" output="screen"
             args="
-                --decoder-sd a200_b1e-1_10000e/a200_b1e-1_10000e.pt
+                --decoder-sd a200_b1e-2_20000e/best_model.pt
                 --reward-type c
-                --load-checkpoint a200_b1e-1_10000e/heavy_continuous/2019-10-03_17:44:47_r6.243.tar
-                --measure-performance
             "
         />
     </group>

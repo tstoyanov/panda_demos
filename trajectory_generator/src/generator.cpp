@@ -56,7 +56,7 @@ std::vector<std::map<std::string, double>> NOISE_MATRIX = { // 1 will be convert
     {
       // y
       {"mean", 0},
-      {"stddev", 0.3}},
+      {"stddev", 1}},
     {
       // z
       {"mean", 0},
