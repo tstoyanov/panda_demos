@@ -422,6 +422,10 @@ int main(int argc, char **argv)
   KDL::VelocityProfile_Spline *vel_prof = new KDL::VelocityProfile_Spline();
   KDL::Trajectory_Segment *trajectory;
 
+  std::map<std::string, double> m_map;
+  std::map<std::string, double> c_map;
+  std::map<std::string, double>::iterator mc_it;
+
   while (generated_trajectories < batch_count)
   {
     exception_count = 0;
@@ -504,6 +508,26 @@ int main(int argc, char **argv)
         c = (noisy_release_point[1] - (m * noisy_release_point[0]));
 
         starting_waypoints[2][1] = m * starting_waypoints[2][0] + c;
+
+        m = trunc(m*100)/100;
+        c = trunc(c*100)/100;
+
+        mc_it = m_map.find(std::to_string(m)); 
+        if (mc_it != m_map.end()){
+          mc_it->second = mc_it->second + 1;
+        }
+        else {
+          m_map.insert({std::to_string(m), 1});
+        }
+
+        mc_it = c_map.find(std::to_string(c)); 
+        if (mc_it != c_map.end()){
+          mc_it->second = mc_it->second + 1;
+        }
+        else {
+          c_map.insert({std::to_string(c), 1});
+        }
+
 
         path->Add(KDL::Frame(KDL::Vector(starting_waypoints[2][0], starting_waypoints[2][1], starting_waypoints[2][2])));
         noisy_release_x_coordinate = noisy_release_point[0];
@@ -820,6 +844,15 @@ int main(int argc, char **argv)
   // std::cout << "path -> GetLengthToEndOfSegment(" << path -> GetNrOfSegments()-1 << "): " << path -> GetLengthToEndOfSegment(n-1) << std::endl;
   // std::cout << "path -> PathLength(): " << path -> PathLength() << std::endl;
   // std::cout << "exception_count: " << exception_count << std::endl;
-
+  std::cout << "m_map:" << std::endl;
+  for(auto elem : m_map)
+  {
+    std::cout << elem.first << " - " << elem.second << std::endl;
+  }
+  std::cout << "c_map:" << std::endl;
+  for(auto elem : c_map)
+  {
+    std::cout << elem.first << " - " << elem.second << std::endl;
+  }
   return 0;
 }
