@@ -1098,20 +1098,38 @@ if __name__ == "__main__":
             for i in range(latent_space_dimension):
                 pairplot_vars.append("latent-space-"+str(i+1))
 
-            # g = sns.pairplot(dataset_data_to_plot[:1000], hue="vel", palette="hls", vars=pairplot_vars)
+            # g_vel = sns.pairplot(dataset_data_to_plot[:1000], hue="vel", palette="hls", vars=pairplot_vars)
 
-            g = sns.PairGrid(dataset_data_to_plot[:1000], hue="vel", palette="hls", vars=pairplot_vars)
-            g = g.map_diag(sns.kdeplot, shade=True)
-            # g = g.map_diag(plt.hist)
-            g = g.map_offdiag(plt.scatter, alpha=0.3)
+            g_vel = sns.PairGrid(dataset_data_to_plot[:1000], hue="vel", palette="hls", vars=pairplot_vars)
+            g_vel = g_vel.map_diag(sns.kdeplot, shade=True)
+            # g_vel = g_vel.map_diag(plt.hist)
+            g_vel = g_vel.map_offdiag(plt.scatter, alpha=0.3)
 
-            # legend = g._legend
+            # legend = g_vel._legend
             # for i, label_text in enumerate(legend.texts):
             #     try:
             #         label_text.set_text(round(float(label_text.get_text()), 2))
             #     except ValueError:
             #         pass
-            g = g.add_legend()
+            g_vel = g_vel.add_legend()
+            g_vel.fig.title("pariplot_vel")
+
+
+            # g_m = sns.pairplot(dataset_data_to_plot[:1000], hue="vel", palette="hls", vars=pairplot_vars)
+
+            g_m = sns.PairGrid(dataset_data_to_plot[:1000], hue="m", palette="hls", vars=pairplot_vars)
+            g_m = g_m.map_diag(sns.kdeplot, shade=True)
+            # g_m = g_m.map_diag(plt.hist)
+            g_m = g_m.map_offdiag(plt.scatter, alpha=0.3)
+
+            # legend = g_m._legend
+            # for i, label_text in enumerate(legend.texts):
+            #     try:
+            #         label_text.set_text(round(float(label_text.get_text()), 2))
+            #     except ValueError:
+            #         pass
+            g_m = g_m.add_legend()
+            g_m.fig.title("pariplot_m")
 
         if args.matrix_plot != False:   
             fig = plt.figure("matrix_plot", figsize=(16,10))
