@@ -88,6 +88,8 @@ parser.add_argument('--transformation-plot', nargs='?', const=10, default=False,
                     help='number of steps for the transformation from one embedded trajetory to another one')
 parser.add_argument('--matrix-plot', nargs='?', const=True, default=False,
                     help='whether to plot the intersection between pairs of dimensions in the latent space or not')
+parser.add_argument('--pairplot', nargs='?', const=True, default=False,
+                    help='whether to plot the pairplot of the latent space or not')
 parser.add_argument('--deg', nargs='?', const=True, default=False,
                     help='whether to transform radians into degrees or not')
 parser.add_argument('--wmb', nargs='?', const=True, default=False,
@@ -123,7 +125,7 @@ if args.deg:
 else:
     coeff = 1
 
-get_encoded_data = args.tsne != False or args.matrix_plot != False or args.safety_test != False
+get_encoded_data = args.tsne != False or args.matrix_plot != False or args.safety_test != False or args.pairplot != False
 
 device = torch.device("cuda" if args.cuda else "cpu")
 
@@ -1081,7 +1083,7 @@ if __name__ == "__main__":
             #     if i != 0:
             #         label_text.set_text(round(float(label_text.get_text()), 1))
 
-        if args.matrix_plot != False:
+        if args.matrix_plot != False or args.pairplot != False:
             dataset_data_to_plot = pd.DataFrame()
             dataset_data_to_plot['vel'] = pd.concat([data_to_plot['vel'], test_data_to_plot['test_vel']], ignore_index=True)
             dataset_data_to_plot['m'] = pd.concat([data_to_plot['m'], test_data_to_plot['test_m']], ignore_index=True)
@@ -1090,8 +1092,31 @@ if __name__ == "__main__":
             latent_space_dimension = len(latent_space_dataset[0])
             for i in range(latent_space_dimension):
                 dataset_data_to_plot['latent-space-'+str(i+1)] = [item[i].item() for item in latent_space_dataset]
+
+        if args.pairplot != False:
+            pairplot_vars = []
+            for i in range(latent_space_dimension):
+                pairplot_vars.append("latent-space-"+str(i+1))
+
+            # g = sns.pairplot(dataset_data_to_plot[:1000], hue="vel", palette="hls", vars=pairplot_vars)
+
+            g = sns.PairGrid(dataset_data_to_plot[:1000], hue="vel", palette="hls", vars=pairplot_vars)
+            g = g.map_diag(sns.kdeplot, shade=True)
+            # g = g.map_diag(plt.hist)
+            g = g.map_offdiag(plt.scatter, alpha=0.3)
+
+            # legend = g._legend
+            # for i, label_text in enumerate(legend.texts):
+            #     try:
+            #         label_text.set_text(round(float(label_text.get_text()), 2))
+            #     except ValueError:
+            #         pass
+            g = g.add_legend()
+
+        if args.matrix_plot != False:   
             fig = plt.figure("matrix_plot", figsize=(16,10))
             fig.suptitle("ALPHA = " + str(args.alpha) + "  BETA = " + str(args.beta))
+            
             for i in range(latent_space_dimension):
                 for ii in range(latent_space_dimension):
                     ax0 = plt.subplot(latent_space_dimension, latent_space_dimension, i*latent_space_dimension + ii + 1)
