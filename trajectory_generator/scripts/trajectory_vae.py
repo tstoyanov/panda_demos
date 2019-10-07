@@ -413,8 +413,8 @@ class MyDataset(Dataset):
                 ret.append(list(map(lambda joint_value, joint_name: (joint_value-joints_ranges[joint_name]["min"])/(joints_ranges[joint_name]["max"]-joints_ranges[joint_name]["min"]), joints_positions, joints_ranges)))
             return torch.tensor(ret), torch.tensor(round(self.dataset["eef_velocity_magnitude"][index], 1)), torch.tensor(round(self.dataset["m"][index], 4)), torch.tensor(round(self.dataset["c"][index], 4)), index
         else:
-            discretized_m = (self.dataset["m"][index]*100 // 1)
-            discretized_c = (self.dataset["c"][index]*100 // 1)
+            discretized_m = round(int(self.dataset["m"][index]*1000 / 3) * 3 / 1000, 3)
+            discretized_c = round(int(self.dataset["c"][index]*1000 / 3) * 3 / 1000, 3)
             # discretized_m = (self.dataset["m"][index]*100 // 0.3) * 0.3
             # discretized_c = (self.dataset["c"][index]*100 // 0.3) * 0.3
             return torch.tensor(self.dataset["joints_positions"][index]), torch.tensor(round(self.dataset["eef_velocity_magnitude"][index], 1)), torch.tensor(discretized_m), torch.tensor(discretized_c), index
