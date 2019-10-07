@@ -55,7 +55,7 @@ parser.add_argument('--trajectory-writer-script', default="writer_from_generated
 
 parser.add_argument('--no-plot', nargs='?', const=True, default=False, help='whether to plot data or not')
 parser.add_argument('--safe-execution-time', type=int, default=9000000000, help='safe execution time in nanoseconds')
-parser.add_argument('--execution-time', type=int, default=1600000000, help='execution time in nanoseconds')
+parser.add_argument('--execution-time', type=int, default=1500000000, help='execution time in nanoseconds')
 parser.add_argument('--release-frame', type=int, default=95, help='release frame')
 
 parser.add_argument('--save-dir', default=package_path + "/saved_models/policy_network/", help='directory where to save the policy model once trained')
@@ -1089,29 +1089,78 @@ a200_b01_10000_initial_means = [a200_b01_10000e_mc_13_means] + [a200_b01_10000e_
 a200_b01_10000_reversed_initial_means = [a200_b01_10000e_mc_18_means] + [a200_b01_10000e_mc_17_means] + [a200_b01_10000e_mc_16_means] + [a200_b01_10000e_mc_15_means] + [a200_b01_10000e_mc_14_means] + [a200_b01_10000e_mc_13_means]
 a200_b01_10000_shuffled_initial_means = [a200_b01_10000e_mc_17_means] + [a200_b01_10000e_mc_15_means] + [a200_b01_10000e_mc_13_means] + [a200_b01_10000e_mc_18_means] + [a200_b01_10000e_mc_14_means] + [a200_b01_10000e_mc_16_means]
 
-# ========== a200_b001_20000e_mc ==========
-a200_b001_20000e_mc_latent_space_means = [0.0260, 0.0046, 0.0036, 0.0586, 0.0040]
-a200_b001_20000e_mc_latent_space_stds = [0.9983, 1.0437, 1.0033, 0.9555, 0.9893]
+			# WRONG
+# # ========== a200_b001_20000e_mc ==========
+# a200_b001_20000e_mc_latent_space_means = [0.0260, 0.0046, 0.0036, 0.0586, 0.0040]
+# a200_b001_20000e_mc_latent_space_stds = [0.9983, 1.0437, 1.0033, 0.9555, 0.9893]
 
-a200_b001_20000e_mc_12_means = [ 0.0070, -1.6013, -0.0356,  0.6396,  0.0168]
-a200_b001_20000e_mc_13_means = [ 0.0063, -1.1037,  0.0251,  0.1639,  0.0351]
-a200_b001_20000e_mc_14_means = [ 0.0502, -0.4833, -0.0348, -0.0588, -0.0115]
-a200_b001_20000e_mc_15_means = [ 0.0277,  0.1102,  0.0260, -0.0783, -0.0032]
-a200_b001_20000e_mc_16_means = [0.0413, 0.6655, 0.0220, 0.0987, 0.0118]
-a200_b001_20000e_mc_17_means = [ 0.0274,  1.2638,  0.0055,  0.0380, -0.0135]
-a200_b001_20000e_mc_18_means = [-4.7113e-03,  1.6995e+00,  1.2287e-04, -5.7070e-01, -1.5765e-02]
+# a200_b001_20000e_mc_12_means = [ 0.0070, -1.6013, -0.0356,  0.6396,  0.0168]
+# a200_b001_20000e_mc_13_means = [ 0.0063, -1.1037,  0.0251,  0.1639,  0.0351]
+# a200_b001_20000e_mc_14_means = [ 0.0502, -0.4833, -0.0348, -0.0588, -0.0115]
+# a200_b001_20000e_mc_15_means = [ 0.0277,  0.1102,  0.0260, -0.0783, -0.0032]
+# a200_b001_20000e_mc_16_means = [0.0413, 0.6655, 0.0220, 0.0987, 0.0118]
+# a200_b001_20000e_mc_17_means = [ 0.0274,  1.2638,  0.0055,  0.0380, -0.0135]
+# a200_b001_20000e_mc_18_means = [-4.7113e-03,  1.6995e+00,  1.2287e-04, -5.7070e-01, -1.5765e-02]
 
-a200_b001_20000e_mc_12_stds = [1.0318, 0.2006, 1.0162, 0.8498, 0.9931]
-a200_b001_20000e_mc_13_stds = [1.0135, 0.2658, 1.0060, 0.8723, 0.9812]
-a200_b001_20000e_mc_14_stds = [0.9669, 0.2571, 1.0099, 0.9603, 0.9775]
-a200_b001_20000e_mc_15_stds = [1.0045, 0.2394, 0.9775, 0.9668, 0.9815]
-a200_b001_20000e_mc_16_stds = [1.0096, 0.2401, 0.9847, 1.0167, 0.9816]
-a200_b001_20000e_mc_17_stds = [0.9731, 0.3234, 1.0264, 0.9017, 1.0077]
-a200_b001_20000e_mc_18_stds = [1.0058, 0.2461, 1.0151, 0.6494, 1.0328]
+# a200_b001_20000e_mc_12_stds = [1.0318, 0.2006, 1.0162, 0.8498, 0.9931]
+# a200_b001_20000e_mc_13_stds = [1.0135, 0.2658, 1.0060, 0.8723, 0.9812]
+# a200_b001_20000e_mc_14_stds = [0.9669, 0.2571, 1.0099, 0.9603, 0.9775]
+# a200_b001_20000e_mc_15_stds = [1.0045, 0.2394, 0.9775, 0.9668, 0.9815]
+# a200_b001_20000e_mc_16_stds = [1.0096, 0.2401, 0.9847, 1.0167, 0.9816]
+# a200_b001_20000e_mc_17_stds = [0.9731, 0.3234, 1.0264, 0.9017, 1.0077]
+# a200_b001_20000e_mc_18_stds = [1.0058, 0.2461, 1.0151, 0.6494, 1.0328]
 
-a200_b001_20000_initial_means = [a200_b001_20000e_mc_13_means] + [a200_b001_20000e_mc_14_means] + [a200_b001_20000e_mc_15_means] + [a200_b001_20000e_mc_16_means] + [a200_b001_20000e_mc_17_means] + [a200_b001_20000e_mc_18_means]
-a200_b001_20000_reversed_initial_means = [a200_b001_20000e_mc_18_means] + [a200_b001_20000e_mc_17_means] + [a200_b001_20000e_mc_16_means] + [a200_b001_20000e_mc_15_means] + [a200_b001_20000e_mc_14_means] + [a200_b001_20000e_mc_13_means]
-a200_b001_20000_shuffled_initial_means = [a200_b001_20000e_mc_17_means] + [a200_b001_20000e_mc_15_means] + [a200_b001_20000e_mc_13_means] + [a200_b001_20000e_mc_18_means] + [a200_b001_20000e_mc_14_means] + [a200_b001_20000e_mc_16_means]
+# a200_b001_20000_initial_means = [a200_b001_20000e_mc_13_means] + [a200_b001_20000e_mc_14_means] + [a200_b001_20000e_mc_15_means] + [a200_b001_20000e_mc_16_means] + [a200_b001_20000e_mc_17_means] + [a200_b001_20000e_mc_18_means]
+# a200_b001_20000_reversed_initial_means = [a200_b001_20000e_mc_18_means] + [a200_b001_20000e_mc_17_means] + [a200_b001_20000e_mc_16_means] + [a200_b001_20000e_mc_15_means] + [a200_b001_20000e_mc_14_means] + [a200_b001_20000e_mc_13_means]
+# a200_b001_20000_shuffled_initial_means = [a200_b001_20000e_mc_17_means] + [a200_b001_20000e_mc_15_means] + [a200_b001_20000e_mc_13_means] + [a200_b001_20000e_mc_18_means] + [a200_b001_20000e_mc_14_means] + [a200_b001_20000e_mc_16_means]
+
+# ========== a200_b01_20000e_ll ==========
+a200_b01_20000e_ll_latent_space_means = [-1.1637,  0.2294,  0.0420, -0.7556,  0.0686]
+a200_b01_20000e_ll_latent_space_stds = [0.3961, 0.8107, 0.8620, 0.2405, 0.8627]
+
+a200_b01_20000e_ll_12_means = [-0.7074, -1.0712,  0.0902, -1.0058,  0.1459]
+a200_b01_20000e_ll_13_means = [-0.8080, -0.6509,  0.0343, -0.9644,  0.0565]
+a200_b01_20000e_ll_14_means = [-0.9603, -0.1414,  0.0279, -0.8642,  0.0750]
+a200_b01_20000e_ll_15_means = [-1.1411,  0.3259,  0.0534, -0.7545,  0.0605]
+a200_b01_20000e_ll_16_means = [-1.3661,  0.7623,  0.0516, -0.6385,  0.0577]
+a200_b01_20000e_ll_17_means = [-1.6163,  1.2043,  0.0662, -0.5008,  0.0567]
+a200_b01_20000e_ll_18_means = [-1.7591,  1.4994, -0.0889, -0.4661,  0.0474]
+
+a200_b01_20000e_ll_12_stds = [0.1612, 0.1302, 0.7633, 0.1414, 0.7703]
+a200_b01_20000e_ll_13_stds = [0.1761, 0.1917, 0.8106, 0.1521, 0.8370]
+a200_b01_20000e_ll_14_stds = [0.1827, 0.1804, 0.8211, 0.1546, 0.8677]
+a200_b01_20000e_ll_15_stds = [0.2068, 0.1634, 0.8613, 0.1584, 0.8594]
+a200_b01_20000e_ll_16_stds = [0.2301, 0.1557, 0.9273, 0.1592, 0.8920]
+a200_b01_20000e_ll_17_stds = [0.2641, 0.1737, 0.9165, 0.1665, 0.8952]
+a200_b01_20000e_ll_18_stds = [0.2536, 0.1013, 0.9191, 0.1334, 0.9002]
+
+a200_b01_20000_ll_initial_means = [a200_b01_20000e_ll_13_means] + [a200_b01_20000e_ll_14_means] + [a200_b01_20000e_ll_15_means] + [a200_b01_20000e_ll_16_means] + [a200_b01_20000e_ll_17_means] + [a200_b01_20000e_ll_18_means]
+a200_b01_20000_ll_reversed_initial_means = [a200_b01_20000e_ll_18_means] + [a200_b01_20000e_ll_17_means] + [a200_b01_20000e_ll_16_means] + [a200_b01_20000e_ll_15_means] + [a200_b01_20000e_ll_14_means] + [a200_b01_20000e_ll_13_means]
+a200_b01_20000_ll_shuffled_initial_means = [a200_b01_20000e_ll_17_means] + [a200_b01_20000e_ll_15_means] + [a200_b01_20000e_ll_13_means] + [a200_b01_20000e_ll_18_means] + [a200_b01_20000e_ll_14_means] + [a200_b01_20000e_ll_16_means]
+
+# ========== a200_b001_20000e ==========
+a200_b001_20000e_latent_space_means = [-1.7219,  1.0729, -0.1047, -1.6899,  0.3130]
+a200_b001_20000e_latent_space_stds = [0.1073, 1.2100, 0.3984, 0.2595, 0.3141]
+
+a200_b001_20000e_12_means = [-1.5408, -0.8342, -0.2943, -1.9800, -0.1611]
+a200_b001_20000e_13_means = [-1.6170, -0.24982, -0.21604, -1.9177, -0.0015477]
+a200_b001_20000e_14_means = [-1.7011,  0.4974, -0.1605, -1.8096,  0.1862]
+a200_b001_20000e_15_means = [-1.7592,  1.2380, -0.0745, -1.6906,  0.3548]
+a200_b001_20000e_16_means = [-1.7939,  1.9186, -0.0265, -1.5452,  0.5254]
+a200_b001_20000e_17_means = [-1.8194,  2.5380,  0.0216, -1.4065,  0.6681]
+a200_b001_20000e_18_means = [-1.8175,  2.8975,  0.0471, -1.3841,  0.6994]
+
+a200_b001_20000e_12_stds = [0.0523, 0.1931, 0.3549, 0.1520, 0.1247]
+a200_b001_20000e_13_stds = [0.0610, 0.2794, 0.3688, 0.1526, 0.1398]
+a200_b001_20000e_14_stds = [0.0606, 0.2784, 0.3884, 0.1599, 0.1404]
+a200_b001_20000e_15_stds = [0.0517, 0.2629, 0.3858, 0.1617, 0.1397]
+a200_b001_20000e_16_stds = [0.0526, 0.2452, 0.3905, 0.1707, 0.1433]
+a200_b001_20000e_17_stds = [0.0523, 0.2212, 0.4012, 0.1672, 0.1366]
+a200_b001_20000e_18_stds = [0.0414, 0.1072, 0.3890, 0.1117, 0.0983]
+
+a200_b001_20000_initial_means = [a200_b001_20000e_13_means] + [a200_b001_20000e_14_means] + [a200_b001_20000e_15_means] + [a200_b001_20000e_16_means] + [a200_b001_20000e_17_means] + [a200_b001_20000e_18_means]
+a200_b001_20000_reversed_initial_means = [a200_b001_20000e_18_means] + [a200_b001_20000e_17_means] + [a200_b001_20000e_16_means] + [a200_b001_20000e_15_means] + [a200_b001_20000e_14_means] + [a200_b001_20000e_13_means]
+a200_b001_20000_shuffled_initial_means = [a200_b001_20000e_17_means] + [a200_b001_20000e_15_means] + [a200_b001_20000e_13_means] + [a200_b001_20000e_18_means] + [a200_b001_20000e_14_means] + [a200_b001_20000e_16_means]
 
 # ========== a200_b01_10000e_too_fast ==========
 a200_b01_10000e_too_fast_latent_space_means = [-1.1826, -0.0662, -0.0697, -0.8120,  0.0305]
@@ -1167,9 +1216,9 @@ vel_latent_space_stds = [0.42513496, 0.01628749, 0.06014936, 0.02778022, 0.51911
 vel_best_mean = [-1.3671,  0.2444,  0.0290, -1.4391,  0.1555]
 vel_best_std = [0.0204, 0.2391, 0.2653, 0.0247, 0.0492]
 
-initial_means = a200_b01_10000e_ll_latent_space_means
-initial_stds = a200_b01_10000e_ll_latent_space_stds
-initial_actions = a200_b01_10000_shuffled_initial_means
+initial_means = a200_b001_20000e_latent_space_means
+initial_stds = a200_b001_20000e_latent_space_stds
+initial_actions = a200_b001_20000_shuffled_initial_means
 
 best_det_reward = None
 
@@ -1284,12 +1333,6 @@ def test_policy(image_reader=None, algorithm=None, decoder_model=None, state=Non
 	test_reward = 0
 	mean = algorithm.get_policy_mean(state)
 	trajectory = decoder_model.decode(mean)
-	smooth_trajectory = []
-	for i in range(joints_number):
-		smooth_trajectory.append(trajectory[i])
-	for i, point in enumerate(trajectory[joints_number:], joints_number):
-		smooth_trajectory.append(0.6*smooth_trajectory[i-joints_number]+0.4*point)
-	smooth_trajectory = torch.tensor(smooth_trajectory)
 	smooth_trajectory = []
 	for i in range(joints_number):
 		smooth_trajectory.append(trajectory[i])
@@ -1417,16 +1460,18 @@ def main(args):
                     
                     cumulative_reward = 0
                     for n in range(args.action_repetition):
+                        command = raw_input("Press enter to execute the action: ")
                         safe_throws += 1
                         print("\nn = {}".format(n+1))
-                        # execute_action(input_folder=False, tot_time_nsecs=args.safe_execution_time, is_simulation=False, is_learning=True, t=trajectory_dict)
-                        execute_action(input_folder=False, tot_time_nsecs=args.execution_time, is_simulation=False, is_learning=True, t=trajectory_dict)
+                        if "skip" != command:
+                            # execute_action(input_folder=False, tot_time_nsecs=args.safe_execution_time, is_simulation=False, is_learning=True, t=trajectory_dict)
+                            execute_action(input_folder=False, tot_time_nsecs=args.execution_time, is_simulation=False, is_learning=True, t=trajectory_dict)
                         command = raw_input("Press enter to evaluate the board\n")
                         if "print rewards_history" == command:
                             print ("rewards_history:")
                             print (algorithm.policy.rewards_history)
                         reward, distance, angle = evaluate_board(image_reader=image_reader)
-                        # while True:
+						# while True:
                         #     distance, stone_x, stone_y = image_reader.evaluate_board()
                         #     if distance != -1:
                         #         if args.reward_type.upper() in ["D", "DISCRETE"]:

@@ -876,6 +876,7 @@ if __name__ == "__main__":
                     latent_space_train = torch.cat((latent_space_train, latent_space_sample), 0)
                     original_data = torch.cat((original_data, data.view(-1, 700)), 0)
                     angular_coefficient = labels.append(pd.Series(m), ignore_index=True)
+                    intercept = labels.append(pd.Series(c), ignore_index=True)
                     labels = labels.append(pd.Series(label), ignore_index=True)
                 
 
@@ -902,13 +903,15 @@ if __name__ == "__main__":
                     latent_space_test = torch.cat((latent_space_test, latent_space_test_sample), 0)
                     # latent_space_test = torch.cat((latent_space_test, vae_model.reparameterize(mu, logvar, False)), 0)
                     test_angular_coefficient = test_labels.append(pd.Series(m), ignore_index=True)
+                    test_intercept = test_labels.append(pd.Series(c), ignore_index=True)
                     test_labels = test_labels.append(pd.Series(label), ignore_index=True)
-                test_is_safe.append(pd.Series(safe_list), ignore_index=True)
+                test_is_safe = test_is_safe.append(pd.Series(safe_list), ignore_index=True)
                 test_unsafe_points = test_unsafe_points.append(pd.Series(unsafe_list), ignore_index=True)
                 test_avg_dist = test_avg_dist.append(pd.Series(avg_dist_list), ignore_index=True)
 
             data_to_plot['vel'] = labels
             data_to_plot['m'] = angular_coefficient
+            data_to_plot['c'] = intercept
             data_to_plot['is_safe'] = is_safe
             data_to_plot['unsafe_points'] = unsafe_points
             data_to_plot['avg_dist'] = avg_dist
@@ -921,6 +924,7 @@ if __name__ == "__main__":
             # std15 = t15.std(0)
             test_data_to_plot['test_vel'] = test_labels
             test_data_to_plot['test_m'] = test_angular_coefficient
+            test_data_to_plot['test_c'] = test_intercept
             test_data_to_plot['test_is_safe'] = test_is_safe
             test_data_to_plot['test_unsafe_points'] = test_unsafe_points
             test_data_to_plot['test_avg_dist'] = test_avg_dist
@@ -1087,6 +1091,7 @@ if __name__ == "__main__":
             dataset_data_to_plot = pd.DataFrame()
             dataset_data_to_plot['vel'] = pd.concat([data_to_plot['vel'], test_data_to_plot['test_vel']], ignore_index=True)
             dataset_data_to_plot['m'] = pd.concat([data_to_plot['m'], test_data_to_plot['test_m']], ignore_index=True)
+            dataset_data_to_plot['c'] = pd.concat([data_to_plot['c'], test_data_to_plot['test_c']], ignore_index=True)
             dataset_data_to_plot['is_safe'] = pd.concat([data_to_plot['is_safe'], test_data_to_plot['test_is_safe']], ignore_index=True)
             latent_space_dataset = torch.cat((latent_space_train, latent_space_test), 0)
             latent_space_dimension = len(latent_space_dataset[0])
@@ -1098,7 +1103,9 @@ if __name__ == "__main__":
             for i in range(latent_space_dimension):
                 pairplot_vars.append("latent-space-"+str(i+1))
 
-            # # g_vel = sns.pairplot(dataset_data_to_plot[:1000], hue="vel", palette="hls", vars=pairplot_vars)
+            g_vel = sns.pairplot(dataset_data_to_plot, hue="vel", palette="hls", vars=pairplot_vars, plot_kws=dict(alpha=0.3), diag_kws=dict(alpha=0.3))
+            # g_vel = sns.pairplot(dataset_data_to_plot.sample(frac=0.1), hue="vel", palette="hls", vars=pairplot_vars, plot_kws=dict(alpha=0.3), diag_kws=dict(alpha=0.3))
+            # g_vel = sns.pairplot(dataset_data_to_plot[:1000], hue="vel", palette=sns.color_palette("hls", dataset_data_to_plot['m'].nunique()), vars=pairplot_vars)
 
             # g_vel = sns.PairGrid(dataset_data_to_plot[:1000], hue="vel", palette="hls", vars=pairplot_vars)
             # g_vel = g_vel.map_diag(sns.kdeplot, shade=True)
@@ -1115,21 +1122,27 @@ if __name__ == "__main__":
             # # g_vel.fig.title("pariplot_vel")
 
 
-            g_m = sns.pairplot(dataset_data_to_plot[:1000], hue="m", palette=sns.color_palette("hls", dataset_data_to_plot['m'].nunique()), vars=pairplot_vars)
+            g_m = sns.pairplot(dataset_data_to_plot, diag_kind="hist", hue="m", palette="hls", vars=pairplot_vars, plot_kws=dict(alpha=0.3), diag_kws=dict(alpha=0.3))
+            # g_m = sns.pairplot(dataset_data_to_plot.sample(frac=0.1), diag_kind="hist", hue="m", palette="hls", vars=pairplot_vars, plot_kws=dict(alpha=0.3), diag_kws=dict(alpha=0.3))
+            # g_m = sns.pairplot(dataset_data_to_plot[:1000], diag_kind="hist", hue="m", palette=sns.color_palette("hls", dataset_data_to_plot['m'].nunique()), vars=pairplot_vars)
 
-            # g_m = sns.PairGrid(dataset_data_to_plot[:1000], hue="m", palette="hls", vars=pairplot_vars)
-            # g_m = g_m.map_diag(sns.kdeplot, shade=True)
+            # g_m = sns.PairGrid(dataset_data_to_plot[:1000], hue="m", palette=sns.color_palette("hls", dataset_data_to_plot['m'].nunique()), vars=pairplot_vars)
+            # g_m = g_m.map_diag(plt.hist, histtype="step", linewidth=3)
+            # # g_m = g_m.map_diag(sns.kdeplot, shade=True)
             # # g_m = g_m.map_diag(plt.hist)
             # g_m = g_m.map_offdiag(plt.scatter, alpha=0.3)
 
-            # # legend = g_m._legend
-            # # for i, label_text in enumerate(legend.texts):
-            # #     try:
-            # #         label_text.set_text(round(float(label_text.get_text()), 2))
-            # #     except ValueError:
-            # #         pass
+            # legend = g_m._legend
+            # for i, label_text in enumerate(legend.texts):
+            #     try:
+            #         label_text.set_text(round(float(label_text.get_text()), 2))
+            #     except ValueError:
+            #         pass
             # g_m = g_m.add_legend()
-            # # g_m.fig.title("pariplot_m")
+            # g_m.fig.title("pariplot_m")
+
+            g_c = sns.pairplot(dataset_data_to_plot, diag_kind="hist", hue="c", palette="hls", vars=pairplot_vars, plot_kws=dict(alpha=0.3), diag_kws=dict(alpha=0.3))
+            # g_c = sns.pairplot(dataset_data_to_plot.sample(frac=0.1), diag_kind="hist", hue="c", palette="hls", vars=pairplot_vars, plot_kws=dict(alpha=0.3), diag_kws=dict(alpha=0.3))
 
         if args.matrix_plot != False:   
             fig = plt.figure("matrix_plot", figsize=(16,10))
