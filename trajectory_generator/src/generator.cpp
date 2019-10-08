@@ -56,7 +56,7 @@ std::vector<std::map<std::string, double>> NOISE_MATRIX = { // 1 will be convert
     {
       // y
       {"mean", 0},
-      {"stddev", 1}},
+      {"stddev", 10}},
     //   {"stddev", 0.3}},
     {
       // z
@@ -370,6 +370,7 @@ int main(int argc, char **argv)
   double min_noise;
   std::default_random_engine generator{std::random_device()()};
   std::normal_distribution<double> distribution;
+  std::uniform_real_distribution<> real_distribution;
   int exception_count;
 
   double current_s;
@@ -490,8 +491,10 @@ int main(int argc, char **argv)
         path->Add(KDL::Frame(KDL::Vector(starting_waypoints[0][0], starting_waypoints[0][1], starting_waypoints[0][2])));
         for (unsigned matrix_index = 0; matrix_index < NOISE_MATRIX.size(); matrix_index++)
         {
-          distribution = std::normal_distribution<double>(NOISE_MATRIX[matrix_index]["mean"], NOISE_MATRIX[matrix_index]["stddev"]);
-          noise = distribution(generator) / 100.0;
+          real_distribution = std::uniform_real_distribution<double>(-NOISE_MATRIX[matrix_index]["stddev"], NOISE_MATRIX[matrix_index]["stddev"]);
+          noise = real_distribution(generator) / 100.0;
+        //   distribution = std::normal_distribution<double>(NOISE_MATRIX[matrix_index]["mean"], NOISE_MATRIX[matrix_index]["stddev"]);
+        //   noise = distribution(generator) / 100.0;
           if (matrix_index != 2)
           {
             noisy_release_point[matrix_index] += noise;

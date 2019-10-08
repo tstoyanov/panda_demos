@@ -108,6 +108,8 @@ parser.add_argument('--ioff', nargs='?', const=True, default=False,
                     help='disables interactive plotting of the train and test error')
 parser.add_argument('--parameters-search', nargs='?', const=True, default=False,
                     help='wether to perform parameter search or not')
+parser.add_argument('--write-latent', nargs='?', const=True, default=False,
+                    help='wether to write to a file insights on the latent space or not')
 
 args, unknown = parser.parse_known_args()
 # args = parser.parse_args()
@@ -125,7 +127,7 @@ if args.deg:
 else:
     coeff = 1
 
-get_encoded_data = args.tsne != False or args.matrix_plot != False or args.safety_test != False or args.pairplot != False
+get_encoded_data = args.tsne != False or args.matrix_plot != False or args.safety_test != False or args.pairplot !=  False or args.write_latent != False
 
 device = torch.device("cuda" if args.cuda else "cpu")
 
@@ -929,6 +931,20 @@ if __name__ == "__main__":
             test_data_to_plot['test_unsafe_points'] = test_unsafe_points
             test_data_to_plot['test_avg_dist'] = test_avg_dist
             test_data_to_plot['test_latent_space'] = latent_space_test.tolist()
+        
+        if args.write_latent != False:
+            latent_train = {}
+            latent_train["mean"] = latent_space_train.mean(0).tolist()
+            latent_train["std"] = latent_space_train.std(0).tolist()
+            latent_train["vel"] = {}
+            for vel in data_to_plot['vel'].unique():
+                vel_str, vel_value = str(round(vel,1)), round(vel,1)
+                latent_train["vel"][vel_str] = {}
+                latent_train["vel"][vel_str]["mean"] = torch.FloatTensor(data_to_plot.loc[data_to_plot.vel == vel_value]["latent_space"].tolist()).mean(0).tolist()
+                latent_train["vel"][vel_str]["std"] = torch.FloatTensor(data_to_plot.loc[data_to_plot.vel == vel_value]["latent_space"].tolist()).std(0).tolist()
+            os.makedirs(os.path.dirname(args.load_dir+args.load_file), exist_ok=True)
+            with open(os.path.dirname(args.load_dir+args.load_file)+"/latent_space_data.txt", "w") as f:
+                json.dump(latent_train, f)
 
         if args.tsne != False:
             print ("\nApplying the t-sne algorithm to the latent space train subset...")

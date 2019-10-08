@@ -4,9 +4,10 @@
         <node 
             pkg="trajectory_generator" name="learning_loop" type="main.py" output="screen"
             args="
-                --decoder-sd a200_b1e-2_20000e/best_model.pt
+                --decoder-sd a200_b1e-1_20000e_slow_batch/best_model.pt
                 --reward-type c
-            "
+                --latent-space-data True
+                "
         />
     </group>
 </launch>

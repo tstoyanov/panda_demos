@@ -1,7 +1,12 @@
 #!/usr/bin/env python
+import os
+from os import listdir
+from os.path import isfile, join
 import sys
 import math
+import json
 import torch
+import random
 import argparse
 import importlib
 import rospy
@@ -42,6 +47,7 @@ parser.add_argument('--models-dir', default="nn_models", help='directory from wh
 parser.add_argument('--decoder-model-file', default="model_trajectory_vae", help='file from where to load the network shape of the action decoder')
 parser.add_argument('--decoder-dir', default=package_path + "/saved_models/trajectory_vae/", help='directory from where to load the trained model of the action decoder')
 parser.add_argument('--decoder-sd', default=False, help='file from where to load the trained model of the action decoder')
+parser.add_argument('--latent-space-data', nargs='?', const=True, default=False, help='file from where to load the data of the latent space')
 parser.add_argument('--encoder-dir', default=package_path + "/saved_models/state_vae/", help='directory from where to load the trained model of the state encoder')
 parser.add_argument('--encoder-file', default="model_state_vae.py", help='file from where to load the network shape of the state encoder')
 parser.add_argument('--encoder-sd', default=False, help='file from where to load the trained model of the state encoder')
@@ -1216,9 +1222,22 @@ vel_latent_space_stds = [0.42513496, 0.01628749, 0.06014936, 0.02778022, 0.51911
 vel_best_mean = [-1.3671,  0.2444,  0.0290, -1.4391,  0.1555]
 vel_best_std = [0.0204, 0.2391, 0.2653, 0.0247, 0.0492]
 
-initial_means = a200_b001_20000e_latent_space_means
-initial_stds = a200_b001_20000e_latent_space_stds
-initial_actions = a200_b001_20000_shuffled_initial_means
+if args.latent_space_data != False:
+    if args.latent_space_data == True or args.latent_space_data == "True":
+        args.latent_space_data = "/latent_space_data.txt"
+    with open(os.path.dirname(args.decoder_dir+args.decoder_sd)+args.latent_space_data, 'r') as f:
+        latent_space_data = json.loads(f.read())
+    initial_means = latent_space_data["mean"]
+    initial_stds = latent_space_data["std"]
+    actions = [(vel, latent_space_data["vel"][vel]["mean"]) for vel in latent_space_data["vel"]]
+    actions.sort()  # slow to fast
+    actions = [action[1] for action in actions]
+    initial_actions = [actions[-1]] + [actions[0]]
+    initial_actions += random.sample(actions, args.batch_size)
+else:
+    initial_means = a200_b001_20000e_latent_space_means
+    initial_stds = a200_b001_20000e_latent_space_stds
+    initial_actions = a200_b001_20000_shuffled_initial_means
 
 best_det_reward = None
 
@@ -1395,7 +1414,7 @@ def main(args):
         }
 
         if args.measure_performance != False:
-			measure_performance(image_reader=image_reader, trajectory_dict=trajectory_dict, algorithm=algorithm, decoder_model=decoder_model, safety_check_module=safety_check_module)
+            measure_performance(image_reader=image_reader, trajectory_dict=trajectory_dict, algorithm=algorithm, decoder_model=decoder_model, safety_check_module=safety_check_module)
 
         safe_throws = 0
         epoch = 0
@@ -1407,8 +1426,9 @@ def main(args):
             for t in range(args.batch_size):
                 print ("t = {}".format(t))
                 state = get_dummy_state(algorithm.policy.in_dim)
-                command = raw_input("Enter command (leave blank to execute action): ")
-                if "" != command:
+                command = True
+                while "" != command:
+                    command = raw_input("Enter command (leave blank to execute action): ")
                     if "set_action" == command:
                         while True:
                             try:
@@ -1420,8 +1440,15 @@ def main(args):
                                 break
                             except:
                                 print ("The action must be a python list\nEg: [1, 2, 3, 4, 5]")
+                        break
                     if "test_policy" == command:
-						test_policy(image_reader, algorithm, decoder_model, state, trajectory_dict)
+                        test_policy(image_reader, algorithm, decoder_model, state, trajectory_dict)
+                    if "print_latent_space" == command:
+                        try:
+                            print(latent_space_data)
+                        except:
+                            print("Cannot print variable 'latent_space_data'.")
+
                 if "set_action" != command:
                     cov_mat = torch.diag((torch.tensor(initial_stds))*math.pow(0.5, epoch))
                     print("cov_mat: ")
@@ -1464,7 +1491,7 @@ def main(args):
                         safe_throws += 1
                         print("\nn = {}".format(n+1))
                         if "skip" != command:
-                            # execute_action(input_folder=False, tot_time_nsecs=args.safe_execution_time, is_simulation=False, is_learning=True, t=trajectory_dict)
+                            execute_action(input_folder=False, tot_time_nsecs=args.safe_execution_time, is_simulation=False, is_learning=True, t=trajectory_dict)
                             execute_action(input_folder=False, tot_time_nsecs=args.execution_time, is_simulation=False, is_learning=True, t=trajectory_dict)
                         command = raw_input("Press enter to evaluate the board\n")
                         if "print rewards_history" == command:
