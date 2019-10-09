@@ -367,8 +367,7 @@ def new_joints_plot (last_data, last_recon_data, title, fig, color):
     new_index = -1
     for joint_index, _ in enumerate(last_data[0]):
         # 3 4 6
-        joints_to_plot = [0, 1, 2, 3, 4, 5, 6]
-        # joints_to_plot = [2, 3, 5]
+        joints_to_plot = [0, 3, 5]
         if joint_index in joints_to_plot:
             new_index += 1
             # ax = fig.add_subplot(4, 2, joint_index+1)
