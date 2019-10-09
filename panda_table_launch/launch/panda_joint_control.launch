@@ -46,6 +46,8 @@
       <param name="z_lower_limit" value="0.85800"/>
       <!-- <param name="z_lower_limit" value="0.86000"/> -->
       <param name="z_upper_limit" value="0.86600"/>
+      <param name="y_lower_limit" value="-0.16"/>
+      <param name="y_upper_limit" value="0.0"/>
     </node>
 
      <!-- enabled only if we want to run moveit in simulation -->

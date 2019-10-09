@@ -61,7 +61,8 @@ ax.set_aspect('equal')
 n = 0
 for trajectory_file in trajectory_files:
     n += 1
-    print ("n = ", n)
+    if n % 100 == 0 or n == 1:
+        print ("n = " + str(n))
     with open(main_dir + "/generated_trajectories/cpp/" + input_folder + "/" + trajectory_file, 'r') as f:
         data = f.read()
     trajectories = json.loads(data)

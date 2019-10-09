@@ -928,7 +928,7 @@ def check(t):
     try:
         local_trajectory_safety_check = rospy.ServiceProxy('/panda/trajectory_safety_check', trajectory_safety_check)
         res = local_trajectory_safety_check(t)
-        return res.is_safe, res.avg_distance, res.unsafe_pts, res.fk_z
+        return res.is_safe, res.avg_distance, res.unsafe_pts, res.fk_z, res.y_unsafe_pts, res.z_unsafe_pts
     except rospy.ServiceException as e:
         print ("Service call failed: %s"%e)
 
@@ -938,6 +938,15 @@ def get_z_bounds():
         local_get_z_bounds = rospy.ServiceProxy('/panda/trajectory_safety_check_z_getter', trajectory_safety_check_z_getter)
         res = local_get_z_bounds()
         return res.z_lower, res.z_upper
+    except rospy.ServiceException as e:
+        print ("Service call failed: %s"%e)
+
+def get_y_bounds():
+    # rospy.wait_for_service('/panda/trajectory_safety_check')
+    try:
+        local_get_y_bounds = rospy.ServiceProxy('/panda/trajectory_safety_check_y_getter', trajectory_safety_check_y_getter)
+        res = local_get_y_bounds()
+        return res.y_lower, res.y_upper
     except rospy.ServiceException as e:
         print ("Service call failed: %s"%e)
 

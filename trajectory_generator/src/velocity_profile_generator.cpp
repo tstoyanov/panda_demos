@@ -18,16 +18,17 @@ int generate_velocity_profile (std::vector<double> &result, int total_frames, in
     // std::uniform_real_distribution<> real_distribution(2 * treshold_length / treshold_frame, treshold_length / 4); 
     // std::uniform_real_distribution<> real_distribution(3 * treshold_length / treshold_frame, 4 * treshold_length / treshold_frame);
     
-    std::uniform_real_distribution<> real_distribution(1 * treshold_length / treshold_frame, 3 * treshold_length / treshold_frame);
+    // std::uniform_real_distribution<> real_distribution(1 * treshold_length / treshold_frame, 3 * treshold_length / treshold_frame);
     // std::uniform_real_distribution<> real_distribution(2 * treshold_length / treshold_frame, 3 * treshold_length / treshold_frame);
+    std::uniform_real_distribution<> real_distribution(2 * treshold_length / treshold_frame, 4 * treshold_length / treshold_frame);
     
     // std::uniform_real_distribution<> real_distribution(2 * treshold_length / treshold_frame, 3 * treshold_length / treshold_frame);
 
     // std::uniform_real_distribution<> real_distribution(2 * treshold_length / treshold_frame, 4 * treshold_length / treshold_frame);
 
     release_velocity = real_distribution(generator);
-    starting_frame = treshold_frame - (1 * treshold_length / release_velocity);
-    // starting_frame = treshold_frame - (2 * treshold_length / release_velocity);
+    // starting_frame = treshold_frame - (1 * treshold_length / release_velocity);
+    starting_frame = treshold_frame - (2 * treshold_length / release_velocity);
 
     computed_total_distance = 0;
     for (unsigned i = 0; i < starting_frame; i++)

@@ -1,0 +1,8 @@
+bool update_lower
+float64 y_lower_limit
+bool update_upper
+float64 y_upper_limit
+---
+float64 updated_lower
+float64 updated_upper
+bool error

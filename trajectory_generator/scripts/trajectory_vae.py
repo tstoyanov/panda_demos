@@ -886,9 +886,15 @@ if __name__ == "__main__":
                         if ((batch_idx * args.batch_size) + n) % 500 == 0:
                             print ((batch_idx * args.batch_size) + n)
                         decoded_t = vae_model.decode(s)
-                        safe, avg_distance, unsafe_pts, fk_z = safety_check_module.check(decoded_t)
+                        safe, avg_distance, unsafe_pts, fk_z, y_unsafe_pts, z_unsafe_pts = safety_check_module.check(decoded_t)
                         if safe:
                             safe_list.append("Safe")
+                        elif y_unsafe_pts > 0 and z_unsafe_pts > 0:
+                            safe_list.append("Unsafe_yz")
+                        elif y_unsafe_pts > 0:
+                            safe_list.append("Unsafe_y")
+                        elif z_unsafe_pts > 0:
+                            safe_list.append("Unsafe_z")
                         else:
                             safe_list.append("Unsafe")
                         avg_dist_list.append(avg_distance)
@@ -914,10 +920,16 @@ if __name__ == "__main__":
                         if ((batch_idx * args.batch_size) + n) % 500 == 0:
                             print ((batch_idx * args.batch_size) + n)
                         decoded_t = vae_model.decode(s)
-                        safe, avg_distance, unsafe_pts, fk_z = safety_check_module.check(decoded_t)
+                        safe, avg_distance, unsafe_pts, fk_z, y_unsafe_pts, z_unsafe_pts = safety_check_module.check(decoded_t)
                         if safe:
                             safe_list.append("Safe")
-                        else:    
+                        elif y_unsafe_pts > 0 and z_unsafe_pts > 0:
+                            safe_list.append("Unsafe_yz")
+                        elif y_unsafe_pts > 0:
+                            safe_list.append("Unsafe_y")
+                        elif z_unsafe_pts > 0:
+                            safe_list.append("Unsafe_z")
+                        else:
                             safe_list.append("Unsafe")
                         avg_dist_list.append(avg_distance)
                         unsafe_list.append(unsafe_pts)

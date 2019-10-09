@@ -70,6 +70,8 @@ add_service_files(
   trajectory_generator_gripper.srv
   trajectory_safety_check_z_setter.srv
   trajectory_safety_check_z_getter.srv
+  trajectory_safety_check_y_setter.srv
+  trajectory_safety_check_y_getter.srv
   trajectory_safety_check.srv
 )
 

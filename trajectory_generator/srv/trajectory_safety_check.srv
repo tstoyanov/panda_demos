@@ -3,5 +3,7 @@ float64[] joints_pos
 bool is_safe
 float64 avg_distance
 int64 unsafe_pts
+int64 z_unsafe_pts
+int64 y_unsafe_pts
 float64[] fk_z
 bool error

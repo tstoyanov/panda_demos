@@ -81,7 +81,8 @@ if batch:
             release_distances["euclidean_distances"][key].append(euclidean_distances[key])
         
         files_computed += 1
-        print ("files_computed = ", files_computed)
+        if files_computed % 100 == 0 or files_computed == 1:
+            print ("files_computed = ", files_computed)
             
     print("data processing completed")
     print("processing graphs")
