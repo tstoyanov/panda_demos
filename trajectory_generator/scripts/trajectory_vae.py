@@ -367,7 +367,8 @@ def new_joints_plot (last_data, last_recon_data, title, fig, color):
     new_index = -1
     for joint_index, _ in enumerate(last_data[0]):
         # 3 4 6
-        joints_to_plot = [2, 3, 5]
+        joints_to_plot = [0, 1, 2, 3, 4, 5, 6]
+        # joints_to_plot = [2, 3, 5]
         if joint_index in joints_to_plot:
             new_index += 1
             # ax = fig.add_subplot(4, 2, joint_index+1)
@@ -375,7 +376,8 @@ def new_joints_plot (last_data, last_recon_data, title, fig, color):
             # ax.set_title("joint_" + str(joint_index+1))
             fig.suptitle("Iteration: "+str(last_recon_data), fontsize=10)
             ax.plot(range(len(last_data)), [item[joint_index].item()*coeff for item in last_data], '-', marker='o', markersize=5, color=color, linewidth=1, alpha=0.7)
-            ax.set_ylabel('joint angle [rad]')
+            if new_index == 0:
+                ax.set_ylabel('joint angle [rad]')
             if new_index+1 == len(joints_to_plot):
                 ax.set_xlabel('steps')
 
@@ -773,17 +775,35 @@ if __name__ == "__main__":
         test_data_1 = torch.tensor([])
         test_data_2 = torch.tensor([])
         for batch_idx, (data, label, m, c, index) in enumerate(my_test_set_loader):
-            if len(test_data_1) == 0:
-                test_data_1 = data[0]
-            elif len(test_data_2) == 0:
-                test_data_2 = data[0]
+            if "VEL" == args.transformation_plot.upper():
+                if len(test_data_1) == 0 and len(torch.where(label == 0.6)[0]) != 0:
+                    test_data_1 = data[torch.where(label == 0.6)[0][0].item()]
+                elif len(test_data_2) == 0 and len(torch.where(label == 1.8)[0]) != 0:
+                    test_data_2 = data[torch.where(label == 1.8)[0][0].item()]
+                else:
+                    break
+            elif "ANGLE" == args.transformation_plot.upper():
+                if len(test_data_1) == 0 and len(torch.where(m <= -0.16)[0]) != 0:
+                    test_data_1 = data[torch.where(m <= -0.16)[0][0].item()]
+                elif len(test_data_2) == 0 and len(torch.where(m >= 0.16)[0]) != 0:
+                    test_data_2 = data[torch.where(m >= 0.16)[0][0].item()]
+                else:
+                    break
             else:
-                break
+                if len(test_data_1) == 0:
+                    test_data_1 = data[0]
+                elif len(test_data_2) == 0:
+                    test_data_2 = data[0]
+                else:
+                    break
         mu, logvar = vae_model.encode(test_data_1.unsqueeze(0).view(-1, 700))
         test_encoded_1 = vae_model.reparameterize(mu, logvar, False)[0]
         mu, logvar = vae_model.encode(test_data_2.unsqueeze(0).view(-1, 700))
         test_encoded_2 = vae_model.reparameterize(mu, logvar, False)[0]
-        steps = int(args.transformation_plot)
+        try:
+            steps = int(args.transformation_plot)
+        except:
+            steps = 10
         ds = torch.tensor(list(map(lambda e1, e2: (e1 - e2) / steps , test_encoded_1, test_encoded_2)))
 
         # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!REMOVE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
