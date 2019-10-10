@@ -2,8 +2,14 @@ float64[] joints_pos
 ---
 bool is_safe
 float64 avg_distance
+float64 rel_angle
 int64 unsafe_pts
-int64 z_unsafe_pts
 int64 y_unsafe_pts
+bool too_left
+bool too_right
+int64 z_unsafe_pts
+bool too_high
+bool too_low
+float64[] fk_y
 float64[] fk_z
 bool error

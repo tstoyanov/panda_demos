@@ -367,7 +367,8 @@ def new_joints_plot (last_data, last_recon_data, title, fig, color):
     new_index = -1
     for joint_index, _ in enumerate(last_data[0]):
         # 3 4 6
-        joints_to_plot = [0, 3, 5]
+        joints_to_plot = [0, 1, 2, 3, 4, 5]
+        # joints_to_plot = [0, 3, 5]
         if joint_index in joints_to_plot:
             new_index += 1
             # ax = fig.add_subplot(4, 2, joint_index+1)
@@ -775,25 +776,29 @@ if __name__ == "__main__":
         test_data_2 = torch.tensor([])
         for batch_idx, (data, label, m, c, index) in enumerate(my_test_set_loader):
             if "VEL" == args.transformation_plot.upper():
-                if len(test_data_1) == 0 and len(torch.where(label == 0.6)[0]) != 0:
-                    test_data_1 = data[torch.where(label == 0.6)[0][0].item()]
-                elif len(test_data_2) == 0 and len(torch.where(label == 1.8)[0]) != 0:
-                    test_data_2 = data[torch.where(label == 1.8)[0][0].item()]
-                else:
+                min_vel = round(min(label).item(), 3)
+                max_vel = round(max(label).item(), 3)
+                if len(test_data_1) == 0 and len(torch.where(label == min_vel)[0]) != 0:
+                    test_data_1 = data[torch.where(label == min_vel)[0][0].item()]
+                if len(test_data_2) == 0 and len(torch.where(label == max_vel)[0]) != 0:
+                    test_data_2 = data[torch.where(label == max_vel)[0][0].item()]
+                if len(test_data_1) != 0 and len(test_data_2) != 0:
                     break
             elif "ANGLE" == args.transformation_plot.upper():
-                if len(test_data_1) == 0 and len(torch.where(m <= -0.16)[0]) != 0:
-                    test_data_1 = data[torch.where(m <= -0.16)[0][0].item()]
-                elif len(test_data_2) == 0 and len(torch.where(m >= 0.16)[0]) != 0:
-                    test_data_2 = data[torch.where(m >= 0.16)[0][0].item()]
-                else:
+                min_angle = round(min(m).item(), 3)
+                max_angle = round(max(m).item(), 3)
+                if len(test_data_1) == 0 and len(torch.where(m <= min_angle)[0]) != 0:
+                    test_data_1 = data[torch.where(m <= min_angle)[0][0].item()]
+                if len(test_data_2) == 0 and len(torch.where(m >= max_angle)[0]) != 0:
+                    test_data_2 = data[torch.where(m >= max_angle)[0][0].item()]
+                if len(test_data_1) != 0 and len(test_data_2) != 0:
                     break
             else:
                 if len(test_data_1) == 0:
                     test_data_1 = data[0]
-                elif len(test_data_2) == 0:
-                    test_data_2 = data[0]
-                else:
+                if len(test_data_2) == 0:
+                    test_data_2 = data[-1]
+                if len(test_data_1) != 0 and len(test_data_2) != 0:
                     break
         mu, logvar = vae_model.encode(test_data_1.unsqueeze(0).view(-1, 700))
         test_encoded_1 = vae_model.reparameterize(mu, logvar, False)[0]
@@ -806,7 +811,10 @@ if __name__ == "__main__":
         ds = torch.tensor(list(map(lambda e1, e2: (e1 - e2) / steps , test_encoded_1, test_encoded_2)))
 
         # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!REMOVE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        new_fig = plt.figure()
+        if "vel" == args.transformation_plot:
+            new_fig = plt.figure("transformation_plot_vel")
+        elif "angle" == args.transformation_plot:
+            new_fig = plt.figure("transformation_plot_angle")
         # Make a user-defined colormap.
         cm1 = mcol.LinearSegmentedColormap.from_list("MyCmapName",["b","r"])
 
@@ -867,6 +875,9 @@ if __name__ == "__main__":
         safe_list = []
         is_safe = pd.Series()
         test_is_safe = pd.Series()
+        rel_angle_list = []
+        rel_angle = pd.Series()
+        test_rel_angle = pd.Series()
         unsafe_list = []
         unsafe_points = pd.Series()
         test_unsafe_points = pd.Series()
@@ -886,19 +897,37 @@ if __name__ == "__main__":
                         if ((batch_idx * args.batch_size) + n) % 500 == 0:
                             print ((batch_idx * args.batch_size) + n)
                         decoded_t = vae_model.decode(s)
-                        safe, avg_distance, unsafe_pts, fk_z, y_unsafe_pts, z_unsafe_pts = safety_check_module.check(decoded_t)
-                        if safe:
+                        safety_res = safety_check_module.check(decoded_t)
+                        safe_list_item = ""
+                        if safety_res.is_safe:
                             safe_list.append("Safe")
-                        elif y_unsafe_pts > 0 and z_unsafe_pts > 0:
-                            safe_list.append("Unsafe_yz")
-                        elif y_unsafe_pts > 0:
-                            safe_list.append("Unsafe_y")
-                        elif z_unsafe_pts > 0:
-                            safe_list.append("Unsafe_z")
                         else:
-                            safe_list.append("Unsafe")
-                        avg_dist_list.append(avg_distance)
-                        unsafe_list.append(unsafe_pts)
+                            if safety_res.too_left:
+                                if safe_list_item == "":
+                                    safe_list_item = "too_left"
+                                else:
+                                    safe_list_item += "-too_left"
+                            if safety_res.too_right:
+                                if safe_list_item == "":
+                                    safe_list_item = "too_right"
+                                else:
+                                    safe_list_item += "-too_right"
+                            if safety_res.too_high:
+                                if safe_list_item == "":
+                                    safe_list_item = "too_high"
+                                else:
+                                    safe_list_item += "-too_high"
+                            if safety_res.too_low:
+                                if safe_list_item == "":
+                                    safe_list_item = "too_low"
+                                else:
+                                    safe_list_item += "-too_low"
+                            if safe_list_item == "":
+                                safe_list_item = "Unsafe"
+                            safe_list.append(safe_list_item)
+                        avg_dist_list.append(safety_res.avg_distance)
+                        unsafe_list.append(safety_res.unsafe_pts)
+                        rel_angle_list.append(round(safety_res.rel_angle, 0))
                     # latent_space_train = torch.cat((latent_space_train, vae_model.reparameterize(mu, logvar, no_noise=args.no_noise)), 0)
                     latent_space_train = torch.cat((latent_space_train, latent_space_sample), 0)
                     original_data = torch.cat((original_data, data.view(-1, 700)), 0)
@@ -910,6 +939,7 @@ if __name__ == "__main__":
                 is_safe = is_safe.append(pd.Series(safe_list), ignore_index=True)
                 unsafe_points = unsafe_points.append(pd.Series(unsafe_list), ignore_index=True)
                 avg_dist = avg_dist.append(pd.Series(avg_dist_list), ignore_index=True)
+                rel_angle = rel_angle.append(pd.Series(rel_angle_list), ignore_index=True)
                 latent_space_test = torch.tensor([])
                 safe_list = []
                 print ("Checking safety for test trajectories...")
@@ -920,19 +950,37 @@ if __name__ == "__main__":
                         if ((batch_idx * args.batch_size) + n) % 500 == 0:
                             print ((batch_idx * args.batch_size) + n)
                         decoded_t = vae_model.decode(s)
-                        safe, avg_distance, unsafe_pts, fk_z, y_unsafe_pts, z_unsafe_pts = safety_check_module.check(decoded_t)
-                        if safe:
+                        safety_res = safety_check_module.check(decoded_t)
+                        safe_list_item = ""
+                        if safety_res.is_safe:
                             safe_list.append("Safe")
-                        elif y_unsafe_pts > 0 and z_unsafe_pts > 0:
-                            safe_list.append("Unsafe_yz")
-                        elif y_unsafe_pts > 0:
-                            safe_list.append("Unsafe_y")
-                        elif z_unsafe_pts > 0:
-                            safe_list.append("Unsafe_z")
                         else:
-                            safe_list.append("Unsafe")
-                        avg_dist_list.append(avg_distance)
-                        unsafe_list.append(unsafe_pts)
+                            if safety_res.too_left:
+                                if safe_list_item == "":
+                                    safe_list_item = "too_left"
+                                else:
+                                    safe_list_item += "-too_left"
+                            if safety_res.too_right:
+                                if safe_list_item == "":
+                                    safe_list_item = "too_right"
+                                else:
+                                    safe_list_item += "-too_right"
+                            if safety_res.too_high:
+                                if safe_list_item == "":
+                                    safe_list_item = "too_high"
+                                else:
+                                    safe_list_item += "-too_high"
+                            if safety_res.too_low:
+                                if safe_list_item == "":
+                                    safe_list_item = "too_low"
+                                else:
+                                    safe_list_item += "-too_low"
+                            if safe_list_item == "":
+                                safe_list_item = "Unsafe"
+                            safe_list.append(safe_list_item)
+                        avg_dist_list.append(safety_res.avg_distance)
+                        rel_angle_list.append(round(safety_res.rel_angle, 0))
+                        unsafe_list.append(safety_res.unsafe_pts)
                     latent_space_test = torch.cat((latent_space_test, latent_space_test_sample), 0)
                     # latent_space_test = torch.cat((latent_space_test, vae_model.reparameterize(mu, logvar, False)), 0)
                     test_angular_coefficient = test_labels.append(pd.Series(m), ignore_index=True)
@@ -941,10 +989,12 @@ if __name__ == "__main__":
                 test_is_safe = test_is_safe.append(pd.Series(safe_list), ignore_index=True)
                 test_unsafe_points = test_unsafe_points.append(pd.Series(unsafe_list), ignore_index=True)
                 test_avg_dist = test_avg_dist.append(pd.Series(avg_dist_list), ignore_index=True)
+                test_rel_angle = test_rel_angle.append(pd.Series(rel_angle_list), ignore_index=True)
 
             data_to_plot['vel'] = labels
             data_to_plot['m'] = angular_coefficient
             data_to_plot['c'] = intercept
+            data_to_plot['rel_angle'] = rel_angle
             data_to_plot['is_safe'] = is_safe
             data_to_plot['unsafe_points'] = unsafe_points
             data_to_plot['avg_dist'] = avg_dist
@@ -958,6 +1008,7 @@ if __name__ == "__main__":
             test_data_to_plot['test_vel'] = test_labels
             test_data_to_plot['test_m'] = test_angular_coefficient
             test_data_to_plot['test_c'] = test_intercept
+            test_data_to_plot['test_rel_angle'] = test_rel_angle
             test_data_to_plot['test_is_safe'] = test_is_safe
             test_data_to_plot['test_unsafe_points'] = test_unsafe_points
             test_data_to_plot['test_avg_dist'] = test_avg_dist
@@ -997,19 +1048,19 @@ if __name__ == "__main__":
                 fig = plt.figure("tsne_safe_unsafe_no_noise", figsize=(16,10))
             else:
                 fig = plt.figure("tsne_safe_unsafe", figsize=(16,10))
-            if "BOTH" == str(args.tsne).upper():
-                fig.suptitle('t-sne algorithm over ' + str(len(my_train_set_loader.dataset)) + ' trajectories:\nEncoded ' + str(vae_model.fc22.out_features) + ' dimensional data using ' + args.loss_type.upper() + ' loss (left) vs Original ' + str(vae_model.fc1.in_features) + ' dimensional data (right)', fontsize=14)
+            if "BOTH" == str(args.tsne).upper() or "ORIGINAL" == str(args.tsne).upper():
                 print ("\nApplying the t-sne algorithm to the original data subset...")
                 time_start = time.time()
                 tsne_results = tsne.fit_transform(original_data.detach().numpy())
                 print('t-SNE over the original data done! Time elapsed: {} seconds'.format(time.time()-time_start))
                 data_to_plot['tsne-original-one'] = tsne_results[:,0]
                 data_to_plot['tsne-original-two'] = tsne_results[:,1]
-                
-                # ax0 = fig.add_subplot(1, 2, 1)
-                # ax1 = fig.add_subplot(1, 2, 2)
-                ax0 = plt.subplot(1, 2, 1)
-                ax1 = plt.subplot(1, 2, 2)
+            if "BOTH" == str(args.tsne).upper():
+                fig.suptitle('t-sne algorithm over ' + str(len(my_train_set_loader.dataset)) + ' trajectories:\nEncoded ' + str(vae_model.fc22.out_features) + ' dimensional data using ' + args.loss_type.upper() + ' loss (left) vs Original ' + str(vae_model.fc1.in_features) + ' dimensional data (right)', fontsize=14)
+                ax0 = fig.add_subplot(1, 2, 1)
+                ax1 = fig.add_subplot(1, 2, 2)
+                # ax0 = plt.subplot(1, 2, 1)
+                # ax1 = plt.subplot(1, 2, 2)
                 g = sns.scatterplot(
                     x="tsne-original-one", y="tsne-original-two",
                     hue="vel",
@@ -1040,8 +1091,8 @@ if __name__ == "__main__":
                     # palette=sns.color_palette("hls", data_to_plot['unsafe_points'].nunique()),
                     hue="is_safe",
                     palette=sns.color_palette("colorblind", data_to_plot['is_safe'].nunique()),
-                    style="is_safe",
-                    markers=safe_markers,
+                    # style="is_safe",
+                    # markers=safe_markers,
                     data=data_to_plot,
                     legend="full",
                     # legend="brief",
@@ -1054,6 +1105,116 @@ if __name__ == "__main__":
                         label_text.set_text(round(float(label_text.get_text()), 2))
                     except ValueError:
                         pass
+
+            elif str(args.tsne).upper() in ["ORIGINAL"]:
+                # fig = plt.figure("tsne_plot", figsize=(16,10))
+                # ax0 = fig.add_subplot(1, 1, 1)
+                fig.suptitle('t-sne algorithm over ' + str(len(my_train_set_loader.dataset)) + ' trajectories:\nOriginal ' + str(vae_model.fc1.in_features) + ' dimensional data', fontsize=14)
+                ax0 = plt.subplot(1, 1, 1)
+                g = sns.scatterplot(
+                    x="tsne-original-one", y="tsne-original-two",
+                    # hue="unsafe_points",
+                    # palette=sns.color_palette("hls", data_to_plot['unsafe_points'].nunique()),
+                    hue="vel",
+                    palette=sns.color_palette("hls", data_to_plot['vel'].nunique()),
+                    # style="is_safe",
+                    # markers=safe_markers,
+                    data=data_to_plot,
+                    legend="full",
+                    # legend="brief",
+                    alpha=0.5,
+                    ax=ax0
+                )
+                legend = g.legend_
+                for i, label_text in enumerate(legend.texts):
+                    try:
+                        label_text.set_text(round(float(label_text.get_text()), 2))
+                    except ValueError:
+                        pass
+
+                fig_double = plt.figure("original_tsne_unsafe_alt", figsize=(16,10))
+                fig_double.suptitle('t-sne algorithm over ' + str(len(my_train_set_loader.dataset)) + ' trajectories:\nOriginal ' + str(vae_model.fc1.in_features) + ' dimensional data', fontsize=14)
+                
+                ax2 = fig_double.add_subplot(1, 1, 1)
+                ax2.set_title("ALPHA = " + str(args.alpha) + "  BETA = " + str(args.beta) + "  z_lower_bound = " + str(z_lower_bound) + "  z_upper_bound = " + str(z_upper_bound))
+                g = sns.scatterplot(
+                    x="tsne-original-one", y="tsne-original-two",
+                    # hue="unsafe_points",
+                    # palette=sns.color_palette("hls", data_to_plot['unsafe_points'].nunique()),
+                    hue="is_safe",
+                    palette=sns.color_palette("bright", data_to_plot['is_safe'].nunique()),
+                    # style="is_safe",
+                    # markers=safe_markers,
+                    data=data_to_plot,
+                    legend="full",
+                    # legend="brief",
+                    alpha=0.5,
+                    ax=ax2
+                )
+                legend = g.legend_
+                for i, label_text in enumerate(legend.texts):
+                    try:
+                        label_text.set_text(round(float(label_text.get_text()), 2))
+                    except ValueError:
+                        pass
+                fig_triple = plt.figure("original_tsne_unsafe_m", figsize=(16,10))
+                fig_triple.suptitle('t-sne algorithm over ' + str(len(my_train_set_loader.dataset)) + ' trajectories:\nOriginal ' + str(vae_model.fc1.in_features) + ' dimensional data', fontsize=14)
+                
+                ax3 = fig_triple.add_subplot(1, 1, 1)
+                ax3.set_title("ALPHA = " + str(args.alpha) + "  BETA = " + str(args.beta) + "  z_lower_bound = " + str(z_lower_bound) + "  z_upper_bound = " + str(z_upper_bound))
+                g = sns.scatterplot(
+                    x="tsne-original-one", y="tsne-original-two",
+                    # hue="unsafe_points",
+                    # palette=sns.color_palette("hls", data_to_plot['unsafe_points'].nunique()),
+                    hue="m",
+                    palette=sns.color_palette("hls", data_to_plot['m'].nunique()),
+                    # style="is_safe",
+                    # markers=safe_markers,
+                    data=data_to_plot,
+                    legend="full",
+                    # legend="brief",
+                    alpha=0.5,
+                    ax=ax3
+                )
+                legend = g.legend_
+                for i, label_text in enumerate(legend.texts):
+                    try:
+                        label_text.set_text(round(float(label_text.get_text()), 2))
+                    except ValueError:
+                        pass
+
+                fig_rel_angle = plt.figure("original_tsne_unsafe_rel_angle", figsize=(16,10))
+                fig_rel_angle.suptitle('t-sne algorithm over ' + str(len(my_train_set_loader.dataset)) + ' trajectories:\nOriginal ' + str(vae_model.fc1.in_features) + ' dimensional data', fontsize=14)
+                
+                ax4 = fig_rel_angle.add_subplot(1, 1, 1)
+                ax4.set_title("ALPHA = " + str(args.alpha) + "  BETA = " + str(args.beta) + "  z_lower_bound = " + str(z_lower_bound) + "  z_upper_bound = " + str(z_upper_bound))
+                g = sns.scatterplot(
+                    x="tsne-original-one", y="tsne-original-two",
+                    # hue="unsafe_points",
+                    # palette=sns.color_palette("hls", data_to_plot['unsafe_points'].nunique()),
+                    hue="rel_angle",
+                    palette=sns.color_palette("hls", data_to_plot['rel_angle'].nunique()),
+                    # style="is_safe",
+                    # markers=safe_markers,
+                    data=data_to_plot,
+                    legend="full",
+                    # legend="brief",
+                    alpha=0.5,
+                    ax=ax4
+                )
+                legend = g.legend_
+                for i, label_text in enumerate(legend.texts):
+                    try:
+                        label_text.set_text(round(float(label_text.get_text()), 2))
+                    except ValueError:
+                        pass
+            else:
+                # fig = plt.figure("tsne_plot", figsize=(16,10))
+                fig.suptitle('t-sne algorithm over ' + str(len(my_train_set_loader.dataset)) + ' trajectories:\nEncoded ' + str(vae_model.fc22.out_features) + ' dimensional data using ' + args.loss_type.upper() + ' loss', fontsize=14)
+                # ax0 = fig.add_subplot(1, 1, 1)
+                ax0 = plt.subplot(1, 1, 1)
+                # ax0 = plt.subplot(1, 2, 1)
+                # ax2 = plt.subplot(1, 2, 2)
 
             if "TRIPLE" == str(args.tsne).upper():
                 # fig = plt.figure("tsne_plot", figsize=(16,10))
@@ -1071,8 +1232,8 @@ if __name__ == "__main__":
                     # palette=sns.color_palette("hls", data_to_plot['unsafe_points'].nunique()),
                     hue="m",
                     palette=sns.color_palette("hls", data_to_plot['m'].nunique()),
-                    style="is_safe",
-                    markers=safe_markers,
+                    # style="is_safe",
+                    # markers=safe_markers,
                     data=data_to_plot,
                     legend="full",
                     # legend="brief",
@@ -1085,37 +1246,57 @@ if __name__ == "__main__":
                         label_text.set_text(round(float(label_text.get_text()), 2))
                     except ValueError:
                         pass
-            else:
-                # fig = plt.figure("tsne_plot", figsize=(16,10))
-                fig.suptitle('t-sne algorithm over ' + str(len(my_train_set_loader.dataset)) + ' trajectories:\nEncoded ' + str(vae_model.fc22.out_features) + ' dimensional data using ' + args.loss_type.upper() + ' loss', fontsize=14)
-                # ax0 = fig.add_subplot(1, 1, 1)
-                ax0 = plt.subplot(1, 1, 1)
-                # ax0 = plt.subplot(1, 2, 1)
-                # ax2 = plt.subplot(1, 2, 2)
-
-            ax0.set_title("ALPHA = " + str(args.alpha) + "  BETA = " + str(args.beta) + "  z_lower_bound = " + str(z_lower_bound) + "  z_upper_bound = " + str(z_upper_bound))
-            g = sns.scatterplot(
-                x="tsne-train-encoded-" + str(vae_model.fc22.out_features) + "d-one", y="tsne-train-encoded-" + str(vae_model.fc22.out_features) + "d-two",
-                hue="vel",
-                palette=sns.color_palette("hls", data_to_plot['vel'].nunique()),
-                # hue="avg_dist",
-                # palette=sns.color_palette("hls", data_to_plot['avg_dist'].nunique()),
-                style="is_safe",
-                markers=safe_markers,
-                data=data_to_plot,
-                legend="full",
-                # legend="brief",
-                alpha=0.5,
-                ax=ax0
-            )
-            # fig.subplots_adjust(right=0.9)
-            # g.legend(bbox_to_anchor=(1, 1), loc=2, borderaxespad=0., ncol=1)
-            legend = g.legend_
-            for i, label_text in enumerate(legend.texts):
-                try:
-                    label_text.set_text(round(float(label_text.get_text()), 2))
-                except ValueError:
-                    pass
+                
+                fig_rel_angle = plt.figure("tsne_unsafe_rel_angle", figsize=(16,10))
+                fig_rel_angle.suptitle('t-sne algorithm over ' + str(len(my_train_set_loader.dataset)) + ' trajectories:\nEncoded ' + str(vae_model.fc22.out_features) + ' dimensional data using ' + args.loss_type.upper() + ' loss', fontsize=14)
+                
+                ax4 = fig_rel_angle.add_subplot(1, 1, 1)
+                ax4.set_title("ALPHA = " + str(args.alpha) + "  BETA = " + str(args.beta) + "  z_lower_bound = " + str(z_lower_bound) + "  z_upper_bound = " + str(z_upper_bound))
+                g = sns.scatterplot(
+                    x="tsne-train-encoded-" + str(vae_model.fc22.out_features) + "d-one", y="tsne-train-encoded-" + str(vae_model.fc22.out_features) + "d-two",
+                    # hue="unsafe_points",
+                    # palette=sns.color_palette("hls", data_to_plot['unsafe_points'].nunique()),
+                    hue="rel_angle",
+                    palette=sns.color_palette("hls", data_to_plot['rel_angle'].nunique()),
+                    # style="is_safe",
+                    # markers=safe_markers,
+                    data=data_to_plot,
+                    legend="full",
+                    # legend="brief",
+                    alpha=0.5,
+                    ax=ax4
+                )
+                legend = g.legend_
+                for i, label_text in enumerate(legend.texts):
+                    try:
+                        label_text.set_text(round(float(label_text.get_text()), 2))
+                    except ValueError:
+                        pass
+            
+            if args.tsne.upper() not in ["BOTH", "ORIGINAL", "TEST"]:
+                ax0.set_title("ALPHA = " + str(args.alpha) + "  BETA = " + str(args.beta) + "  z_lower_bound = " + str(z_lower_bound) + "  z_upper_bound = " + str(z_upper_bound))
+                g = sns.scatterplot(
+                    x="tsne-train-encoded-" + str(vae_model.fc22.out_features) + "d-one", y="tsne-train-encoded-" + str(vae_model.fc22.out_features) + "d-two",
+                    hue="vel",
+                    palette=sns.color_palette("hls", data_to_plot['vel'].nunique()),
+                    # hue="avg_dist",
+                    # palette=sns.color_palette("hls", data_to_plot['avg_dist'].nunique()),
+                    # style="is_safe",
+                    # markers=safe_markers,
+                    data=data_to_plot,
+                    legend="full",
+                    # legend="brief",
+                    alpha=0.5,
+                    ax=ax0
+                )
+                # fig.subplots_adjust(right=0.9)
+                # g.legend(bbox_to_anchor=(1, 1), loc=2, borderaxespad=0., ncol=1)
+                legend = g.legend_
+                for i, label_text in enumerate(legend.texts):
+                    try:
+                        label_text.set_text(round(float(label_text.get_text()), 2))
+                    except ValueError:
+                        pass
                 # if i != 0:
                 #     label_text.set_text(round(float(label_text.get_text()), 1))
             
@@ -1134,11 +1315,37 @@ if __name__ == "__main__":
             #     if i != 0:
             #         label_text.set_text(round(float(label_text.get_text()), 1))
 
+            if "TEST" == args.tsne.upper():
+                ax0.set_title("ALPHA = " + str(args.alpha) + "  BETA = " + str(args.beta) + "  z_lower_bound = " + str(z_lower_bound) + "  z_upper_bound = " + str(z_upper_bound))
+                g = sns.scatterplot(
+                    x="tsne-train-encoded-" + str(vae_model.fc22.out_features) + "d-one", y="tsne-train-encoded-" + str(vae_model.fc22.out_features) + "d-two",
+                    hue="is_safe",
+                    palette=sns.color_palette("bright", data_to_plot['is_safe'].nunique()),
+                    # hue="avg_dist",
+                    # palette=sns.color_palette("hls", data_to_plot['avg_dist'].nunique()),
+                    # style="is_safe",
+                    # markers=safe_markers,
+                    data=data_to_plot,
+                    legend="full",
+                    # legend="brief",
+                    alpha=0.5,
+                    ax=ax0
+                )
+                # fig.subplots_adjust(right=0.9)
+                # g.legend(bbox_to_anchor=(1, 1), loc=2, borderaxespad=0., ncol=1)
+                legend = g.legend_
+                for i, label_text in enumerate(legend.texts):
+                    try:
+                        label_text.set_text(round(float(label_text.get_text()), 2))
+                    except ValueError:
+                        pass
+
         if args.matrix_plot != False or args.pairplot != False:
             dataset_data_to_plot = pd.DataFrame()
             dataset_data_to_plot['vel'] = pd.concat([data_to_plot['vel'], test_data_to_plot['test_vel']], ignore_index=True)
             dataset_data_to_plot['m'] = pd.concat([data_to_plot['m'], test_data_to_plot['test_m']], ignore_index=True)
             dataset_data_to_plot['c'] = pd.concat([data_to_plot['c'], test_data_to_plot['test_c']], ignore_index=True)
+            dataset_data_to_plot['rel_angle'] = pd.concat([data_to_plot['rel_angle'], test_data_to_plot['test_rel_angle']], ignore_index=True)
             dataset_data_to_plot['is_safe'] = pd.concat([data_to_plot['is_safe'], test_data_to_plot['test_is_safe']], ignore_index=True)
             latent_space_dataset = torch.cat((latent_space_train, latent_space_test), 0)
             latent_space_dimension = len(latent_space_dataset[0])
@@ -1149,47 +1356,57 @@ if __name__ == "__main__":
             pairplot_vars = []
             for i in range(latent_space_dimension):
                 pairplot_vars.append("latent-space-"+str(i+1))
+            print("Generating pairplots...")
+            pairplot_vars = []
+            pairplot_vars.append("latent-space-1")
+            pairplot_vars.append("latent-space-3")
 
-            g_vel = sns.pairplot(dataset_data_to_plot, hue="vel", palette="hls", vars=pairplot_vars, plot_kws=dict(alpha=0.3), diag_kws=dict(alpha=0.3))
-            # g_vel = sns.pairplot(dataset_data_to_plot.sample(frac=0.1), hue="vel", palette="hls", vars=pairplot_vars, plot_kws=dict(alpha=0.3), diag_kws=dict(alpha=0.3))
-            # g_vel = sns.pairplot(dataset_data_to_plot[:1000], hue="vel", palette=sns.color_palette("hls", dataset_data_to_plot['m'].nunique()), vars=pairplot_vars)
+            g_vel = sns.pairplot(dataset_data_to_plot, height=3, diag_kind="hist", hue="vel", palette=sns.color_palette("bright", dataset_data_to_plot['vel'].nunique()), vars=pairplot_vars, plot_kws=dict(alpha=0.5), diag_kws=dict(alpha=0.5))
+            g_rel_angle = sns.pairplot(dataset_data_to_plot, height=3, diag_kind="hist", hue="rel_angle", palette=sns.color_palette("bright", dataset_data_to_plot['rel_angle'].nunique()), vars=pairplot_vars, plot_kws=dict(alpha=0.5), diag_kws=dict(alpha=0.5))
+            # g_vel = sns.pairplot(dataset_data_to_plot, diag_kind="hist", hue="vel", palette=sns.color_palette("hls", dataset_data_to_plot['vel'].nunique()), vars=pairplot_vars, plot_kws=dict(alpha=0.5), diag_kws=dict(alpha=0.5))
+            # # g_vel = sns.pairplot(dataset_data_to_plot.sample(frac=0.1), hue="vel", palette="hls", vars=pairplot_vars, plot_kws=dict(alpha=0.5), diag_kws=dict(alpha=0.5))
+            # # g_vel = sns.pairplot(dataset_data_to_plot[:1000], hue="vel", palette=sns.color_palette("hls", dataset_data_to_plot['m'].nunique()), vars=pairplot_vars)
 
-            # g_vel = sns.PairGrid(dataset_data_to_plot[:1000], hue="vel", palette="hls", vars=pairplot_vars)
-            # g_vel = g_vel.map_diag(sns.kdeplot, shade=True)
-            # # g_vel = g_vel.map_diag(plt.hist)
-            # g_vel = g_vel.map_offdiag(plt.scatter, alpha=0.3)
+            # # g_vel = sns.PairGrid(dataset_data_to_plot[:1000], hue="vel", palette="hls", vars=pairplot_vars)
+            # # g_vel = g_vel.map_diag(sns.kdeplot, shade=True)
+            # # # g_vel = g_vel.map_diag(plt.hist)
+            # # g_vel = g_vel.map_offdiag(plt.scatter, alpha=0.5)
 
-            # # legend = g_vel._legend
+            # # # legend = g_vel._legend
+            # # # for i, label_text in enumerate(legend.texts):
+            # # #     try:
+            # # #         label_text.set_text(round(float(label_text.get_text()), 2))
+            # # #     except ValueError:
+            # # #         pass
+            # # g_vel = g_vel.add_legend()
+            # # # g_vel.fig.title("pariplot_vel")
+
+
+            # g_m = sns.pairplot(dataset_data_to_plot, diag_kind="hist", hue="m", palette=sns.color_palette("hls", dataset_data_to_plot['m'].nunique()), vars=pairplot_vars, plot_kws=dict(alpha=0.5), diag_kws=dict(alpha=0.5))
+            # # g_m = sns.pairplot(dataset_data_to_plot.sample(frac=0.1), diag_kind="hist", hue="m", palette="hls", vars=pairplot_vars, plot_kws=dict(alpha=0.5), diag_kws=dict(alpha=0.5))
+            # # g_m = sns.pairplot(dataset_data_to_plot[:1000], diag_kind="hist", hue="m", palette=sns.color_palette("hls", dataset_data_to_plot['m'].nunique()), vars=pairplot_vars)
+
+            # # g_m = sns.PairGrid(dataset_data_to_plot[:1000], hue="m", palette=sns.color_palette("hls", dataset_data_to_plot['m'].nunique()), vars=pairplot_vars)
+            # # g_m = g_m.map_diag(plt.hist, histtype="step", linewidth=3)
+            # # # g_m = g_m.map_diag(sns.kdeplot, shade=True)
+            # # # g_m = g_m.map_diag(plt.hist)
+            # # g_m = g_m.map_offdiag(plt.scatter, alpha=0.5)
+
+            # # legend = g_m._legend
             # # for i, label_text in enumerate(legend.texts):
             # #     try:
             # #         label_text.set_text(round(float(label_text.get_text()), 2))
             # #     except ValueError:
             # #         pass
-            # g_vel = g_vel.add_legend()
-            # # g_vel.fig.title("pariplot_vel")
+            # # g_m = g_m.add_legend()
+            # # g_m.fig.title("pariplot_m")
 
-
-            g_m = sns.pairplot(dataset_data_to_plot, diag_kind="hist", hue="m", palette="hls", vars=pairplot_vars, plot_kws=dict(alpha=0.3), diag_kws=dict(alpha=0.3))
-            # g_m = sns.pairplot(dataset_data_to_plot.sample(frac=0.1), diag_kind="hist", hue="m", palette="hls", vars=pairplot_vars, plot_kws=dict(alpha=0.3), diag_kws=dict(alpha=0.3))
-            # g_m = sns.pairplot(dataset_data_to_plot[:1000], diag_kind="hist", hue="m", palette=sns.color_palette("hls", dataset_data_to_plot['m'].nunique()), vars=pairplot_vars)
-
-            # g_m = sns.PairGrid(dataset_data_to_plot[:1000], hue="m", palette=sns.color_palette("hls", dataset_data_to_plot['m'].nunique()), vars=pairplot_vars)
-            # g_m = g_m.map_diag(plt.hist, histtype="step", linewidth=3)
-            # # g_m = g_m.map_diag(sns.kdeplot, shade=True)
-            # # g_m = g_m.map_diag(plt.hist)
-            # g_m = g_m.map_offdiag(plt.scatter, alpha=0.3)
-
-            # legend = g_m._legend
-            # for i, label_text in enumerate(legend.texts):
-            #     try:
-            #         label_text.set_text(round(float(label_text.get_text()), 2))
-            #     except ValueError:
-            #         pass
-            # g_m = g_m.add_legend()
-            # g_m.fig.title("pariplot_m")
-
-            g_c = sns.pairplot(dataset_data_to_plot, diag_kind="hist", hue="c", palette="hls", vars=pairplot_vars, plot_kws=dict(alpha=0.3), diag_kws=dict(alpha=0.3))
-            # g_c = sns.pairplot(dataset_data_to_plot.sample(frac=0.1), diag_kind="hist", hue="c", palette="hls", vars=pairplot_vars, plot_kws=dict(alpha=0.3), diag_kws=dict(alpha=0.3))
+            # g_c = sns.pairplot(dataset_data_to_plot, diag_kind="hist", hue="c", palette=sns.color_palette("hls", dataset_data_to_plot['c'].nunique()), vars=pairplot_vars, plot_kws=dict(alpha=0.5), diag_kws=dict(alpha=0.5))
+            # # g_c = sns.pairplot(dataset_data_to_plot.sample(frac=0.1), diag_kind="hist", hue="c", palette="hls", vars=pairplot_vars, plot_kws=dict(alpha=0.5), diag_kws=dict(alpha=0.5))
+            
+            # g_safe = sns.pairplot(dataset_data_to_plot, diag_kind="hist", hue="is_safe", palette=sns.color_palette("bright", dataset_data_to_plot['is_safe'].nunique()), vars=pairplot_vars, plot_kws=dict(alpha=0.5), diag_kws=dict(alpha=0.5))
+            
+            # g_rel_angle = sns.pairplot(dataset_data_to_plot, diag_kind="hist", hue="rel_angle", palette=sns.color_palette("bright", dataset_data_to_plot['rel_angle'].nunique()), vars=pairplot_vars, plot_kws=dict(alpha=0.5), diag_kws=dict(alpha=0.5))
 
         if args.matrix_plot != False:   
             fig = plt.figure("matrix_plot", figsize=(16,10))
@@ -1205,7 +1422,7 @@ if __name__ == "__main__":
                         # palette=sns.color_palette("colorblind", dataset_data_to_plot['vel'].nunique()),
                         data=dataset_data_to_plot,
                         legend=False,
-                        alpha=0.3,
+                        alpha=0.5,
                         ax=ax0
                     )
                     if ii != 0:
@@ -1224,7 +1441,7 @@ if __name__ == "__main__":
                         palette=sns.color_palette("colorblind", dataset_data_to_plot['is_safe'].nunique()),
                         data=dataset_data_to_plot,
                         legend=False,
-                        alpha=0.3,
+                        alpha=0.5,
                         ax=ax0
                     )
                     if ii != 0:
@@ -1246,7 +1463,7 @@ if __name__ == "__main__":
                         palette=sns.color_palette("hls", dataset_data_to_plot['m'].nunique()),
                         data=dataset_data_to_plot,
                         legend=False,
-                        alpha=0.3,
+                        alpha=0.5,
                         ax=ax0
                     )
                     if ii != 0:
@@ -1256,6 +1473,25 @@ if __name__ == "__main__":
                     # if i == 0 and 11 == latent_space_dimension-1:
                     #     a.legend = True
                     #     a.legend(bbox_to_anchor=(1.01, 1), loc=2, borderaxespad=0., ncol=1)
+
+            fig = plt.figure("matrix_plot_safe_unsafe_rel_angle", figsize=(16,10))
+            fig.suptitle("ALPHA = " + str(args.alpha) + "  BETA = " + str(args.beta) + "  z_lower_bound = " + str(z_lower_bound) + "  z_upper_bound = " + str(z_upper_bound))
+            for i in range(latent_space_dimension):
+                for ii in range(latent_space_dimension):
+                    ax0 = plt.subplot(latent_space_dimension, latent_space_dimension, i*latent_space_dimension + ii + 1)
+                    a = sns.scatterplot(
+                        x="latent-space-"+str(ii+1), y="latent-space-"+str(i+1),
+                        hue="rel_angle",
+                        palette=sns.color_palette("hls", dataset_data_to_plot['rel_angle'].nunique()),
+                        data=dataset_data_to_plot,
+                        legend=False,
+                        alpha=0.5,
+                        ax=ax0
+                    )
+                    if ii != 0:
+                        a.set_ylabel(None)
+                    if i != latent_space_dimension-1:
+                        a.set_xlabel(None)
 
     if args.wmb != False:
 

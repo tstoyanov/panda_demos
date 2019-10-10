@@ -1315,8 +1315,8 @@ def measure_performance(image_reader=None, trajectory_dict=None, algorithm=None,
 		smooth_trajectory.append(0.6*smooth_trajectory[i-joints_number]+0.4*point)
 	smooth_trajectory = torch.tensor(smooth_trajectory)
 	trajectory_dict["joint_trajectory"] = smooth_trajectory.view(100, -1).tolist()
-	is_safe, avg_distance, unsafe_pts, fk_z = safety_check_module.check(trajectory.tolist())
-	if is_safe:
+	safety_res = safety_check_module.check(trajectory.tolist())
+	if safety_res.is_safe:
 		performance = {
 			"tot": 0,
 			"50": 0,
@@ -1359,13 +1359,13 @@ def test_policy(image_reader=None, algorithm=None, decoder_model=None, state=Non
 		smooth_trajectory.append(0.6*smooth_trajectory[i-joints_number]+0.4*point)
 	smooth_trajectory = torch.tensor(smooth_trajectory)
 	trajectory_dict["joint_trajectory"] = smooth_trajectory.view(100, -1).tolist()
-	is_safe, avg_distance, unsafe_pts, fk_z = safety_check_module.check(trajectory.tolist())
+	safety_res = safety_check_module.check(trajectory.tolist())
 	performance = {
 		"tot": 0,
 		"50": 0,
 		"115": 0
 	}
-	if is_safe:
+	if safety_res.is_safe:
 		for n in range(max(args.performance_repetition, args.test_repetition)):
 			raw_input("Press enter to execute a trajectory from the policy mean")
 			execute_action(input_folder=False, tot_time_nsecs=args.execution_time, is_simulation=False, is_learning=True, t=trajectory_dict)
@@ -1472,10 +1472,10 @@ def main(args):
                     smooth_trajectory.append(0.6*smooth_trajectory[i-joints_number]+0.4*point)
                 smooth_trajectory = torch.tensor(smooth_trajectory)
 
-                # is_safe, avg_distance, unsafe_pts, fk_z = safety_check_module.check(smooth_trajectory.tolist())
-                is_safe, avg_distance, unsafe_pts, fk_z = safety_check_module.check(trajectory.tolist())
+                # safety_res = safety_check_module.check(smooth_trajectory.tolist())
+                safety_res = safety_check_module.check(trajectory.tolist())
                 
-                if is_safe:
+                if safety_res.is_safe:
                     print("Distribution mean:")
                     print(mean)
                     print("Action to execute:")
@@ -1544,10 +1544,10 @@ def main(args):
                     reward = float(cumulative_reward)/args.action_repetition
                 else:
                     ret[1] += 1
-                    reward = -unsafe_pts
+                    reward = -safety_res.unsafe_pts
                     algorithm.set_stone_position("unsafe", "unsafe")
                 print (ret)
-                print ("unsafe_pts = " + str(unsafe_pts))
+                print ("unsafe_pts = " + str(safety_res.unsafe_pts))
 
                 print ("reward = {}".format(reward))      
                 algorithm.set_reward(reward)

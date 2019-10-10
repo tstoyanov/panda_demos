@@ -25,6 +25,10 @@
 
 #include <boost/program_options.hpp>
 
+#include <math.h>
+
+#define PI 3.14159265
+
 int main(int argc, char **argv)
 {
     std::string node_name = "trajectory_safety_check_node";
@@ -160,9 +164,25 @@ int main(int argc, char **argv)
     auto safety_check_handler = [&my_chain, &chainFkSolverPos, &joints_pos, &eef_frame, &z_lower_limit, &z_upper_limit, &y_lower_limit, &y_upper_limit, nr_of_joints](trajectory_generator::trajectory_safety_check::Request& req, trajectory_generator::trajectory_safety_check::Response& res)
     {
         int ret = 0;
+        double rel_angle;
+        double initial_x;
+        double initial_y;
+        double initial_z;
+        double final_x;
+        double final_y;
+        double final_z;
+        double x;
+        double y;
+        double z;
+        int unsafe_pt = 0;
         double avg_distance = 0;
+        std::vector<double> fk_y;
         std::vector<double> fk_z;
         res.is_safe = true;
+        res.too_left = false;
+        res.too_right = false;
+        res.too_high = false;
+        res.too_low = false;
         res.error = false;
         res.unsafe_pts = 0;
         res.z_unsafe_pts = 0;
@@ -170,24 +190,74 @@ int main(int argc, char **argv)
         for (int i = 0; i < req.joints_pos.size(); i++) {
             joints_pos(i % nr_of_joints) = req.joints_pos[i];
             if (i % 7 == 6) {
+                unsafe_pt = 0;
                 ret = chainFkSolverPos.JntToCart(joints_pos, eef_frame);
+                if (i == 6)
+                {
+                    initial_x = eef_frame.p.x();
+                    initial_y = eef_frame.p.y();
+                    initial_z = eef_frame.p.z();
+                }
+                fk_y.push_back(eef_frame.p.y());
                 fk_z.push_back(eef_frame.p.z());
                 avg_distance += std::abs(eef_frame.p.z() - z_lower_limit);
-                if (eef_frame.p.z() < z_lower_limit || (i / nr_of_joints < 95 && eef_frame.p.z() > z_upper_limit))
+                if (eef_frame.p.y() <= y_lower_limit)
                 {
-                    res.unsafe_pts++;
-                    res.z_unsafe_pts++;
-                }
-                if (eef_frame.p.y() <= y_lower_limit || eef_frame.p.y() >= y_upper_limit)
-                {
-                    res.unsafe_pts++;
+                    unsafe_pt = 1;
                     res.y_unsafe_pts++;
+                    res.too_right = true;
+                }
+                if (eef_frame.p.y() >= y_upper_limit)
+                {
+                    unsafe_pt = 1;
+                    res.y_unsafe_pts++;
+                    res.too_left = true;
+                }
+                if (eef_frame.p.z() < z_lower_limit)
+                {
+                    unsafe_pt = 1;
+                    res.z_unsafe_pts++;
+                    res.too_low = true;
+                }
+                if ((i+1) / nr_of_joints < 95 && eef_frame.p.z() > z_upper_limit)
+                {
+                    unsafe_pt = 1;
+                    res.z_unsafe_pts++;
+                    res.too_high = true;
+                }
+                res.unsafe_pts += unsafe_pt;
+                if ((i+1) / nr_of_joints == 94)
+                {
+                    final_x = eef_frame.p.x();
+                    final_y = eef_frame.p.y();
+                    final_z = eef_frame.p.z();
+                }
+                if ((i+1) / nr_of_joints == 95) // release frame
+                {
+                    final_x += eef_frame.p.x();
+                    final_y += eef_frame.p.y();
+                    final_z += eef_frame.p.z();
+                }
+                if ((i+1) / nr_of_joints == 96)
+                {
+                    final_x += eef_frame.p.x();
+                    final_y += eef_frame.p.y();
+                    final_z += eef_frame.p.z();
+                    
+                    final_x /= 3;
+                    final_y /= 3;
+                    final_z /= 3;
+
+                    x = final_x - initial_x;
+                    y = initial_y - final_y; // inverted because the y axis is in the opposite direction
+                    res.rel_angle = atan2(x, y) * 180 / PI; // x and y are inverted because the axes in the cartesian space are inverted
                 }
             }
         }
         if (res.unsafe_pts != 0) {
             res.is_safe = false;
         }
+        res.fk_y = fk_y;
         res.fk_z = fk_z;
         res.avg_distance = avg_distance / req.joints_pos.size();
         return 1;
