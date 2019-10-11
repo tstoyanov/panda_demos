@@ -1046,6 +1046,7 @@ if __name__ == "__main__":
 
             if args.no_noise:
                 fig = plt.figure("tsne_safe_unsafe_no_noise", figsize=(16,10))
+            # elif "TEST" != args.tsne.upper():
             else:
                 fig = plt.figure("tsne_safe_unsafe", figsize=(16,10))
             if "BOTH" == str(args.tsne).upper() or "ORIGINAL" == str(args.tsne).upper():
@@ -1319,16 +1320,18 @@ if __name__ == "__main__":
                 ax0.set_title("ALPHA = " + str(args.alpha) + "  BETA = " + str(args.beta) + "  z_lower_bound = " + str(z_lower_bound) + "  z_upper_bound = " + str(z_upper_bound))
                 g = sns.scatterplot(
                     x="tsne-train-encoded-" + str(vae_model.fc22.out_features) + "d-one", y="tsne-train-encoded-" + str(vae_model.fc22.out_features) + "d-two",
-                    hue="is_safe",
-                    palette=sns.color_palette("bright", data_to_plot['is_safe'].nunique()),
+                    hue="vel",
+                    palette=sns.color_palette("hls", data_to_plot['vel'].nunique()),
                     # hue="avg_dist",
                     # palette=sns.color_palette("hls", data_to_plot['avg_dist'].nunique()),
-                    # style="is_safe",
-                    # markers=safe_markers,
+                    style="is_safe",
+                    markers=safe_markers,
+                    # markers=["o", "X", "P"],
+                    s=50,
                     data=data_to_plot,
                     legend="full",
                     # legend="brief",
-                    alpha=0.5,
+                    alpha=1,
                     ax=ax0
                 )
                 # fig.subplots_adjust(right=0.9)
@@ -1408,7 +1411,8 @@ if __name__ == "__main__":
             
             # g_rel_angle = sns.pairplot(dataset_data_to_plot, diag_kind="hist", hue="rel_angle", palette=sns.color_palette("bright", dataset_data_to_plot['rel_angle'].nunique()), vars=pairplot_vars, plot_kws=dict(alpha=0.5), diag_kws=dict(alpha=0.5))
 
-        if args.matrix_plot != False:   
+        if args.matrix_plot != False:
+            print("Generating matrix-plots...")
             fig = plt.figure("matrix_plot", figsize=(16,10))
             fig.suptitle("ALPHA = " + str(args.alpha) + "  BETA = " + str(args.beta))
             
