@@ -14,8 +14,9 @@ import moveit_commander
 import getopt
 import os
 
-import thread
+import argparse
 import pandas as pd
+import random
 
 from franka_gripper.srv import *
 
@@ -24,59 +25,110 @@ import seaborn as sns
 
 import rospkg
 rospack = rospkg.RosPack()
+package_path = rospack.get_path("trajectory_generator")
 
-def subsample(samples_list, samples_nr):
-    real_sample_interval = len(samples_list)/float(samples_nr)
+# parser = argparse.ArgumentParser(description='stone sensing')
+
+def subsample_list(list_to_subsample, samples_nr):
+    real_sample_interval = len(list_to_subsample)/float(samples_nr)
     current_sample_interval = int(real_sample_interval)
     sample_interval_avg = None
     sample_index = 0
+    test = []
     subsamples = []
     while len(subsamples) < 100:
-        if len(subsamples) != 0 and sample_index >= len(samples_list):
+        if len(subsamples) != 0 and sample_index >= len(list_to_subsample):
             sample_index = len(subsamples)-1
-        subsamples.append(samples_list[sample_index])
+        subsamples.append(list_to_subsample[sample_index])
+        test.append(sample_index)
         if sample_index != 0:
             sample_interval_avg = (sample_index / float(len(subsamples)-1))
             if sample_interval_avg > real_sample_interval:
-                current_sample_interval -= 1
+                current_sample_interval = int(real_sample_interval)
+                # current_sample_interval -= 1
             elif sample_interval_avg < real_sample_interval:
-                current_sample_interval += 1
+                current_sample_interval = int(real_sample_interval) + 1
+                # current_sample_interval += 1
         sample_index += current_sample_interval
     return subsamples
+
+def filter_list(list_to_filter, alpha):
+    filtered_list = []
+    for index, item in enumerate(list_to_filter):
+        if index == 0:
+            filtered_list.append(item)
+        else:
+            filtered_list.append(float(alpha)*filtered_list[-1] + float(1-alpha)*item)
+    return filtered_list
         
 
 def callback(data, args):
-    sensors_data = args[0]
-    sensors_data["force"]["x"].append(data.wrench.force.x)
-    sensors_data["force"]["y"].append(data.wrench.force.y)
-    sensors_data["force"]["z"].append(data.wrench.force.z)
-    sensors_data["torque"]["x"].append(data.wrench.torque.x)
-    sensors_data["torque"]["y"].append(data.wrench.torque.y)
-    sensors_data["torque"]["z"].append(data.wrench.torque.z)
+    sensing_step = args[0]
+    sensing_step["force"]["x"].append(data.wrench.force.x)
+    sensing_step["force"]["y"].append(data.wrench.force.y)
+    sensing_step["force"]["z"].append(data.wrench.force.z)
+    sensing_step["torque"]["x"].append(data.wrench.torque.x)
+    sensing_step["torque"]["y"].append(data.wrench.torque.y)
+    sensing_step["torque"]["z"].append(data.wrench.torque.z)
 
 def listener():
     rospy.Subscriber("/panda/franka_state_controller/F_ext", geometry_msgs.msg.WrenchStamped, callback, [])
 
-def sense_stone(input_folder="latest", tot_time_nsecs=9000000000, is_simulation=False, is_learning=True, t=None):
-
+def sense_stone(output_folder="latest", is_simulation=False, is_learning=True, repetitions=100, labels=None):
+    package_path = rospack.get_path("trajectory_generator")
+    output_folder = package_path + "/sensing_data/" + output_folder
     sensors_data = {
-        "force": {
-            "x": [],
-            "y": [],
-            "z": []
+        "raw": {
+            "force": {
+                "x": [],
+                "y": [],
+                "z": []
+            },
+            "torque": {
+                "x": [],
+                "y": [],
+                "z": []
+            },
+            "subsamples": {
+                "force": {
+                    "x": [],
+                    "y": [],
+                    "z": []
+                },
+                "torque": {
+                    "x": [],
+                    "y": [],
+                    "z": []
+                }   
+            }
         },
-        "torque": {
-            "x": [],
-            "y": [],
-            "z": []
+        "filtered": {
+            "alpha": None,
+            "force": {
+                "x": [],
+                "y": [],
+                "z": []
+            },
+            "torque": {
+                "x": [],
+                "y": [],
+                "z": []
+            },
+            "subsamples": {
+                "force": {
+                    "x": [],
+                    "y": [],
+                    "z": []
+                },
+                "torque": {
+                    "x": [],
+                    "y": [],
+                    "z": []
+                }   
+            }
         }
     }
     rospy.init_node('force_reader', anonymous=True)
-    # thread.start_new_thread(listener, ())
-    
-    # sns.lineplot(range(len(sensors_data["force"]["x"])), sensors_data["force"]["x"])
-    # plt.show()
-
 
     if is_simulation:
         print("SIMULATION MODE")
@@ -124,6 +176,33 @@ def sense_stone(input_folder="latest", tot_time_nsecs=9000000000, is_simulation=
     else:
         robot = moveit_commander.RobotCommander(robot_description=robot_desctiption_str, ns=namespace)
         group = moveit_commander.MoveGroupCommander(group_name, robot_description=robot_desctiption_str, ns=namespace)
+
+    grasping_points = {
+        "10": {            
+            "orientation": [-0.9239, 0.3826, -7.02665323908824e-05, 0.0001], # x, y, z, w
+            "position": [0.360, 0.063, 0.959], # x, y, z
+            "hovering_joints_position": [0.36696093194814283, 0.17944039607466314, 0.4089761023876119, -2.358461730187831, -0.12317095402943311, 2.5191082320543745, 0.08425164690794548],
+            "grasping_joints_position": [0.4260575038152828, 0.4334983963393511, 0.3151125600120057, -2.3362570904182687, -0.3284292590488873, 2.7300798716132246, 0.23072858667767124]
+        },
+        "20": {
+            "orientation": [-0.9239, 0.3826, -7.02665323908824e-05, 0.0001], # x, y, z, w
+            "position": [0.210, 0.063, 0.959], # x, y, z
+            "hovering_joints_position": [0.09197913135191854, -0.06794736741508771, 0.4429717659580504, -2.664749506900185, 0.05786304345829169, 2.6017944910261366, -0.30182371413154874],
+            "grasping_joints_position": [0.1547609451772318, 0.2666294309465509, 0.30558009457633056, -2.639995261242515, -0.3112949253521605, 2.882298212263319, -0.0340398218951605]
+        },
+        "30": {
+            "orientation": [-0.9239, 0.3826, -7.02665323908824e-05, 0.0001], # x, y, z, w
+            "position": [0.060, 0.063, 0.959], # x, y, z
+            "hovering_joints_position": [-0.2963754566866036, -0.22609519766033184, 0.5066942452590402, -2.822304789117009, 0.21546041037639288, 2.613143800150113, -0.7740535357700479],
+            "grasping_joints_position": [-0.19486450364276442, 0.17763616890843223, 0.28773354355127934, -2.8004517943398994, -0.28575185754343313, 2.962733009843974, -0.4160978253429793]
+        },
+        "40": {
+            "orientation": [-0.9239, 0.3826, -7.02665323908824e-05, 0.0001], # x, y, z, w
+            "position": [-0.090, 0.063, 0.959], # x, y, z
+            "hovering_joints_position": [0.2374669449747654, -0.20859305197716996, -0.5233313921309419, -2.8038381514632906, -0.20888573720058043, 2.6131777341570905, -0.8799971305608723],
+            "grasping_joints_position": [0.12372470620042843, 0.18846930262097014, -0.2952061458441635, -2.781528095056179, 0.29313913822709015, 2.9528340691460504, -1.2398218304215838]
+        }
+    }
 
     grasping_point = {
         # x, y, z, w
@@ -198,82 +277,145 @@ def sense_stone(input_folder="latest", tot_time_nsecs=9000000000, is_simulation=
         ]
     }
 
-    raw_input("Press enter to move to the grasping point.")
-    # planning in eef space
-    # pose_goal = geometry_msgs.msg.Pose()
-    # pose_goal.position.x = grasping_point["position"][0]
-    # pose_goal.position.y = grasping_point["position"][1]
-    # pose_goal.position.z = grasping_point["position"][2]
-    # pose_goal.orientation.x = grasping_point["orientation"][0]
-    # pose_goal.orientation.y = grasping_point["orientation"][1]
-    # pose_goal.orientation.z = grasping_point["orientation"][2]
-    # pose_goal.orientation.w = grasping_point["orientation"][3]
-    # group.set_pose_target(pose_goal)
-    # plan = group.go(wait=True)
-    # group.stop()
-    # group.clear_pose_targets()
-
-    # planning in joint space
-    joint_goal = group.get_current_joint_values()
-    for joint_index, _ in enumerate(grasping_point["joints_position"]):
-        joint_goal[joint_index] = grasping_point["joints_position"][joint_index]
-    group.go(joint_goal, wait=True)
-    group.stop()
+    repetitions = 2
+    for repetition in range(repetitions):
+        if type(labels) == list and len(labels) > 1:
+            random.shuffle(labels)
         
-    raw_input("Press enter to grasp the stone.")
-    grasp_message = GraspActionGoal()
-    grasp_message.goal.width = 0.02
-    grasp_message.goal.epsilon.inner = 0.01
-    grasp_message.goal.epsilon.outer = 0.01
-    grasp_message.goal.speed = 0.05
-    grasp_message.goal.force = 0.01
-    grasp_pub.publish(grasp_message)
+        for label in labels:
+            True
 
-    pose_goal = geometry_msgs.msg.Pose()
-    waypoints = []
+        raw_input("Press enter to move to the grasping point.")
+        # planning in eef space
+        # pose_goal = geometry_msgs.msg.Pose()
+        # pose_goal.position.x = grasping_point["position"][0]
+        # pose_goal.position.y = grasping_point["position"][1]
+        # pose_goal.position.z = grasping_point["position"][2]
+        # pose_goal.orientation.x = grasping_point["orientation"][0]
+        # pose_goal.orientation.y = grasping_point["orientation"][1]
+        # pose_goal.orientation.z = grasping_point["orientation"][2]
+        # pose_goal.orientation.w = grasping_point["orientation"][3]
+        # group.set_pose_target(pose_goal)
+        # plan = group.go(wait=True)
+        # group.stop()
+        # group.clear_pose_targets()
 
-    raw_input("Press enter to start sensing.")
-    for pos in sensing_waypoints["joints_positions"]:
+        # planning in joint space
         joint_goal = group.get_current_joint_values()
-        for joint_index, _ in enumerate(pos):
-            joint_goal[joint_index] = pos[joint_index]
+        for joint_index, _ in enumerate(grasping_point["joints_position"]):
+            joint_goal[joint_index] = grasping_point["joints_position"][joint_index]
         group.go(joint_goal, wait=True)
         group.stop()
-        sub = rospy.Subscriber("/panda/franka_state_controller/F_ext", geometry_msgs.msg.WrenchStamped, callback, [sensors_data])
-        rospy.rostime.wallsleep(1)
-        sub.unregister()
-    # for waypoint_index, _ in enumerate(sensing_waypoints["orientations"]):
+            
+        raw_input("Press enter to grasp the stone.")
+        grasp_message = GraspActionGoal()
+        grasp_message.goal.width = 0.02
+        grasp_message.goal.epsilon.inner = 0.01
+        grasp_message.goal.epsilon.outer = 0.01
+        grasp_message.goal.speed = 0.05
+        grasp_message.goal.force = 0.01
+        grasp_pub.publish(grasp_message)
 
-    #     waypoints = []
+        pose_goal = geometry_msgs.msg.Pose()
+        waypoints = []
 
-    #     pose_goal.position.x = sensing_waypoints["positions"][waypoint_index][0]
-    #     pose_goal.position.y = sensing_waypoints["positions"][waypoint_index][1]
-    #     pose_goal.position.z = sensing_waypoints["positions"][waypoint_index][2]
-    #     pose_goal.orientation.x = sensing_waypoints["orientations"][waypoint_index][0]
-    #     pose_goal.orientation.y = sensing_waypoints["orientations"][waypoint_index][1]
-    #     pose_goal.orientation.z = sensing_waypoints["orientations"][waypoint_index][2]
-    #     pose_goal.orientation.w = sensing_waypoints["orientations"][waypoint_index][3]
+        raw_input("Press enter to start sensing.")
+        sensors_data["raw"]["force"]["x"].append([])
+        sensors_data["raw"]["force"]["y"].append([])
+        sensors_data["raw"]["force"]["z"].append([])
+        sensors_data["raw"]["torque"]["x"].append([])
+        sensors_data["raw"]["torque"]["y"].append([])
+        sensors_data["raw"]["torque"]["z"].append([])
+        
+        for pos in sensing_waypoints["joints_positions"]:
+            sensing_step = {
+                "force": {
+                    "x": [],
+                    "y": [],
+                    "z": []
+                },
+                "torque": {
+                    "x": [],
+                    "y": [],
+                    "z": []
+                },
+            }
+            joint_goal = group.get_current_joint_values()
+            for joint_index, _ in enumerate(pos):
+                joint_goal[joint_index] = pos[joint_index]
+            group.go(joint_goal, wait=True)
+            group.stop()
+            sub = rospy.Subscriber("/panda/franka_state_controller/F_ext", geometry_msgs.msg.WrenchStamped, callback, [sensing_step])
+            rospy.rostime.wallsleep(1)
+            sub.unregister()
+            
+            sensors_data["raw"]["force"]["x"][-1].append(sensing_step["force"]["x"])
+            sensors_data["raw"]["force"]["y"][-1].append(sensing_step["force"]["y"])
+            sensors_data["raw"]["force"]["z"][-1].append(sensing_step["force"]["z"])
+            sensors_data["raw"]["torque"]["x"][-1].append(sensing_step["torque"]["x"])
+            sensors_data["raw"]["torque"]["y"][-1].append(sensing_step["torque"]["y"])
+            sensors_data["raw"]["torque"]["z"][-1].append(sensing_step["torque"]["z"])
+        # for waypoint_index, _ in enumerate(sensing_waypoints["orientations"]):
 
-    #     waypoints.append(copy.deepcopy(pose_goal))
+        #     waypoints = []
 
-    #     (plan, fraction) = group.compute_cartesian_path(
-    #                                 waypoints,   # waypoints to follow
-    #                                 0.01,        # eef_step
-    #                                 0.0)         # jump_threshold
-    
-    #     display_trajectory = moveit_msgs.msg.DisplayTrajectory()
-    #     display_trajectory.trajectory_start = robot.get_current_state()
-    #     display_trajectory.trajectory.append(plan)
-    #     # Publish
-    #     display_trajectory_publisher = rospy.Publisher('/move_group/display_planned_path',
-    #                                             moveit_msgs.msg.DisplayTrajectory,
-    #                                             queue_size=20)
-    #     display_trajectory_publisher.publish(display_trajectory);
+        #     pose_goal.position.x = sensing_waypoints["positions"][waypoint_index][0]
+        #     pose_goal.position.y = sensing_waypoints["positions"][waypoint_index][1]
+        #     pose_goal.position.z = sensing_waypoints["positions"][waypoint_index][2]
+        #     pose_goal.orientation.x = sensing_waypoints["orientations"][waypoint_index][0]
+        #     pose_goal.orientation.y = sensing_waypoints["orientations"][waypoint_index][1]
+        #     pose_goal.orientation.z = sensing_waypoints["orientations"][waypoint_index][2]
+        #     pose_goal.orientation.w = sensing_waypoints["orientations"][waypoint_index][3]
 
-    #     raw_input("Press enter to start sensing.")
-    #     group.execute(plan, wait=True)
-    #     group.stop()
-    subset = subsample(samples_list=sensors_data["force"]["x"], samples_nr=100)
+        #     waypoints.append(copy.deepcopy(pose_goal))
+
+        #     (plan, fraction) = group.compute_cartesian_path(
+        #                                 waypoints,   # waypoints to follow
+        #                                 0.01,        # eef_step
+        #                                 0.0)         # jump_threshold
+        
+        #     display_trajectory = moveit_msgs.msg.DisplayTrajectory()
+        #     display_trajectory.trajectory_start = robot.get_current_state()
+        #     display_trajectory.trajectory.append(plan)
+        #     # Publish
+        #     display_trajectory_publisher = rospy.Publisher('/move_group/display_planned_path',
+        #                                             moveit_msgs.msg.DisplayTrajectory,
+        #                                             queue_size=20)
+        #     display_trajectory_publisher.publish(display_trajectory);
+
+        #     raw_input("Press enter to start sensing.")
+        #     group.execute(plan, wait=True)
+        #     group.stop()
+        alpha = 0.99
+        sensors_data["filtered"]["alpha"] = alpha
+        
+        # sensors_data["filtered"]["force"]["x"].append([item for sublist in sensors_data["raw"]["force"]["x"][-1] for item in filter_list(sublist, alpha)])
+        # sensors_data["filtered"]["force"]["y"].append([item for sublist in sensors_data["raw"]["force"]["y"][-1] for item in filter_list(sublist, alpha)])
+        # sensors_data["filtered"]["force"]["z"].append([item for sublist in sensors_data["raw"]["force"]["z"][-1] for item in filter_list(sublist, alpha)])
+        # sensors_data["filtered"]["torque"]["x"].append([item for sublist in sensors_data["raw"]["torque"]["x"][-1] for item in filter_list(sublist, alpha)])
+        # sensors_data["filtered"]["torque"]["y"].append([item for sublist in sensors_data["raw"]["torque"]["y"][-1] for item in filter_list(sublist, alpha)])
+        # sensors_data["filtered"]["torque"]["z"].append([item for sublist in sensors_data["raw"]["torque"]["z"][-1] for item in filter_list(sublist, alpha)])
+        
+        sensors_data["filtered"]["force"]["x"] = [[item for sublist in sensors_data["raw"]["force"]["x"][-1] for item in filter_list(sublist, alpha)]]
+        sensors_data["filtered"]["force"]["y"] = [[item for sublist in sensors_data["raw"]["force"]["y"][-1] for item in filter_list(sublist, alpha)]]
+        sensors_data["filtered"]["force"]["z"] = [[item for sublist in sensors_data["raw"]["force"]["z"][-1] for item in filter_list(sublist, alpha)]]
+        sensors_data["filtered"]["torque"]["x"] = [[item for sublist in sensors_data["raw"]["torque"]["x"][-1] for item in filter_list(sublist, alpha)]]
+        sensors_data["filtered"]["torque"]["y"] = [[item for sublist in sensors_data["raw"]["torque"]["y"][-1] for item in filter_list(sublist, alpha)]]
+        sensors_data["filtered"]["torque"]["z"] = [[item for sublist in sensors_data["raw"]["torque"]["z"][-1] for item in filter_list(sublist, alpha)]]
+
+        sensors_data["filtered"]["subsamples"]["force"]["x"].append(subsample_list(sensors_data["filtered"]["force"]["x"][-1], 100))
+        sensors_data["filtered"]["subsamples"]["force"]["y"].append(subsample_list(sensors_data["filtered"]["force"]["y"][-1], 100))
+        sensors_data["filtered"]["subsamples"]["force"]["z"].append(subsample_list(sensors_data["filtered"]["force"]["z"][-1], 100))
+        sensors_data["filtered"]["subsamples"]["torque"]["x"].append(subsample_list(sensors_data["filtered"]["torque"]["x"][-1], 100))
+        sensors_data["filtered"]["subsamples"]["torque"]["y"].append(subsample_list(sensors_data["filtered"]["torque"]["y"][-1], 100))
+        sensors_data["filtered"]["subsamples"]["torque"]["z"].append(subsample_list(sensors_data["filtered"]["torque"]["z"][-1], 100))
+
+        # os.makedirs(output_folder)
+        # os.makedirs(output_folder, exist_ok=True)
+    with open(output_folder + "/raw_stone_dataset.txt", "w") as f:
+        json.dump(sensors_data["raw"], f)
+    with open(output_folder + "/stone_dataset.txt", "w") as f:
+        json.dump(sensors_data["filtered"]["subsamples"], f)
 
     raw_input("Press enter to position the arm.")
     pose_goal.position.x = sliding_point["position"][0]
@@ -299,25 +441,11 @@ if __name__ == '__main__':
         input_folder = "latest"
         is_simulation = False
         tot_time_nsecs = 20000000000  # total execution time for the trajectory in nanoseconds
-        try:
-            opts, args = getopt.getopt(sys.argv[1:],"i:t:s",["input=", "nanoseconds=", "simulation="])
-        except getopt.GetoptError:
-            print("test.py -i <input_folder> -t <trajectory_execution_time> -s")
-            sys.exit(2)
-        for opt, arg in opts:
-            if opt == '-h':
-                print("test.py -i <input_folder> -t <trajectory_execution_time>")
-                sys.exit()
-            elif opt in ("-i", "--input"):
-                input_folder = arg
-            elif opt in ("-t", "--nanoseconds"):
-                tot_time_nsecs = int(arg)
-            elif opt in ("-s", "--simulation"):
-                is_simulation = True
+        
 
         print("input_folder = " + str(input_folder))
         print("tot_time_nsecs = " + str(tot_time_nsecs))
 
-        sense_stone(input_folder, tot_time_nsecs, is_simulation)
+        sense_stone()
     except rospy.ROSInterruptException:
         pass
