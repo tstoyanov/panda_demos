@@ -284,11 +284,22 @@ def sense_stone(output_folder="latest", is_simulation=False, is_learning=True, r
         ]
     }
 
+    rospy.rostime.wallsleep(1)
+
+    gripper_move_message = MoveActionGoal()
+    gripper_move_message.goal.width = 0.06
+    gripper_move_message.goal.speed = 0.05
+    gripper_move_pub.publish(gripper_move_message)
+
+    rospy.rostime.wallsleep(1)
+
     for repetition in range(repetitions):
+        print ("\nRepetition number " + str(repetition+1))
         # if type(labels) == list and len(labels) > 1:
         #     random.shuffle(labels)
         
         for label in labels:
+            print ("Now sensing stone with label '" + str(label) + "'...")
             # raw_input("Press enter to sense.")
             # raw_input("Press enter to move to the grasping point.")
             # planning in eef space
@@ -318,7 +329,7 @@ def sense_stone(output_folder="latest", is_simulation=False, is_learning=True, r
             group.go(joint_goal, wait=True)
             group.stop()
 
-            rospy.rostime.wallsleep(1)
+            rospy.rostime.wallsleep(0.5)
                 
             # raw_input("Press enter to grasp the stone.")
             grasp_message = GraspActionGoal()
@@ -394,7 +405,7 @@ def sense_stone(output_folder="latest", is_simulation=False, is_learning=True, r
             gripper_move_message.goal.speed = 0.05
             gripper_move_pub.publish(gripper_move_message)
 
-            rospy.rostime.wallsleep(1.5)
+            rospy.rostime.wallsleep(1)
 
             joint_goal = group.get_current_joint_values()
             for joint_index, _ in enumerate(grasping_points[str(label)]["hovering_joints_position"]):
@@ -433,7 +444,7 @@ def sense_stone(output_folder="latest", is_simulation=False, is_learning=True, r
             #     raw_input("Press enter to start sensing.")
             #     group.execute(plan, wait=True)
             #     group.stop()
-            alpha = 0.99
+            alpha = 0.9
             sensors_data["filtered"]["alpha"] = alpha
             sensors_data["raw"]["label"].append(label)
             sensors_data["filtered"]["subsamples"]["label"].append(label)
@@ -466,22 +477,22 @@ def sense_stone(output_folder="latest", is_simulation=False, is_learning=True, r
         with open(output_folder + "/stone_dataset.txt", "w") as f:
             json.dump(sensors_data["filtered"]["subsamples"], f)
 
-    raw_input("Press enter to position the arm.")
-    pose_goal.position.x = sliding_point["position"][0]
-    pose_goal.position.y = sliding_point["position"][1]
-    pose_goal.position.z = sliding_point["position"][2]
-    pose_goal.orientation.x = sliding_point["orientation"][0]
-    pose_goal.orientation.y = sliding_point["orientation"][1]
-    pose_goal.orientation.z = sliding_point["orientation"][2]
-    pose_goal.orientation.w = sliding_point["orientation"][3]
-    group.set_pose_target(pose_goal)
-    plan = group.go(wait=True)
-    group.stop()
-    group.clear_pose_targets()
-    gripper_move_message = MoveActionGoal()
-    gripper_move_message.goal.width = 0.06
-    gripper_move_message.goal.speed = 0.05
-    gripper_move_pub.publish(gripper_move_message)
+    # raw_input("Press enter to position the arm.")
+    # pose_goal.position.x = sliding_point["position"][0]
+    # pose_goal.position.y = sliding_point["position"][1]
+    # pose_goal.position.z = sliding_point["position"][2]
+    # pose_goal.orientation.x = sliding_point["orientation"][0]
+    # pose_goal.orientation.y = sliding_point["orientation"][1]
+    # pose_goal.orientation.z = sliding_point["orientation"][2]
+    # pose_goal.orientation.w = sliding_point["orientation"][3]
+    # group.set_pose_target(pose_goal)
+    # plan = group.go(wait=True)
+    # group.stop()
+    # group.clear_pose_targets()
+    # gripper_move_message = MoveActionGoal()
+    # gripper_move_message.goal.width = 0.06
+    # gripper_move_message.goal.speed = 0.05
+    # gripper_move_pub.publish(gripper_move_message)
 
     print("End of sensing")
 
@@ -494,6 +505,6 @@ if __name__ == '__main__':
         print("input_folder = " + str(input_folder))
         print("tot_time_nsecs = " + str(tot_time_nsecs))
 
-        sense_stone(labels=args.stones_labels)
+        sense_stone(labels=args.stones_labels, repetitions=args.repetitions)
     except rospy.ROSInterruptException:
         pass
