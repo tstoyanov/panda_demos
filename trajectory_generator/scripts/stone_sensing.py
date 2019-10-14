@@ -6,6 +6,7 @@ from franka_gripper.msg import GraspActionGoal
 from franka_gripper.msg import MoveActionGoal
 import geometry_msgs.msg
 import moveit_msgs.msg
+import sensor_msgs.msg
 
 
 import ast
@@ -33,6 +34,35 @@ parser.add_argument('--stones_labels', nargs='+', default=None, type=str, help='
 parser.add_argument('--repetitions', default=2, type=int, help='number of times to sense each stone')
 
 args, unknown = parser.parse_known_args()
+
+def joint_move(group=None, joint_coordinates=None):
+    joint_goal = group.get_current_joint_values()
+    for joint_index, _ in enumerate(joint_coordinates):
+        joint_goal[joint_index] = joint_coordinates[joint_index]
+    group.go(joint_goal, wait=True)
+    group.stop()
+
+def open_gripper(gripper_move_pub=None):
+    gripper_move_message = MoveActionGoal()
+    gripper_move_message.goal.width = 0.06
+    gripper_move_message.goal.speed = 0.05
+    gripper_move_pub.publish(gripper_move_message)
+
+def grasp_stone(grasp_pub=None):
+    grasp_message = GraspActionGoal()
+    grasp_message.goal.width = 0.02
+    grasp_message.goal.epsilon.inner = 0.01
+    grasp_message.goal.epsilon.outer = 0.01
+    grasp_message.goal.speed = 0.05
+    grasp_message.goal.force = 0.01
+    grasp_pub.publish(grasp_message)
+
+def check_grasp(robot=None, gripper_move_pub=None):
+    gripper_width = robot.get_current_state().joint_state.position[-1] + robot.get_current_state().joint_state.position[-2]
+    if gripper_width < 0.028 or gripper_width > 0.030:
+        return False
+    else:
+        return True
 
 def subsample_list(list_to_subsample, samples_nr):
     real_sample_interval = len(list_to_subsample)/float(samples_nr)
@@ -65,7 +95,6 @@ def filter_list(list_to_filter, alpha):
         else:
             filtered_list.append(float(alpha)*filtered_list[-1] + float(1-alpha)*item)
     return filtered_list
-        
 
 def callback(data, args):
     sensing_step = args[0]
@@ -286,15 +315,12 @@ def sense_stone(output_folder="latest", is_simulation=False, is_learning=True, r
 
     rospy.rostime.wallsleep(1)
 
-    gripper_move_message = MoveActionGoal()
-    gripper_move_message.goal.width = 0.06
-    gripper_move_message.goal.speed = 0.05
-    gripper_move_pub.publish(gripper_move_message)
+    open_gripper(gripper_move_pub)
 
     rospy.rostime.wallsleep(1)
 
     for repetition in range(repetitions):
-        print ("\nRepetition number " + str(repetition+1))
+        print ("\nRepetition " + str(repetition+1) + "/" + str(repetitions))
         # if type(labels) == list and len(labels) > 1:
         #     random.shuffle(labels)
         
@@ -317,36 +343,22 @@ def sense_stone(output_folder="latest", is_simulation=False, is_learning=True, r
             # group.clear_pose_targets()
 
             # planning in joint space
-            joint_goal = group.get_current_joint_values()
-            for joint_index, _ in enumerate(grasping_points[str(label)]["hovering_joints_position"]):
-                joint_goal[joint_index] = grasping_points[str(label)]["hovering_joints_position"][joint_index]
-            group.go(joint_goal, wait=True)
-            group.stop()
-
-            joint_goal = group.get_current_joint_values()
-            for joint_index, _ in enumerate(grasping_points[str(label)]["grasping_joints_position"]):
-                joint_goal[joint_index] = grasping_points[str(label)]["grasping_joints_position"][joint_index]
-            group.go(joint_goal, wait=True)
-            group.stop()
+            joint_move(group, grasping_points[str(label)]["hovering_joints_position"])
+            joint_move(group, grasping_points[str(label)]["grasping_joints_position"])
 
             rospy.rostime.wallsleep(0.5)
-                
-            # raw_input("Press enter to grasp the stone.")
-            grasp_message = GraspActionGoal()
-            grasp_message.goal.width = 0.02
-            grasp_message.goal.epsilon.inner = 0.01
-            grasp_message.goal.epsilon.outer = 0.01
-            grasp_message.goal.speed = 0.05
-            grasp_message.goal.force = 0.01
-            grasp_pub.publish(grasp_message)
+            
+            stone_grasped = False
+            while not stone_grasped:
+                # raw_input("Press enter to grasp the stone.")
+                grasp_stone(grasp_pub)
+                rospy.rostime.wallsleep(1.5)
+                stone_grasped = check_grasp(robot, gripper_move_pub)
+                if not stone_grasped:
+                    open_gripper(gripper_move_pub)
+                    raw_input("Grasping was unsuccesfull, reposition the stone and press enter.\n")
 
-            rospy.rostime.wallsleep(1.5)
-
-            joint_goal = group.get_current_joint_values()
-            for joint_index, _ in enumerate(grasping_points[str(label)]["hovering_joints_position"]):
-                joint_goal[joint_index] = grasping_points[str(label)]["hovering_joints_position"][joint_index]
-            group.go(joint_goal, wait=True)
-            group.stop()
+            joint_move(group, grasping_points[str(label)]["hovering_joints_position"])
 
             pose_goal = geometry_msgs.msg.Pose()
             waypoints = []
@@ -359,59 +371,69 @@ def sense_stone(output_folder="latest", is_simulation=False, is_learning=True, r
             sensors_data["raw"]["torque"]["y"].append([])
             sensors_data["raw"]["torque"]["z"].append([])
             
-            for pos in sensing_waypoints["joints_positions"]:
-                sensing_step = {
-                    "force": {
-                        "x": [],
-                        "y": [],
-                        "z": []
-                    },
-                    "torque": {
-                        "x": [],
-                        "y": [],
-                        "z": []
-                    },
-                }
-                joint_goal = group.get_current_joint_values()
-                for joint_index, _ in enumerate(pos):
-                    joint_goal[joint_index] = pos[joint_index]
-                group.go(joint_goal, wait=True)
-                group.stop()
-                sub = rospy.Subscriber("/panda/franka_state_controller/F_ext", geometry_msgs.msg.WrenchStamped, callback, [sensing_step])
-                rospy.rostime.wallsleep(1)
-                sub.unregister()
+            stone_grasped = False
+            while not stone_grasped:
+                for pos in sensing_waypoints["joints_positions"]:
+                    sensing_step = {
+                        "force": {
+                            "x": [],
+                            "y": [],
+                            "z": []
+                        },
+                        "torque": {
+                            "x": [],
+                            "y": [],
+                            "z": []
+                        },
+                    }
+                    joint_move(group, pos)
+                    rospy.rostime.wallsleep(0.5)
+                    sub = rospy.Subscriber("/panda/franka_state_controller/F_ext", geometry_msgs.msg.WrenchStamped, callback, [sensing_step])
+                    rospy.rostime.wallsleep(1)
+                    sub.unregister()
+
+                    stone_grasped = check_grasp(robot, gripper_move_pub)
+                    if not stone_grasped:
+                        sensors_data["raw"]["force"]["x"][-1] = []
+                        sensors_data["raw"]["force"]["y"][-1] = []
+                        sensors_data["raw"]["force"]["z"][-1] = []
+                        sensors_data["raw"]["torque"]["x"][-1] = []
+                        sensors_data["raw"]["torque"]["y"][-1] = []
+                        sensors_data["raw"]["torque"]["z"][-1] = []
+                        print("Stone fell off while sensing, repositioning gripper...")
+                        rospy.rostime.wallsleep(0.5)
+                        joint_move(group, grasping_points[str(label)]["hovering_joints_position"])
+                        joint_move(group, grasping_points[str(label)]["grasping_joints_position"])
+                        open_gripper(gripper_move_pub)
+                        rospy.rostime.wallsleep(0.5)
+                        raw_input("Reposition the stone and press enter to resume sensing.\n")
+                        while not stone_grasped:
+                            grasp_stone(grasp_pub)
+                            rospy.rostime.wallsleep(1.5)
+                            stone_grasped = check_grasp(robot, gripper_move_pub)
+                            if not stone_grasped:
+                                rospy.rostime.wallsleep(0.5)
+                                open_gripper(gripper_move_pub)
+                                raw_input("Grasping was unsuccesfull, reposition the stone and press enter.\n")
+                                rospy.rostime.wallsleep(0.5)
+                        stone_grasped = False
+                        break
                 
-                sensors_data["raw"]["force"]["x"][-1].append(sensing_step["force"]["x"])
-                sensors_data["raw"]["force"]["y"][-1].append(sensing_step["force"]["y"])
-                sensors_data["raw"]["force"]["z"][-1].append(sensing_step["force"]["z"])
-                sensors_data["raw"]["torque"]["x"][-1].append(sensing_step["torque"]["x"])
-                sensors_data["raw"]["torque"]["y"][-1].append(sensing_step["torque"]["y"])
-                sensors_data["raw"]["torque"]["z"][-1].append(sensing_step["torque"]["z"])
+                    sensors_data["raw"]["force"]["x"][-1].append(sensing_step["force"]["x"])
+                    sensors_data["raw"]["force"]["y"][-1].append(sensing_step["force"]["y"])
+                    sensors_data["raw"]["force"]["z"][-1].append(sensing_step["force"]["z"])
+                    sensors_data["raw"]["torque"]["x"][-1].append(sensing_step["torque"]["x"])
+                    sensors_data["raw"]["torque"]["y"][-1].append(sensing_step["torque"]["y"])
+                    sensors_data["raw"]["torque"]["z"][-1].append(sensing_step["torque"]["z"])
 
-            joint_goal = group.get_current_joint_values()
-            for joint_index, _ in enumerate(grasping_points[str(label)]["hovering_joints_position"]):
-                joint_goal[joint_index] = grasping_points[str(label)]["hovering_joints_position"][joint_index]
-            group.go(joint_goal, wait=True)
-            group.stop()
+            joint_move(group, grasping_points[str(label)]["hovering_joints_position"])
+            joint_move(group, grasping_points[str(label)]["grasping_joints_position"])
 
-            joint_goal = group.get_current_joint_values()
-            for joint_index, _ in enumerate(grasping_points[str(label)]["grasping_joints_position"]):
-                joint_goal[joint_index] = grasping_points[str(label)]["grasping_joints_position"][joint_index]
-            group.go(joint_goal, wait=True)
-            group.stop()
-
-            gripper_move_message = MoveActionGoal()
-            gripper_move_message.goal.width = 0.06
-            gripper_move_message.goal.speed = 0.05
-            gripper_move_pub.publish(gripper_move_message)
+            open_gripper(gripper_move_pub)
 
             rospy.rostime.wallsleep(1)
 
-            joint_goal = group.get_current_joint_values()
-            for joint_index, _ in enumerate(grasping_points[str(label)]["hovering_joints_position"]):
-                joint_goal[joint_index] = grasping_points[str(label)]["hovering_joints_position"][joint_index]
-            group.go(joint_goal, wait=True)
-            group.stop()
+            joint_move(group, grasping_points[str(label)]["hovering_joints_position"])
 
             # for waypoint_index, _ in enumerate(sensing_waypoints["orientations"]):
 
@@ -444,7 +466,7 @@ def sense_stone(output_folder="latest", is_simulation=False, is_learning=True, r
             #     raw_input("Press enter to start sensing.")
             #     group.execute(plan, wait=True)
             #     group.stop()
-            alpha = 0.9
+            alpha = 0.8
             sensors_data["filtered"]["alpha"] = alpha
             sensors_data["raw"]["label"].append(label)
             sensors_data["filtered"]["subsamples"]["label"].append(label)
@@ -462,6 +484,13 @@ def sense_stone(output_folder="latest", is_simulation=False, is_learning=True, r
             sensors_data["filtered"]["torque"]["x"] = [[item for sublist in sensors_data["raw"]["torque"]["x"][-1] for item in filter_list(sublist, alpha)]]
             sensors_data["filtered"]["torque"]["y"] = [[item for sublist in sensors_data["raw"]["torque"]["y"][-1] for item in filter_list(sublist, alpha)]]
             sensors_data["filtered"]["torque"]["z"] = [[item for sublist in sensors_data["raw"]["torque"]["z"][-1] for item in filter_list(sublist, alpha)]]
+            
+            # sensors_data["filtered"]["force"]["x"] = [[item for sublist in sensors_data["raw"]["force"]["x"][-1] for item in [sum(sublist)/len(sublist)]*len(sublist)]]
+            # sensors_data["filtered"]["force"]["y"] = [[item for sublist in sensors_data["raw"]["force"]["y"][-1] for item in [sum(sublist)/len(sublist)]*len(sublist)]]
+            # sensors_data["filtered"]["force"]["z"] = [[item for sublist in sensors_data["raw"]["force"]["z"][-1] for item in [sum(sublist)/len(sublist)]*len(sublist)]]
+            # sensors_data["filtered"]["torque"]["x"] = [[item for sublist in sensors_data["raw"]["torque"]["x"][-1] for item in [sum(sublist)/len(sublist)]*len(sublist)]]
+            # sensors_data["filtered"]["torque"]["y"] = [[item for sublist in sensors_data["raw"]["torque"]["y"][-1] for item in [sum(sublist)/len(sublist)]*len(sublist)]]
+            # sensors_data["filtered"]["torque"]["z"] = [[item for sublist in sensors_data["raw"]["torque"]["z"][-1] for item in [sum(sublist)/len(sublist)]*len(sublist)]]
 
             sensors_data["filtered"]["subsamples"]["force"]["x"].append(subsample_list(sensors_data["filtered"]["force"]["x"][-1], 100))
             sensors_data["filtered"]["subsamples"]["force"]["y"].append(subsample_list(sensors_data["filtered"]["force"]["y"][-1], 100))
