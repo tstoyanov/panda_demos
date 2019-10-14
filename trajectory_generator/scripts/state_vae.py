@@ -70,6 +70,8 @@ parser.add_argument('--vae-dim', default=4,
                     help='set the dimension of the latent space of the VAE used to encode the state')
 parser.add_argument('--ioff', nargs='?', const=True, default=False,
                     help='disables interactive plotting of the train and test error')
+parser.add_argument('--parameters-search', nargs='?', const=True, default=False,
+                    help='wether to perform parameter search or not')
 
 args, unknown = parser.parse_known_args()
 
@@ -104,7 +106,7 @@ class stones_dataset(Dataset):
         ret.append(self.dataset["torque"]["x"][index])
         ret.append(self.dataset["torque"]["y"][index])
         ret.append(self.dataset["torque"]["z"][index])
-        return torch.tensor(ret), torch.tensor(self.dataset["label"][index]), index
+        return torch.tensor(ret), torch.tensor(float(self.dataset["label"][index])), index
 
 def update_graph(fig, ax, line1, x_value, y_value):
     line1.set_xdata(np.append(line1.get_xdata(), x_value))
@@ -421,10 +423,10 @@ if __name__ == "__main__":
         my_test("loaded_model", None)
     else:
         if args.parameters_search == True:
-            # alpha_list = [1, 2, 5, 10, 25, 50, 100, 250, 500, 100, 200, 50, 100, 1, 1, 1, 1, 1, 1, 1, 1, 0.1, 0.1, 0.01, 0.01]
-            # beta_list = [1, 1, 1, 1, 1, 1, 1, 1, 1, 0.1, 0.1, 0.01, 0.01, 2, 5, 10, 25, 50, 100, 250, 500, 100, 200, 50, 100]
-            alpha_list = [200, 100, 100, 50]
-            beta_list = [0.1, 0.1, 0.01, 0.01]
+            alpha_list = [1, 2, 5, 10, 25, 50, 100, 250, 500, 100, 200, 50, 100, 1, 1, 1, 1, 1, 1, 1, 1, 0.1, 0.1, 0.01, 0.01]
+            beta_list = [1, 1, 1, 1, 1, 1, 1, 1, 1, 0.1, 0.1, 0.01, 0.01, 2, 5, 10, 25, 50, 100, 250, 500, 100, 200, 50, 100]
+            # alpha_list = [200, 100]
+            # beta_list = [0.1, 0.1]
         else:
             alpha_list = [args.alpha]
             beta_list = [args.beta]
@@ -465,11 +467,12 @@ if __name__ == "__main__":
                 beta_str = "b"+str(beta)+"e-"+str(e_beta)
             else:
                 beta_str = "b"+str(beta)
-            if int(args.vae_dim) != 5:
-                save_path = args.save_dir + str(args.vae_dim) + "_dim/" + alpha_str + "_" + beta_str + "_" + str(args.epochs) + "e_" + dataset_str + "/model.pt"
-            else:
-                save_path = args.save_dir + alpha_str + "_" + beta_str + "_" + str(args.epochs) + "e_" + dataset_str + "/model.pt"
-            # os.makedirs(os.path.dirname(save_path), exist_ok=True)
+            save_path = args.save_dir + str(args.vae_dim) + "_dim/" + alpha_str + "_" + beta_str + "_" + str(args.epochs) + "e_" + dataset_str + "/model.pt"
+            # if int(args.vae_dim) != 5:
+            #     save_path = args.save_dir + str(args.vae_dim) + "_dim/" + alpha_str + "_" + beta_str + "_" + str(args.epochs) + "e_" + dataset_str + "/model.pt"
+            # else:
+            #     save_path = args.save_dir + alpha_str + "_" + beta_str + "_" + str(args.epochs) + "e_" + dataset_str + "/model.pt"
+            os.makedirs(os.path.dirname(save_path), exist_ok=True)
 
             loss_plots = {
                 "loss": {
