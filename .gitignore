@@ -6,6 +6,7 @@ trajectory_generator/generated_trajectories
 # trajectory_generator/saved_models/state_vae/*
 # !trajectory_generator/saved_models/state_vae/.gitkeep
 # trajectory_generator/images
+trajectory_generator/sensing_data
 .vscode
 devel/
 logs/

@@ -27,7 +27,12 @@ import rospkg
 rospack = rospkg.RosPack()
 package_path = rospack.get_path("trajectory_generator")
 
-# parser = argparse.ArgumentParser(description='stone sensing')
+parser = argparse.ArgumentParser(description='stone sensing')
+
+parser.add_argument('--stones_labels', nargs='+', default=None, type=str, help='list of the labels of the stones')
+parser.add_argument('--repetitions', default=2, type=int, help='number of times to sense each stone')
+
+args, unknown = parser.parse_known_args()
 
 def subsample_list(list_to_subsample, samples_nr):
     real_sample_interval = len(list_to_subsample)/float(samples_nr)
@@ -89,6 +94,7 @@ def sense_stone(output_folder="latest", is_simulation=False, is_learning=True, r
                 "y": [],
                 "z": []
             },
+            "label": [],
             "subsamples": {
                 "force": {
                     "x": [],
@@ -124,7 +130,8 @@ def sense_stone(output_folder="latest", is_simulation=False, is_learning=True, r
                     "x": [],
                     "y": [],
                     "z": []
-                }   
+                },
+                "label": []
             }
         }
     }
@@ -268,154 +275,196 @@ def sense_stone(output_folder="latest", is_simulation=False, is_learning=True, r
 
             [0.3351801368290918, -0.29662777607797913, -0.11244693900398067, -2.3844817042769044, 0.4160744979646716, 1.7924010314720245, -1.3208833060871592],
             [0.3619200299155657, -0.23360565089133745, -0.12781654499551712, -2.3745498456453022, 0.978863298841051, 2.1175465971498175, -1.117479492057386],
-            [0.30448947731444703, -0.12694879574524728, -0.051233081743954974, -2.3243839509474378, 0.8545456072769047, 2.48963434716984, -0.5527099020836809],
+            # [0.30448947731444703, -0.12694879574524728, -0.051233081743954974, -2.3243839509474378, 0.8545456072769047, 2.48963434716984, -0.5527099020836809],
             [0.15692759708981763, -0.2920189494293214, 0.12201354729948073, -2.3580899385820357, -0.21012455755472154, 1.705037037051065, 0.0049194150333632955],
             [0.12587268760957215, -0.11777158826903292, 0.16212125076698525, -2.21868566964802, -0.8504195135672374, 1.77099568547142, -0.2145776784027563],
-            [0.14789706793375182, -0.13316567956848385, 0.0641090490445283, -2.301253765842371, -0.7098326927480935, 2.3117149482243375, -0.8717583615683947],
+            # [0.14789706793375182, -0.13316567956848385, 0.0641090490445283, -2.301253765842371, -0.7098326927480935, 2.3117149482243375, -0.8717583615683947],
 
             [0.20444709271878062, -0.2148109244173751, 0.03434020159994296, -2.395439041634496, 0.009049621077046537, 2.1804183384366924, -0.552972294800217]
         ]
     }
 
-    repetitions = 2
     for repetition in range(repetitions):
-        if type(labels) == list and len(labels) > 1:
-            random.shuffle(labels)
+        # if type(labels) == list and len(labels) > 1:
+        #     random.shuffle(labels)
         
         for label in labels:
-            True
+            # raw_input("Press enter to sense.")
+            # raw_input("Press enter to move to the grasping point.")
+            # planning in eef space
+            # pose_goal = geometry_msgs.msg.Pose()
+            # pose_goal.position.x = grasping_point["position"][0]
+            # pose_goal.position.y = grasping_point["position"][1]
+            # pose_goal.position.z = grasping_point["position"][2]
+            # pose_goal.orientation.x = grasping_point["orientation"][0]
+            # pose_goal.orientation.y = grasping_point["orientation"][1]
+            # pose_goal.orientation.z = grasping_point["orientation"][2]
+            # pose_goal.orientation.w = grasping_point["orientation"][3]
+            # group.set_pose_target(pose_goal)
+            # plan = group.go(wait=True)
+            # group.stop()
+            # group.clear_pose_targets()
 
-        raw_input("Press enter to move to the grasping point.")
-        # planning in eef space
-        # pose_goal = geometry_msgs.msg.Pose()
-        # pose_goal.position.x = grasping_point["position"][0]
-        # pose_goal.position.y = grasping_point["position"][1]
-        # pose_goal.position.z = grasping_point["position"][2]
-        # pose_goal.orientation.x = grasping_point["orientation"][0]
-        # pose_goal.orientation.y = grasping_point["orientation"][1]
-        # pose_goal.orientation.z = grasping_point["orientation"][2]
-        # pose_goal.orientation.w = grasping_point["orientation"][3]
-        # group.set_pose_target(pose_goal)
-        # plan = group.go(wait=True)
-        # group.stop()
-        # group.clear_pose_targets()
-
-        # planning in joint space
-        joint_goal = group.get_current_joint_values()
-        for joint_index, _ in enumerate(grasping_point["joints_position"]):
-            joint_goal[joint_index] = grasping_point["joints_position"][joint_index]
-        group.go(joint_goal, wait=True)
-        group.stop()
-            
-        raw_input("Press enter to grasp the stone.")
-        grasp_message = GraspActionGoal()
-        grasp_message.goal.width = 0.02
-        grasp_message.goal.epsilon.inner = 0.01
-        grasp_message.goal.epsilon.outer = 0.01
-        grasp_message.goal.speed = 0.05
-        grasp_message.goal.force = 0.01
-        grasp_pub.publish(grasp_message)
-
-        pose_goal = geometry_msgs.msg.Pose()
-        waypoints = []
-
-        raw_input("Press enter to start sensing.")
-        sensors_data["raw"]["force"]["x"].append([])
-        sensors_data["raw"]["force"]["y"].append([])
-        sensors_data["raw"]["force"]["z"].append([])
-        sensors_data["raw"]["torque"]["x"].append([])
-        sensors_data["raw"]["torque"]["y"].append([])
-        sensors_data["raw"]["torque"]["z"].append([])
-        
-        for pos in sensing_waypoints["joints_positions"]:
-            sensing_step = {
-                "force": {
-                    "x": [],
-                    "y": [],
-                    "z": []
-                },
-                "torque": {
-                    "x": [],
-                    "y": [],
-                    "z": []
-                },
-            }
+            # planning in joint space
             joint_goal = group.get_current_joint_values()
-            for joint_index, _ in enumerate(pos):
-                joint_goal[joint_index] = pos[joint_index]
+            for joint_index, _ in enumerate(grasping_points[str(label)]["hovering_joints_position"]):
+                joint_goal[joint_index] = grasping_points[str(label)]["hovering_joints_position"][joint_index]
             group.go(joint_goal, wait=True)
             group.stop()
-            sub = rospy.Subscriber("/panda/franka_state_controller/F_ext", geometry_msgs.msg.WrenchStamped, callback, [sensing_step])
+
+            joint_goal = group.get_current_joint_values()
+            for joint_index, _ in enumerate(grasping_points[str(label)]["grasping_joints_position"]):
+                joint_goal[joint_index] = grasping_points[str(label)]["grasping_joints_position"][joint_index]
+            group.go(joint_goal, wait=True)
+            group.stop()
+
             rospy.rostime.wallsleep(1)
-            sub.unregister()
+                
+            # raw_input("Press enter to grasp the stone.")
+            grasp_message = GraspActionGoal()
+            grasp_message.goal.width = 0.02
+            grasp_message.goal.epsilon.inner = 0.01
+            grasp_message.goal.epsilon.outer = 0.01
+            grasp_message.goal.speed = 0.05
+            grasp_message.goal.force = 0.01
+            grasp_pub.publish(grasp_message)
+
+            rospy.rostime.wallsleep(1.5)
+
+            joint_goal = group.get_current_joint_values()
+            for joint_index, _ in enumerate(grasping_points[str(label)]["hovering_joints_position"]):
+                joint_goal[joint_index] = grasping_points[str(label)]["hovering_joints_position"][joint_index]
+            group.go(joint_goal, wait=True)
+            group.stop()
+
+            pose_goal = geometry_msgs.msg.Pose()
+            waypoints = []
+
+            # raw_input("Press enter to start sensing.")
+            sensors_data["raw"]["force"]["x"].append([])
+            sensors_data["raw"]["force"]["y"].append([])
+            sensors_data["raw"]["force"]["z"].append([])
+            sensors_data["raw"]["torque"]["x"].append([])
+            sensors_data["raw"]["torque"]["y"].append([])
+            sensors_data["raw"]["torque"]["z"].append([])
             
-            sensors_data["raw"]["force"]["x"][-1].append(sensing_step["force"]["x"])
-            sensors_data["raw"]["force"]["y"][-1].append(sensing_step["force"]["y"])
-            sensors_data["raw"]["force"]["z"][-1].append(sensing_step["force"]["z"])
-            sensors_data["raw"]["torque"]["x"][-1].append(sensing_step["torque"]["x"])
-            sensors_data["raw"]["torque"]["y"][-1].append(sensing_step["torque"]["y"])
-            sensors_data["raw"]["torque"]["z"][-1].append(sensing_step["torque"]["z"])
-        # for waypoint_index, _ in enumerate(sensing_waypoints["orientations"]):
+            for pos in sensing_waypoints["joints_positions"]:
+                sensing_step = {
+                    "force": {
+                        "x": [],
+                        "y": [],
+                        "z": []
+                    },
+                    "torque": {
+                        "x": [],
+                        "y": [],
+                        "z": []
+                    },
+                }
+                joint_goal = group.get_current_joint_values()
+                for joint_index, _ in enumerate(pos):
+                    joint_goal[joint_index] = pos[joint_index]
+                group.go(joint_goal, wait=True)
+                group.stop()
+                sub = rospy.Subscriber("/panda/franka_state_controller/F_ext", geometry_msgs.msg.WrenchStamped, callback, [sensing_step])
+                rospy.rostime.wallsleep(1)
+                sub.unregister()
+                
+                sensors_data["raw"]["force"]["x"][-1].append(sensing_step["force"]["x"])
+                sensors_data["raw"]["force"]["y"][-1].append(sensing_step["force"]["y"])
+                sensors_data["raw"]["force"]["z"][-1].append(sensing_step["force"]["z"])
+                sensors_data["raw"]["torque"]["x"][-1].append(sensing_step["torque"]["x"])
+                sensors_data["raw"]["torque"]["y"][-1].append(sensing_step["torque"]["y"])
+                sensors_data["raw"]["torque"]["z"][-1].append(sensing_step["torque"]["z"])
 
-        #     waypoints = []
+            joint_goal = group.get_current_joint_values()
+            for joint_index, _ in enumerate(grasping_points[str(label)]["hovering_joints_position"]):
+                joint_goal[joint_index] = grasping_points[str(label)]["hovering_joints_position"][joint_index]
+            group.go(joint_goal, wait=True)
+            group.stop()
 
-        #     pose_goal.position.x = sensing_waypoints["positions"][waypoint_index][0]
-        #     pose_goal.position.y = sensing_waypoints["positions"][waypoint_index][1]
-        #     pose_goal.position.z = sensing_waypoints["positions"][waypoint_index][2]
-        #     pose_goal.orientation.x = sensing_waypoints["orientations"][waypoint_index][0]
-        #     pose_goal.orientation.y = sensing_waypoints["orientations"][waypoint_index][1]
-        #     pose_goal.orientation.z = sensing_waypoints["orientations"][waypoint_index][2]
-        #     pose_goal.orientation.w = sensing_waypoints["orientations"][waypoint_index][3]
+            joint_goal = group.get_current_joint_values()
+            for joint_index, _ in enumerate(grasping_points[str(label)]["grasping_joints_position"]):
+                joint_goal[joint_index] = grasping_points[str(label)]["grasping_joints_position"][joint_index]
+            group.go(joint_goal, wait=True)
+            group.stop()
 
-        #     waypoints.append(copy.deepcopy(pose_goal))
+            gripper_move_message = MoveActionGoal()
+            gripper_move_message.goal.width = 0.06
+            gripper_move_message.goal.speed = 0.05
+            gripper_move_pub.publish(gripper_move_message)
 
-        #     (plan, fraction) = group.compute_cartesian_path(
-        #                                 waypoints,   # waypoints to follow
-        #                                 0.01,        # eef_step
-        #                                 0.0)         # jump_threshold
-        
-        #     display_trajectory = moveit_msgs.msg.DisplayTrajectory()
-        #     display_trajectory.trajectory_start = robot.get_current_state()
-        #     display_trajectory.trajectory.append(plan)
-        #     # Publish
-        #     display_trajectory_publisher = rospy.Publisher('/move_group/display_planned_path',
-        #                                             moveit_msgs.msg.DisplayTrajectory,
-        #                                             queue_size=20)
-        #     display_trajectory_publisher.publish(display_trajectory);
+            rospy.rostime.wallsleep(1.5)
 
-        #     raw_input("Press enter to start sensing.")
-        #     group.execute(plan, wait=True)
-        #     group.stop()
-        alpha = 0.99
-        sensors_data["filtered"]["alpha"] = alpha
-        
-        # sensors_data["filtered"]["force"]["x"].append([item for sublist in sensors_data["raw"]["force"]["x"][-1] for item in filter_list(sublist, alpha)])
-        # sensors_data["filtered"]["force"]["y"].append([item for sublist in sensors_data["raw"]["force"]["y"][-1] for item in filter_list(sublist, alpha)])
-        # sensors_data["filtered"]["force"]["z"].append([item for sublist in sensors_data["raw"]["force"]["z"][-1] for item in filter_list(sublist, alpha)])
-        # sensors_data["filtered"]["torque"]["x"].append([item for sublist in sensors_data["raw"]["torque"]["x"][-1] for item in filter_list(sublist, alpha)])
-        # sensors_data["filtered"]["torque"]["y"].append([item for sublist in sensors_data["raw"]["torque"]["y"][-1] for item in filter_list(sublist, alpha)])
-        # sensors_data["filtered"]["torque"]["z"].append([item for sublist in sensors_data["raw"]["torque"]["z"][-1] for item in filter_list(sublist, alpha)])
-        
-        sensors_data["filtered"]["force"]["x"] = [[item for sublist in sensors_data["raw"]["force"]["x"][-1] for item in filter_list(sublist, alpha)]]
-        sensors_data["filtered"]["force"]["y"] = [[item for sublist in sensors_data["raw"]["force"]["y"][-1] for item in filter_list(sublist, alpha)]]
-        sensors_data["filtered"]["force"]["z"] = [[item for sublist in sensors_data["raw"]["force"]["z"][-1] for item in filter_list(sublist, alpha)]]
-        sensors_data["filtered"]["torque"]["x"] = [[item for sublist in sensors_data["raw"]["torque"]["x"][-1] for item in filter_list(sublist, alpha)]]
-        sensors_data["filtered"]["torque"]["y"] = [[item for sublist in sensors_data["raw"]["torque"]["y"][-1] for item in filter_list(sublist, alpha)]]
-        sensors_data["filtered"]["torque"]["z"] = [[item for sublist in sensors_data["raw"]["torque"]["z"][-1] for item in filter_list(sublist, alpha)]]
+            joint_goal = group.get_current_joint_values()
+            for joint_index, _ in enumerate(grasping_points[str(label)]["hovering_joints_position"]):
+                joint_goal[joint_index] = grasping_points[str(label)]["hovering_joints_position"][joint_index]
+            group.go(joint_goal, wait=True)
+            group.stop()
 
-        sensors_data["filtered"]["subsamples"]["force"]["x"].append(subsample_list(sensors_data["filtered"]["force"]["x"][-1], 100))
-        sensors_data["filtered"]["subsamples"]["force"]["y"].append(subsample_list(sensors_data["filtered"]["force"]["y"][-1], 100))
-        sensors_data["filtered"]["subsamples"]["force"]["z"].append(subsample_list(sensors_data["filtered"]["force"]["z"][-1], 100))
-        sensors_data["filtered"]["subsamples"]["torque"]["x"].append(subsample_list(sensors_data["filtered"]["torque"]["x"][-1], 100))
-        sensors_data["filtered"]["subsamples"]["torque"]["y"].append(subsample_list(sensors_data["filtered"]["torque"]["y"][-1], 100))
-        sensors_data["filtered"]["subsamples"]["torque"]["z"].append(subsample_list(sensors_data["filtered"]["torque"]["z"][-1], 100))
+            # for waypoint_index, _ in enumerate(sensing_waypoints["orientations"]):
+
+            #     waypoints = []
+
+            #     pose_goal.position.x = sensing_waypoints["positions"][waypoint_index][0]
+            #     pose_goal.position.y = sensing_waypoints["positions"][waypoint_index][1]
+            #     pose_goal.position.z = sensing_waypoints["positions"][waypoint_index][2]
+            #     pose_goal.orientation.x = sensing_waypoints["orientations"][waypoint_index][0]
+            #     pose_goal.orientation.y = sensing_waypoints["orientations"][waypoint_index][1]
+            #     pose_goal.orientation.z = sensing_waypoints["orientations"][waypoint_index][2]
+            #     pose_goal.orientation.w = sensing_waypoints["orientations"][waypoint_index][3]
+
+            #     waypoints.append(copy.deepcopy(pose_goal))
+
+            #     (plan, fraction) = group.compute_cartesian_path(
+            #                                 waypoints,   # waypoints to follow
+            #                                 0.01,        # eef_step
+            #                                 0.0)         # jump_threshold
+            
+            #     display_trajectory = moveit_msgs.msg.DisplayTrajectory()
+            #     display_trajectory.trajectory_start = robot.get_current_state()
+            #     display_trajectory.trajectory.append(plan)
+            #     # Publish
+            #     display_trajectory_publisher = rospy.Publisher('/move_group/display_planned_path',
+            #                                             moveit_msgs.msg.DisplayTrajectory,
+            #                                             queue_size=20)
+            #     display_trajectory_publisher.publish(display_trajectory);
+
+            #     raw_input("Press enter to start sensing.")
+            #     group.execute(plan, wait=True)
+            #     group.stop()
+            alpha = 0.99
+            sensors_data["filtered"]["alpha"] = alpha
+            sensors_data["raw"]["label"].append(label)
+            sensors_data["filtered"]["subsamples"]["label"].append(label)
+            
+            # sensors_data["filtered"]["force"]["x"].append([item for sublist in sensors_data["raw"]["force"]["x"][-1] for item in filter_list(sublist, alpha)])
+            # sensors_data["filtered"]["force"]["y"].append([item for sublist in sensors_data["raw"]["force"]["y"][-1] for item in filter_list(sublist, alpha)])
+            # sensors_data["filtered"]["force"]["z"].append([item for sublist in sensors_data["raw"]["force"]["z"][-1] for item in filter_list(sublist, alpha)])
+            # sensors_data["filtered"]["torque"]["x"].append([item for sublist in sensors_data["raw"]["torque"]["x"][-1] for item in filter_list(sublist, alpha)])
+            # sensors_data["filtered"]["torque"]["y"].append([item for sublist in sensors_data["raw"]["torque"]["y"][-1] for item in filter_list(sublist, alpha)])
+            # sensors_data["filtered"]["torque"]["z"].append([item for sublist in sensors_data["raw"]["torque"]["z"][-1] for item in filter_list(sublist, alpha)])
+            
+            sensors_data["filtered"]["force"]["x"] = [[item for sublist in sensors_data["raw"]["force"]["x"][-1] for item in filter_list(sublist, alpha)]]
+            sensors_data["filtered"]["force"]["y"] = [[item for sublist in sensors_data["raw"]["force"]["y"][-1] for item in filter_list(sublist, alpha)]]
+            sensors_data["filtered"]["force"]["z"] = [[item for sublist in sensors_data["raw"]["force"]["z"][-1] for item in filter_list(sublist, alpha)]]
+            sensors_data["filtered"]["torque"]["x"] = [[item for sublist in sensors_data["raw"]["torque"]["x"][-1] for item in filter_list(sublist, alpha)]]
+            sensors_data["filtered"]["torque"]["y"] = [[item for sublist in sensors_data["raw"]["torque"]["y"][-1] for item in filter_list(sublist, alpha)]]
+            sensors_data["filtered"]["torque"]["z"] = [[item for sublist in sensors_data["raw"]["torque"]["z"][-1] for item in filter_list(sublist, alpha)]]
+
+            sensors_data["filtered"]["subsamples"]["force"]["x"].append(subsample_list(sensors_data["filtered"]["force"]["x"][-1], 100))
+            sensors_data["filtered"]["subsamples"]["force"]["y"].append(subsample_list(sensors_data["filtered"]["force"]["y"][-1], 100))
+            sensors_data["filtered"]["subsamples"]["force"]["z"].append(subsample_list(sensors_data["filtered"]["force"]["z"][-1], 100))
+            sensors_data["filtered"]["subsamples"]["torque"]["x"].append(subsample_list(sensors_data["filtered"]["torque"]["x"][-1], 100))
+            sensors_data["filtered"]["subsamples"]["torque"]["y"].append(subsample_list(sensors_data["filtered"]["torque"]["y"][-1], 100))
+            sensors_data["filtered"]["subsamples"]["torque"]["z"].append(subsample_list(sensors_data["filtered"]["torque"]["z"][-1], 100))
 
         # os.makedirs(output_folder)
         # os.makedirs(output_folder, exist_ok=True)
-    with open(output_folder + "/raw_stone_dataset.txt", "w") as f:
-        json.dump(sensors_data["raw"], f)
-    with open(output_folder + "/stone_dataset.txt", "w") as f:
-        json.dump(sensors_data["filtered"]["subsamples"], f)
+        with open(output_folder + "/raw_stone_dataset.txt", "w") as f:
+            json.dump(sensors_data["raw"], f)
+        with open(output_folder + "/stone_dataset.txt", "w") as f:
+            json.dump(sensors_data["filtered"]["subsamples"], f)
 
     raw_input("Press enter to position the arm.")
     pose_goal.position.x = sliding_point["position"][0]
@@ -430,7 +479,7 @@ def sense_stone(output_folder="latest", is_simulation=False, is_learning=True, r
     group.stop()
     group.clear_pose_targets()
     gripper_move_message = MoveActionGoal()
-    gripper_move_message.goal.width = 0.08
+    gripper_move_message.goal.width = 0.06
     gripper_move_message.goal.speed = 0.05
     gripper_move_pub.publish(gripper_move_message)
 
@@ -441,11 +490,10 @@ if __name__ == '__main__':
         input_folder = "latest"
         is_simulation = False
         tot_time_nsecs = 20000000000  # total execution time for the trajectory in nanoseconds
-        
 
         print("input_folder = " + str(input_folder))
         print("tot_time_nsecs = " + str(tot_time_nsecs))
 
-        sense_stone()
+        sense_stone(labels=args.stones_labels)
     except rospy.ROSInterruptException:
         pass
