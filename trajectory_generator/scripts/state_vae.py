@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 
 from collections import Counter
-
+from sklearn.manifold import TSNE
 
 import importlib
 from nn_models.model_state_vae import STATE_VAE as STATE_VAE
@@ -41,6 +41,22 @@ parser.add_argument('--seed', type=int, default=1, metavar='S',
                     help='random seed (default: 1)')
 parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                     help='how many batches to wait before logging training status')
+parser.add_argument('--epoch_log-interval', type=int, default=10, metavar='N',
+                    help='how many epochs to wait before logging training status')
+
+parser.add_argument('--tsne', nargs='?', const=True, default=False,
+                    help='whether or not to perform and plot t-sne on the embedded data')
+parser.add_argument('--matrix-plot', nargs='?', const=True, default=False,
+                    help='whether to plot the intersection between pairs of dimensions in the latent space or not')
+parser.add_argument('--transformation-plot', nargs='?', const=10, default=False,
+                    help='number of steps for the transformation from one embedded trajetory to another one')
+parser.add_argument('--wmb', nargs='?', const=True, default=False,
+                    help='whether to show the trajectories with the worst, median and best loss or not')
+parser.add_argument('--pairplot', nargs='?', const=True, default=False,
+                    help='whether to plot the pairplot of the latent space or not')
+
+parser.add_argument('--write-latent', nargs='?', const=True, default=False,
+                    help='wether to write to a file insights on the latent space or not')
 
 parser.add_argument('--dataset-dir', default="latest",
                     help='path of the directory containing the input dataset')
@@ -75,6 +91,8 @@ parser.add_argument('--parameters-search', nargs='?', const=True, default=False,
 
 args, unknown = parser.parse_known_args()
 
+get_encoded_data = args.tsne != False or args.matrix_plot != False or args.pairplot !=  False or args.write_latent != False
+
 if args.dataset_dir[0] != "/":
     args.dataset_dir = "/" + args.dataset_dir
 if args.dataset_dir[-1] != "/":
@@ -84,6 +102,9 @@ args.cuda = not args.no_cuda and torch.cuda.is_available()
 
 torch.manual_seed(args.seed)
 device = torch.device("cuda" if args.cuda else "cpu")
+
+latent_space_train = None
+latent_space_test = None
 
 class stones_dataset(Dataset):
     """
@@ -107,6 +128,148 @@ class stones_dataset(Dataset):
         ret.append(self.dataset["torque"]["y"][index])
         ret.append(self.dataset["torque"]["z"][index])
         return torch.tensor(ret), torch.tensor(float(self.dataset["label"][index])), index
+
+if get_encoded_data:
+    # global latent_space_train
+    # safe_markers = {
+    #     True: "o",
+    #     False: "*"
+    # }
+    safe_markers = True
+    data_to_plot = pd.DataFrame()
+    test_data_to_plot = pd.DataFrame()
+    original_data = pd.Series()
+    labels = pd.Series()
+    test_labels = pd.Series()
+    if latent_space_train == None:
+        latent_space_train = torch.tensor([])
+        original_data = torch.tensor([])
+        # for batch_idx, (data, label) in enumerate(train_loader):
+        with torch.no_grad():
+            print ("Analyzing train set...")
+            for batch_idx, (data, label, index) in enumerate(my_train_set_loader):
+                mu, logvar = vae_model.encode(data.view(-1, 600))
+                latent_space_sample = vae_model.reparameterize(mu, logvar, no_noise=args.no_noise)
+                for n, s in enumerate(latent_space_sample):
+                    if ((batch_idx * args.batch_size) + n) % 500 == 0:
+                        print ((batch_idx * args.batch_size) + n)
+                    decoded_s = vae_model.decode(s)
+                latent_space_train = torch.cat((latent_space_train, latent_space_sample), 0)
+                original_data = torch.cat((original_data, data.view(-1, 600)), 0)
+                labels = labels.append(pd.Series(label), ignore_index=True)
+            
+            latent_space_test = torch.tensor([])
+            print ("Analyzing test...")
+            for batch_idx, (data, label, index) in enumerate(my_test_set_loader):
+                mu, logvar = vae_model.encode(data.view(-1, 600))
+                latent_space_test_sample = vae_model.reparameterize(mu, logvar, no_noise=args.no_noise)
+                for n, s in enumerate(latent_space_test_sample):
+                    if ((batch_idx * args.batch_size) + n) % 500 == 0:
+                        print ((batch_idx * args.batch_size) + n)
+                    decoded_s = vae_model.decode(s)
+                latent_space_test = torch.cat((latent_space_test, latent_space_test_sample), 0)
+                test_labels = test_labels.append(pd.Series(label), ignore_index=True)
+
+        data_to_plot['label'] = labels
+        data_to_plot['latent_space'] = latent_space_train.tolist()
+        # mean = latent_space_train.mean(0)
+        # std = latent_space_train.std(0)
+        # v15 = data_to_plot.loc[data_to_plot.vel == 1.5]["latent_space"].tolist()
+        # t15 = torch.FloatTensor(v15)
+        # m15 = t15.mean(0)
+        # std15 = t15.std(0)
+        test_data_to_plot['test_label'] = test_labels
+        test_data_to_plot['test_latent_space'] = latent_space_test.tolist()
+    
+    if args.write_latent != False:
+        latent_train = {}
+        latent_train["mean"] = latent_space_train.mean(0).tolist()
+        latent_train["std"] = latent_space_train.std(0).tolist()
+        latent_train["label"] = {}
+        for label in data_to_plot['label'].unique():
+            label_str, label_value = str(round(label,1)), float(round(label,1))
+            latent_train["label"][label_str] = {}
+            latent_train["label"][label_str]["mean"] = torch.FloatTensor(data_to_plot.loc[data_to_plot.label == label_value]["latent_space"].tolist()).mean(0).tolist()
+            latent_train["label"][label_str]["std"] = torch.FloatTensor(data_to_plot.loc[data_to_plot.label == label_value]["latent_space"].tolist()).std(0).tolist()
+        os.makedirs(os.path.dirname(args.load_dir+args.load_file), exist_ok=True)
+        with open(os.path.dirname(args.load_dir+args.load_file)+"/latent_space_data.txt", "w") as f:
+            json.dump(latent_train, f)
+
+if args.tsne != False:
+    print ("\nApplying the t-sne algorithm to the latent space train subset...")
+    time_start = time.time()
+    tsne = TSNE(n_components=2, verbose=1, perplexity=40, n_iter=300)
+    tsne_results = tsne.fit_transform(latent_space_train.detach().numpy())
+    print('t-SNE over the latent space done! Time elapsed: {} seconds'.format(time.time()-time_start))
+    data_to_plot['tsne-train-encoded-' + str(vae_model.fc22.out_features) + 'd-one'] = tsne_results[:,0]
+    data_to_plot['tsne-train-encoded-' + str(vae_model.fc22.out_features) + 'd-two'] = tsne_results[:,1]
+
+    # print ("\nApplying the t-sne algorithm to the latent space test subset...")
+    # time_start = time.time()
+    # tsne_results = tsne.fit_transform(latent_space_test.detach().numpy())
+    # print('t-SNE over the latent space done! Time elapsed: {} seconds'.format(time.time()-time_start))
+    # test_data_to_plot['tsne-test-encoded-' + str(model.fc22.out_features) + 'd-one'] = tsne_results[:,0]
+    # test_data_to_plot['tsne-test-encoded-' + str(model.fc22.out_features) + 'd-two'] = tsne_results[:,1]
+
+    if args.no_noise:
+        tsne_title = "tsne_no_noise"
+        fig = plt.figure(tsne_title, figsize=(16,10))
+    # elif "TEST" != args.tsne.upper():
+    else:
+        tsne_title = "tsne"
+        fig = plt.figure(tsne_title, figsize=(16,10))
+    if "BOTH" == str(args.tsne).upper() or "ORIGINAL" == str(args.tsne).upper():
+        print ("\nApplying the t-sne algorithm to the original data subset...")
+        time_start = time.time()
+        tsne_results = tsne.fit_transform(original_data.detach().numpy())
+        print('t-SNE over the original data done! Time elapsed: {} seconds'.format(time.time()-time_start))
+        data_to_plot['tsne-original-one'] = tsne_results[:,0]
+        data_to_plot['tsne-original-two'] = tsne_results[:,1]
+    else:
+        fig.suptitle('t-sne algorithm over ' + str(len(my_train_set_loader.dataset)) + ' data points:\nEncoded ' + str(vae_model.fc22.out_features) + ' dimensional data using ' + args.loss_type.upper() + ' loss', fontsize=14)
+
+    if "BOTH" == str(args.tsne).upper():
+        # fig = plt.figure(tsne_title, figsize=(16,10))
+        fig.suptitle('t-sne algorithm over ' + str(len(my_train_set_loader.dataset)) + ' data points:\nEncoded ' + str(vae_model.fc22.out_features) + ' dimensional data using ' + args.loss_type.upper() + ' loss (left) vs Original ' + str(vae_model.fc1.in_features) + ' dimensional data (right)', fontsize=14)
+        ax0 = fig.add_subplot(1, 2, 1)
+        ax1 = fig.add_subplot(1, 2, 2)
+        g = sns.scatterplot(
+            x="tsne-original-one", y="tsne-original-two",
+            hue="vel",
+            palette=sns.color_palette("hls", data_to_plot['vel'].nunique()),
+            data=data_to_plot,
+            legend="full",
+            alpha=0.5,
+            ax=ax1
+        )
+        legend = g.legend_
+        for i, label_text in enumerate(legend.texts):
+            if i != 0:
+                label_text.set_text(round(float(label_text.get_text()), 1))
+
+    ax0.set_title("ALPHA = " + str(args.alpha) + "  BETA = " + str(args.beta))
+    g = sns.scatterplot(
+        x="tsne-train-encoded-" + str(vae_model.fc22.out_features) + "d-one", y="tsne-train-encoded-" + str(vae_model.fc22.out_features) + "d-two",
+        hue="label",
+        palette=sns.color_palette("hls", data_to_plot['label'].nunique()),
+        # hue="avg_dist",
+        # palette=sns.color_palette("hls", data_to_plot['avg_dist'].nunique()),
+        # style="is_safe",
+        # markers=safe_markers,
+        data=data_to_plot,
+        legend="full",
+        # legend="brief",
+        alpha=0.5,
+        ax=ax0
+    )
+    # fig.subplots_adjust(right=0.9)
+    # g.legend(bbox_to_anchor=(1, 1), loc=2, borderaxespad=0., ncol=1)
+    legend = g.legend_
+    for i, label_text in enumerate(legend.texts):
+        try:
+            label_text.set_text(round(float(label_text.get_text()), 2))
+        except ValueError:
+            pass
 
 def update_graph(fig, ax, line1, x_value, y_value):
     line1.set_xdata(np.append(line1.get_xdata(), x_value))
@@ -356,7 +519,8 @@ def my_train(epoch, loss_plots):
         #     print ("f.data.shape: ", f.data.shape)
             # print ("f.data: ", f.data)
         # raw_input()
-        if batch_idx % args.log_interval == 0:
+        # if batch_idx % args.log_interval == 0:
+        if epoch % args.epoch_log_interval == 0:
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 epoch, batch_idx * len(data), len(my_train_set_loader.dataset),
                 100. * batch_idx / len(my_train_set_loader),
@@ -369,8 +533,9 @@ def my_train(epoch, loss_plots):
 
     # update_graph(loss_plots["loss"]["fig"], loss_plots["loss"]["ax"], loss_plots["loss"]["line1"], len(my_train_set_loader) + epoch*len(my_train_set_loader), loss.item()/len(data))
 
-    print('====> Epoch: {} Average loss: {:.4f}'.format(
-          epoch, train_loss / len(my_train_set_loader.dataset)))
+    if epoch % args.epoch_log_interval == 0:
+        print('====> Epoch: {} Average loss: {:.4f}'.format(
+            epoch, train_loss / len(my_train_set_loader.dataset)))
     
     latest_train_loss = train_loss / len(my_train_set_loader.dataset)
 
@@ -392,7 +557,8 @@ def my_test(epoch, loss_plots):
 
     test_loss /= len(my_test_set_loader.dataset)
     args.latest_test_loss = copy.deepcopy(test_loss)
-    print('====> Test set loss: {:.4f}'.format(test_loss))
+    if epoch % args.epoch_log_interval == 0:
+        print('====> Test set loss: {:.4f}'.format(test_loss))
     if loss_plots != None:
         update_graph(loss_plots["test_loss"]["fig"], loss_plots["test_loss"]["ax"], loss_plots["test_loss"]["line1"], len(my_train_set_loader) + epoch*len(my_train_set_loader), test_loss)
     # update_graph(loss_plots["test_loss"]["fig"], loss_plots["test_loss"]["ax"], loss_plots["test_loss"]["line1"], len(my_train_set_loader) + epoch*len(my_train_set_loader), test_loss.item()/len(data))
@@ -423,8 +589,10 @@ if __name__ == "__main__":
         my_test("loaded_model", None)
     else:
         if args.parameters_search == True:
-            alpha_list = [1, 2, 5, 10, 25, 50, 100, 250, 500, 100, 200, 50, 100, 1, 1, 1, 1, 1, 1, 1, 1, 0.1, 0.1, 0.01, 0.01]
-            beta_list = [1, 1, 1, 1, 1, 1, 1, 1, 1, 0.1, 0.1, 0.01, 0.01, 2, 5, 10, 25, 50, 100, 250, 500, 100, 200, 50, 100]
+            # alpha_list = [1, 2, 5, 10, 25, 50, 100, 250, 500, 100, 200, 50, 100, 1, 1, 1, 1, 1, 1, 1, 1, 0.1, 0.1, 0.01, 0.01]
+            # beta_list = [1, 1, 1, 1, 1, 1, 1, 1, 1, 0.1, 0.1, 0.01, 0.01, 2, 5, 10, 25, 50, 100, 250, 500, 100, 200, 50, 100]
+            alpha_list = [100, 250, 500, 100, 200, 50, 100, 1, 1, 1, 1, 1, 1, 1, 1, 0.1, 0.1, 0.01, 0.01]
+            beta_list = [1, 1, 1, 0.1, 0.1, 0.01, 0.01, 2, 5, 10, 25, 50, 100, 250, 500, 100, 200, 50, 100]
             # alpha_list = [200, 100]
             # beta_list = [0.1, 0.1]
         else:
@@ -472,7 +640,9 @@ if __name__ == "__main__":
             #     save_path = args.save_dir + str(args.vae_dim) + "_dim/" + alpha_str + "_" + beta_str + "_" + str(args.epochs) + "e_" + dataset_str + "/model.pt"
             # else:
             #     save_path = args.save_dir + alpha_str + "_" + beta_str + "_" + str(args.epochs) + "e_" + dataset_str + "/model.pt"
-            os.makedirs(os.path.dirname(save_path), exist_ok=True)
+            
+            os.makedirs(os.path.dirname(save_path))
+            # os.makedirs(os.path.dirname(save_path), exist_ok=True)
 
             loss_plots = {
                 "loss": {
