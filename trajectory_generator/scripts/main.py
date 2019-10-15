@@ -47,15 +47,16 @@ parser.add_argument('--models-dir', default="nn_models", help='directory from wh
 parser.add_argument('--decoder-model-file', default="model_trajectory_vae", help='file from where to load the network shape of the action decoder')
 parser.add_argument('--decoder-dir', default=package_path + "/saved_models/trajectory_vae/", help='directory from where to load the trained model of the action decoder')
 parser.add_argument('--decoder-sd', default=False, help='file from where to load the trained model of the action decoder')
-parser.add_argument('--latent-space-data', nargs='?', const=True, default=False, help='file from where to load the data of the latent space')
+parser.add_argument('--encoder-model-file', default="model_state_vae", help='file from where to load the network shape of the state encoder')
 parser.add_argument('--encoder-dir', default=package_path + "/saved_models/state_vae/", help='directory from where to load the trained model of the state encoder')
-parser.add_argument('--encoder-file', default="model_state_vae.py", help='file from where to load the network shape of the state encoder')
 parser.add_argument('--encoder-sd', default=False, help='file from where to load the trained model of the state encoder')
+parser.add_argument('--latent-space-data', nargs='?', const=True, default=False, help='file from where to load the data of the latent space')
 parser.add_argument('--algorithm-dir', default="learning_algorithms", help='directory from where to load the learning algorithm')
 parser.add_argument('--algorithm', default="pytorch_reinforce", help='file from where to load the learning algorithm')
 parser.add_argument('--scripts-dir', default=package_path + "/scripts/", help='directory from where to load the scripts')
 parser.add_argument('--image-reader', default="imager", help='file from where to load the learning algorithm')
-parser.add_argument('--action-script', default="writer_from_generated", help='file from where to load the learning algorithm')
+parser.add_argument('--sensing-script', default="stone_sensing", help='file from where to load the sensing script')
+parser.add_argument('--action-script', default="writer_from_generated", help='file from where to load the action script')
 parser.add_argument('--safety-check-script', default="safety_check_client", help='script for the trajectory safety check')
 parser.add_argument('--trajectory-writer-script', default="writer_from_generated", help='script publishing the trajectory')
 
@@ -101,6 +102,17 @@ else:
     decoder_model.load_state_dict(decoder_sd)
     decoder_model.eval()
 
+if not args.encoder_sd:
+    print ("No encoder state dictionary specified: provide the file name of the encoder trained model using the '--encoder-sd' argument")
+    sys.exit(2)
+elif "DUMMY" != args.encoder_sd.upper():
+    encoder_sd = torch.load(args.encoder_dir+args.encoder_sd)
+    args.state_dim = len(encoder_sd["fc21.bias"])
+    encoder_module = importlib.import_module(args.models_dir + "." + args.encoder_model_file)
+    encoder_model = encoder_module.STATE_VAE(args.state_dim).to(device)
+    encoder_model.load_state_dict(encoder_sd)
+    encoder_model.eval()
+
 if not args.algorithm:
     print ("No learning algorithm specified: provide the file name of the learning algorithm using the '--algorithm' argument")
     sys.exit(2)
@@ -111,6 +123,7 @@ if args.reward_type.upper() not in ["DISCRETE", "CONTINUOUS", "D", "C"]:
     print("argument --reward-type not valid")
     sys.exit(2)
 
+sensing_script = importlib.import_module(args.sensing_script)
 action_script = importlib.import_module(args.action_script)
 image_reader_module = importlib.import_module(args.image_reader)
 safety_check_module = importlib.import_module(args.safety_check_script)
@@ -1232,7 +1245,7 @@ if args.latent_space_data != False:
     actions = [(vel, latent_space_data["vel"][vel]["mean"]) for vel in latent_space_data["vel"]]
     actions.sort()  # slow to fast
     actions = [action[1] for action in actions]
-    initial_actions = [actions[-1]] + [actions[0]] + [actions[-6]]
+    initial_actions = [actions[-1]] + [actions[0]] + [actions[-2]]
     initial_actions += random.sample(actions, args.batch_size)
 else:
     initial_means = a200_b001_20000e_latent_space_means
@@ -1241,9 +1254,22 @@ else:
 
 best_det_reward = None
 
-def get_dummy_state(dim):
+def get_state(dim):
+    if "DUMMY" == args.encoder_sd.upper():
+        return torch.ones(dim)
+    else:
+        sensors_data = sensing_script.sense_stone()
+        forces_tensor = []
+        forces_tensor.append(sensors_data["force"]["x"][-1])
+        forces_tensor.append(sensors_data["force"]["y"][-1])
+        forces_tensor.append(sensors_data["force"]["z"][-1])
+        forces_tensor.append(sensors_data["torque"]["x"][-1])
+        forces_tensor.append(sensors_data["torque"]["y"][-1])
+        forces_tensor.append(sensors_data["torque"]["z"][-1])
+        state_encoding = encoder_model.encode(torch.tensor(forces_tensor).view(-1, 600))
+        state_mu = state_encoding[0].detach()
+        return state_mu
     # return torch.randn(dim)
-    return torch.ones(dim)
     # return torch.zeros(dim)
 
 def get_dummy_action(dim):
@@ -1304,7 +1330,7 @@ def evaluate_board(image_reader=None):
 	return reward, distance, angle
 
 def measure_performance(image_reader=None, trajectory_dict=None, algorithm=None, decoder_model=None, safety_check_module=None):
-	state = get_dummy_state(algorithm.policy.in_dim)
+	state = get_state(algorithm.policy.in_dim)
 	mean = algorithm.get_policy_mean(state)
 	print ("mean: {}".format(mean))
 	trajectory = decoder_model.decode(mean)
@@ -1425,7 +1451,7 @@ def main(args):
             episode_reward = 0
             for t in range(args.batch_size):
                 print ("t = {}".format(t))
-                state = get_dummy_state(algorithm.policy.in_dim)
+                state = get_state(algorithm.policy.in_dim)
                 command = True
                 while "" != command:
                     command = raw_input("Enter command (leave blank to execute action): ")
