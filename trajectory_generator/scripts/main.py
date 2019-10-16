@@ -1245,7 +1245,7 @@ if args.latent_space_data != False:
     actions = [(vel, latent_space_data["vel"][vel]["mean"]) for vel in latent_space_data["vel"]]
     actions.sort()  # slow to fast
     actions = [action[1] for action in actions]
-    initial_actions = [actions[-1]] + [actions[0]] + [actions[-2]]
+    initial_actions = [actions[-1]] + [actions[0]] + [actions[-2]] + [actions[-3]]
     initial_actions += random.sample(actions, args.batch_size)
 else:
     initial_means = a200_b001_20000e_latent_space_means
@@ -1266,8 +1266,8 @@ def get_state(dim):
         forces_tensor.append(sensors_data["torque"]["x"][-1])
         forces_tensor.append(sensors_data["torque"]["y"][-1])
         forces_tensor.append(sensors_data["torque"]["z"][-1])
-        state_encoding = encoder_model.encode(torch.tensor(forces_tensor).view(-1, 600))
-        state_mu = state_encoding[0].detach()
+        state_mu, state_logvar = encoder_model.encode(torch.tensor(forces_tensor).view(-1, 600))
+        state_mu = state_mu[0].detach()
         return state_mu
     # return torch.randn(dim)
     # return torch.zeros(dim)

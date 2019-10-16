@@ -35,9 +35,9 @@ parser.add_argument('--repetitions', default=2, type=int, help='number of times 
 
 args, unknown = parser.parse_known_args()
 
-def filtered_plot(l, labels):
+def old_filtered_plot(l, labels):
     y = l[-1]
-    sns.scatterplot(range(len(y)), y, color="pink", label=labels[-1], legend="full")
+    sns.scatterplot(range(len(y)), y, color="purple", label=labels[-1], legend="full")
     y = l[-2]
     sns.scatterplot(range(len(y)), y, color="b", label=labels[-2], legend="full")
     y = l[-3]
@@ -46,15 +46,73 @@ def filtered_plot(l, labels):
     sns.scatterplot(range(len(y)), y, color="r", label=labels[-4], legend="full")
     plt.show()
 
-def raw_plot(l):
+def filtered_plot(l, labels):
+    fig = plt.figure("filtered_plot")
+    ax1 = fig.add_subplot(3, 2, 1)
+    ax2 = fig.add_subplot(3, 2, 2)
+    ax3 = fig.add_subplot(3, 2, 3)
+    ax4 = fig.add_subplot(3, 2, 4)
+    ax5 = fig.add_subplot(3, 2, 5)
+    ax6 = fig.add_subplot(3, 2, 6)
+    colors = ["r", "g", "b", "purple"]
+    ax1.set_title("force")
+    ax1.set_ylabel("x")
+    ax2.set_title("torque")
+    ax3.set_ylabel("y")
+    ax5.set_ylabel("z")
+    for i in range(1, 5):
+        y = l["force"]["x"][-i]
+        g = sns.scatterplot(x=range(len(y)), y=y, color=colors[-i], label=labels[-i], legend="full", alpha=0.8, ax=ax1)
+        y = l["force"]["y"][-i]
+        g = sns.scatterplot(x=range(len(y)), y=y, color=colors[-i], label=labels[-i], legend="full", alpha=0.8, ax=ax3)
+        y = l["force"]["z"][-i]
+        g = sns.scatterplot(x=range(len(y)), y=y, color=colors[-i], label=labels[-i], legend="full", alpha=0.8, ax=ax5)
+        y = l["torque"]["x"][-i]
+        g = sns.scatterplot(x=range(len(y)), y=y, color=colors[-i], label=labels[-i], legend="full", alpha=0.8, ax=ax2)
+        y = l["torque"]["y"][-i]
+        g = sns.scatterplot(x=range(len(y)), y=y, color=colors[-i], label=labels[-i], legend="full", alpha=0.8, ax=ax4)
+        y = l["torque"]["z"][-i]
+        g = sns.scatterplot(x=range(len(y)), y=y, color=colors[-i], label=labels[-i], legend="full", alpha=0.8, ax=ax6)
+    plt.show()
+
+def old_raw_plot(l):
     y = [item for sublist in l[-1] for item in sublist]
-    sns.scatterplot(range(len(y)), y, color="pink")
+    sns.scatterplot(range(len(y)), y, color="purple")
     y = [item for sublist in l[-2] for item in sublist]
     sns.scatterplot(range(len(y)), y, color="b")
     y = [item for sublist in l[-3] for item in sublist]
     sns.scatterplot(range(len(y)), y, color="g")
     y = [item for sublist in l[-4] for item in sublist]
     sns.scatterplot(range(len(y)), y, color="r")
+    plt.show()
+
+def raw_plot(l):
+    fig = plt.figure("raw_plot")
+    ax1 = fig.add_subplot(3, 2, 1)
+    ax2 = fig.add_subplot(3, 2, 2)
+    ax3 = fig.add_subplot(3, 2, 3)
+    ax4 = fig.add_subplot(3, 2, 4)
+    ax5 = fig.add_subplot(3, 2, 5)
+    ax6 = fig.add_subplot(3, 2, 6)
+    colors = ["r", "g", "b", "purple"]
+    ax1.set_title("force")
+    ax1.set_ylabel("x")
+    ax2.set_title("torque")
+    ax3.set_ylabel("y")
+    ax5.set_ylabel("z")
+    for i in range(1, 5):
+        y = [item for sublist in l["force"]["x"][-i] for item in sublist]
+        g = sns.scatterplot(x=range(len(y)), y=y, color=colors[-i], legend="full", ax=ax1)
+        y = [item for sublist in l["force"]["y"][-i] for item in sublist]
+        g = sns.scatterplot(x=range(len(y)), y=y, color=colors[-i], legend="full", ax=ax3)
+        y = [item for sublist in l["force"]["z"][-i] for item in sublist]
+        g = sns.scatterplot(x=range(len(y)), y=y, color=colors[-i], legend="full", ax=ax5)
+        y = [item for sublist in l["torque"]["x"][-i] for item in sublist]
+        g = sns.scatterplot(x=range(len(y)), y=y, color=colors[-i], legend="full", ax=ax2)
+        y = [item for sublist in l["torque"]["y"][-i] for item in sublist]
+        g = sns.scatterplot(x=range(len(y)), y=y, color=colors[-i], legend="full", ax=ax4)
+        y = [item for sublist in l["torque"]["z"][-i] for item in sublist]
+        g = sns.scatterplot(x=range(len(y)), y=y, color=colors[-i], legend="full", ax=ax6)
     plt.show()
 
 def pose_move(group=None, point=None):
@@ -101,13 +159,15 @@ def check_grasp(robot=None, gripper_move_pub=None):
         return True
 
 def subsample_list(list_to_subsample, samples_nr):
+    if samples_nr > len(list_to_subsample):
+        raw_input("The list does not contain enough samples: {} samples requested, but {} samples are in the list".format(samples_nr, len(list_to_subsample)))
     real_sample_interval = len(list_to_subsample)/float(samples_nr)
     current_sample_interval = int(real_sample_interval)
     sample_interval_avg = None
     sample_index = 0
     test = []
     subsamples = []
-    while len(subsamples) < 100:
+    while len(subsamples) < samples_nr:
         if len(subsamples) != 0 and sample_index >= len(list_to_subsample):
             sample_index = len(subsamples)-1
         subsamples.append(list_to_subsample[sample_index])
@@ -248,33 +308,33 @@ def sense_stone(output_folder="latest", is_simulation=False, is_learning=True, r
     grasping_points = {
         "10": {            
             "orientation": [-0.9239, 0.3826, -7.02665323908824e-05, 0.0001], # x, y, z, w
-            "position": [0.360, 0.063, 0.959], # x, y, z
-            "hovering_joints_position": [0.36696093194814283, 0.17944039607466314, 0.4089761023876119, -2.358461730187831, -0.12317095402943311, 2.5191082320543745, 0.08425164690794548],
-            "grasping_joints_position": [0.4260575038152828, 0.4334983963393511, 0.3151125600120057, -2.3362570904182687, -0.3284292590488873, 2.7300798716132246, 0.23072858667767124]
+            "position": [0.360, 0, 0.959], # x, y, z
+            "hovering_joints_position": [0.5142469373983083, 0.58864791404992, 0.4109301574533518, -1.7464407590397617, -0.2942778061838653, 2.2733246678428056, 0.26931423637248975],
+            "grasping_joints_position": [0.5584349823003857, 0.7669955060133635, 0.34803027073230886, -1.7289693730492495, -0.372046103130778, 2.4307231125368634, 0.3161871728630494]
         },
         "20": {
             "orientation": [-0.9239, 0.3826, -7.02665323908824e-05, 0.0001], # x, y, z, w
-            "position": [0.210, 0.063, 0.959], # x, y, z
-            "hovering_joints_position": [0.09197913135191854, -0.06794736741508771, 0.4429717659580504, -2.664749506900185, 0.05786304345829169, 2.6017944910261366, -0.30182371413154874],
-            "grasping_joints_position": [0.1547609451772318, 0.2666294309465509, 0.30558009457633056, -2.639995261242515, -0.3112949253521605, 2.882298212263319, -0.0340398218951605]
+            "position": [0.210, 0, 0.959], # x, y, z
+            "hovering_joints_position": [0.41443757597396247, 0.46631249645310835, 0.4235820091639901, -1.9450973129794462, -0.26485765947898227, 2.35714606514291, 0.2023833901636485],
+            "grasping_joints_position": [0.46923908052318963, 0.6613585829651146, 0.3477711293421327, -1.9254993174133115, -0.37074258951259165, 2.5235585845190327, 0.2691860056346718]
         },
         "30": {
             "orientation": [-0.9239, 0.3826, -7.02665323908824e-05, 0.0001], # x, y, z, w
-            "position": [0.060, 0.063, 0.959], # x, y, z
-            "hovering_joints_position": [-0.2963754566866036, -0.22609519766033184, 0.5066942452590402, -2.822304789117009, 0.21546041037639288, 2.613143800150113, -0.7740535357700479],
-            "grasping_joints_position": [-0.19486450364276442, 0.17763616890843223, 0.28773354355127934, -2.8004517943398994, -0.28575185754343313, 2.962733009843974, -0.4160978253429793]
+            "position": [0.060, 0, 0.959], # x, y, z
+            "hovering_joints_position": [0.29283302700937835, 0.3594985494195369, 0.4567617479473339, -2.113724579560129, -0.23796098346843167, 2.4241980358757487, 0.12007181211959518],
+            "grasping_joints_position": [0.36017622283046086, 0.5738621895689713, 0.36335281852253676, -2.0926987548863014, -0.386788282930851, 2.6037577000270917, 0.21925989602626683]
         },
         "40": {
             "orientation": [-0.9239, 0.3826, -7.02665323908824e-05, 0.0001], # x, y, z, w
-            "position": [-0.090, 0.063, 0.959], # x, y, z
-            "hovering_joints_position": [0.2374669449747654, -0.20859305197716996, -0.5233313921309419, -2.8038381514632906, -0.20888573720058043, 2.6131777341570905, -0.8799971305608723],
-            "grasping_joints_position": [0.12372470620042843, 0.18846930262097014, -0.2952061458441635, -2.781528095056179, 0.29313913822709015, 2.9528340691460504, -1.2398218304215838]
+            "position": [-0.090, 0, 0.959], # x, y, z
+            "hovering_joints_position": [0.23743921274672905, 0.2517310960090678, 0.419285442544725, -2.2607955156292827, -0.16672964333228762, 2.485045480199256, -0.007544105715858234],
+            "grasping_joints_position": [0.3001652932277772, 0.4882139589084475, 0.3272152716010523, -2.2381679057515567, -0.34320602850340026, 2.679322558014489, 0.11473005577259905]
         },
         "learning_stone": {
             "orientation": [-0.9239, 0.3826, -7.02665323908824e-05, 0.0001], # x, y, z, w
-            "position": [0.360, 0.063, 0.959], # x, y, z
-            "hovering_joints_position": [0.36696093194814283, 0.17944039607466314, 0.4089761023876119, -2.358461730187831, -0.12317095402943311, 2.5191082320543745, 0.08425164690794548],
-            "grasping_joints_position": [0.4260575038152828, 0.4334983963393511, 0.3151125600120057, -2.3362570904182687, -0.3284292590488873, 2.7300798716132246, 0.23072858667767124]
+            "position": [0.360, 0, 0.959], # x, y, z
+            "hovering_joints_position": [-0.22418082891116864, -0.021118342585632, 0.01563296593681296, -2.6142579815562224, -0.00010159493463057645, 2.5934383369042777, -0.9943609043742773],
+            "grasping_joints_position": [-0.22022550052894801, 0.27592300802189773, 0.009137543043775277, -2.598599127845808, -0.01297810329839507, 2.8747516451494377, -0.9849187362178262]
         }
     }
 
@@ -315,17 +375,35 @@ def sense_stone(output_folder="latest", is_simulation=False, is_learning=True, r
 
             [0.110, -0.025, 1.100]
         ],
+        "predefined_joints_path": [
+            [0.5061984524379249, -0.17315264765564847, -0.22725228734664832, -2.7905919022154224, -0.07659106785917477, 2.618745111407918, -0.4369418799075402],
+            [0.22389371792057103, -0.4881079590929628, 0.06878514456188034, -2.6440227623989645, 0.038908337513605784, 2.1557850458984777, -0.522047535885542]
+        ],
         "joints_positions": [
+            # normal
             [0.19445120013816, -0.21487730565614868, 0.04427450973878616, -2.3955809373590724, 0.01187810182718171, 2.180555477353596, -0.5547206810216108],
 
-    #         [0.3351801368290918, -0.29662777607797913, -0.11244693900398067, -2.3844817042769044, 0.4160744979646716, 1.7924010314720245, -1.3208833060871592],
+    #         # 8 shape
+    # #         [0.3351801368290918, -0.29662777607797913, -0.11244693900398067, -2.3844817042769044, 0.4160744979646716, 1.7924010314720245, -1.3208833060871592],
     #         [0.3619200299155657, -0.23360565089133745, -0.12781654499551712, -2.3745498456453022, 0.978863298841051, 2.1175465971498175, -1.117479492057386],
-    # # [0.30448947731444703, -0.12694879574524728, -0.051233081743954974, -2.3243839509474378, 0.8545456072769047, 2.48963434716984, -0.5527099020836809],
-    #         [0.15692759708981763, -0.2920189494293214, 0.12201354729948073, -2.3580899385820357, -0.21012455755472154, 1.705037037051065, 0.0049194150333632955],
+    # # # [0.30448947731444703, -0.12694879574524728, -0.051233081743954974, -2.3243839509474378, 0.8545456072769047, 2.48963434716984, -0.5527099020836809],
+    # #         [0.15692759708981763, -0.2920189494293214, 0.12201354729948073, -2.3580899385820357, -0.21012455755472154, 1.705037037051065, 0.0049194150333632955],
     #         [0.12587268760957215, -0.11777158826903292, 0.16212125076698525, -2.21868566964802, -0.8504195135672374, 1.77099568547142, -0.2145776784027563],
-    # # [0.14789706793375182, -0.13316567956848385, 0.0641090490445283, -2.301253765842371, -0.7098326927480935, 2.3117149482243375, -0.8717583615683947],
+    # # # [0.14789706793375182, -0.13316567956848385, 0.0641090490445283, -2.301253765842371, -0.7098326927480935, 2.3117149482243375, -0.8717583615683947],
 
-    #         [0.19445120013816, -0.21487730565614868, 0.04427450973878616, -2.3955809373590724, 0.01187810182718171, 2.180555477353596, -0.5547206810216108],
+            # # max force on x
+            # [0.3580385840838415, -0.22323768461422525, -0.1588374459835385, -2.355844996096438, 1.6573459696700605, 1.7795040021472508, -1.349393375527316],
+            # # almost max force on y
+            # [0.23969123298243467, -0.1792329619555566, -0.12297258245354055, -2.256062999568857, 0.08960046780666968, 3.6497432763667486, -0.8688858720449072],
+            
+            # almost max force on x
+            [0.3577381551594371, -0.2212658614213006, -0.15405057695574867, -2.350672152502495, 1.4752342208280778, 1.8857782667261198, -1.3482390514999687],
+            # normal
+            [0.19445120013816, -0.21487730565614868, 0.04427450973878616, -2.3955809373590724, 0.01187810182718171, 2.180555477353596, -0.5547206810216108],
+            # almost max force on x
+            [0.3577381551594371, -0.2212658614213006, -0.15405057695574867, -2.350672152502495, 1.4752342208280778, 1.8857782667261198, -1.3482390514999687],
+            # normal
+            [0.19445120013816, -0.21487730565614868, 0.04427450973878616, -2.3955809373590724, 0.01187810182718171, 2.180555477353596, -0.5547206810216108],
         ]
     }
 
@@ -340,7 +418,7 @@ def sense_stone(output_folder="latest", is_simulation=False, is_learning=True, r
         # if type(labels) == list and len(labels) > 1:
         #     random.shuffle(labels)
         
-        for label in labels:
+        for label_index, label in enumerate(labels):
             print ("Now sensing stone with label '" + str(label) + "'...")
             # raw_input("Press enter to sense.")
             # raw_input("Press enter to move to the grasping point.")
@@ -359,7 +437,8 @@ def sense_stone(output_folder="latest", is_simulation=False, is_learning=True, r
             # group.clear_pose_targets()
 
             # planning in joint space
-            joint_move(group, grasping_points[str(label)]["hovering_joints_position"])
+            if label_index == 0:
+                joint_move(group, grasping_points[str(label)]["hovering_joints_position"])
             joint_move(group, grasping_points[str(label)]["grasping_joints_position"])
 
             rospy.rostime.wallsleep(0.5)
@@ -374,8 +453,8 @@ def sense_stone(output_folder="latest", is_simulation=False, is_learning=True, r
                     open_gripper(gripper_move_pub)
                     raw_input("Grasping was unsuccesfull, reposition the stone and press enter.\n")
 
-            joint_move(group, grasping_points[str(label)]["hovering_joints_position"])
 
+            joint_move(group, grasping_points[str(label)]["hovering_joints_position"])
             # pose_goal = geometry_msgs.msg.Pose()
             waypoints = []
 
@@ -389,7 +468,12 @@ def sense_stone(output_folder="latest", is_simulation=False, is_learning=True, r
             
             stone_grasped = False
             while not stone_grasped:
-                for pos_index, pos in enumerate(sensing_waypoints["joints_positions"]):
+                if not is_learning:
+                    joint_move(group, grasping_points["learning_stone"]["grasping_joints_position"])
+                    joint_move(group, grasping_points["learning_stone"]["hovering_joints_position"])
+                # for pos in sensing_waypoints["predefined_joints_path"]:
+                #     joint_move(group, pos)
+                for sensing_pos_index, pos in enumerate(sensing_waypoints["joints_positions"]):
                     sensing_step = {
                         "force": {
                             "x": [],
@@ -403,13 +487,16 @@ def sense_stone(output_folder="latest", is_simulation=False, is_learning=True, r
                         },
                     }
                     joint_move(group, pos)
-                    if pos_index == 0:
-                        rospy.rostime.wallsleep(5)
+                    if sensing_pos_index == 0:
+                        rospy.rostime.wallsleep(1)
                     else:
-                        rospy.rostime.wallsleep(0.5)
-                    sub = rospy.Subscriber("/panda/franka_state_controller/F_ext", geometry_msgs.msg.WrenchStamped, callback, [sensing_step])
-                    rospy.rostime.wallsleep(5)
-                    sub.unregister()
+                        rospy.rostime.wallsleep(1)
+                    if sensing_pos_index != 0:
+                        sub = rospy.Subscriber("/panda/franka_state_controller/F_ext", geometry_msgs.msg.WrenchStamped, callback, [sensing_step])
+                        rospy.rostime.wallsleep(4)
+                        sub.unregister()
+                    else:
+                        rospy.rostime.wallsleep(4)
 
                     stone_grasped = check_grasp(robot, gripper_move_pub)
                     if not stone_grasped:
@@ -438,12 +525,13 @@ def sense_stone(output_folder="latest", is_simulation=False, is_learning=True, r
                         stone_grasped = False
                         break
                 
-                    sensors_data["raw"]["force"]["x"][-1].append(sensing_step["force"]["x"])
-                    sensors_data["raw"]["force"]["y"][-1].append(sensing_step["force"]["y"])
-                    sensors_data["raw"]["force"]["z"][-1].append(sensing_step["force"]["z"])
-                    sensors_data["raw"]["torque"]["x"][-1].append(sensing_step["torque"]["x"])
-                    sensors_data["raw"]["torque"]["y"][-1].append(sensing_step["torque"]["y"])
-                    sensors_data["raw"]["torque"]["z"][-1].append(sensing_step["torque"]["z"])
+                    if sensing_pos_index != 0:
+                        sensors_data["raw"]["force"]["x"][-1].append(sensing_step["force"]["x"])
+                        sensors_data["raw"]["force"]["y"][-1].append(sensing_step["force"]["y"])
+                        sensors_data["raw"]["force"]["z"][-1].append(sensing_step["force"]["z"])
+                        sensors_data["raw"]["torque"]["x"][-1].append(sensing_step["torque"]["x"])
+                        sensors_data["raw"]["torque"]["y"][-1].append(sensing_step["torque"]["y"])
+                        sensors_data["raw"]["torque"]["z"][-1].append(sensing_step["torque"]["z"])
 
             if not is_learning:
                 joint_move(group, grasping_points[str(label)]["hovering_joints_position"])
@@ -453,7 +541,8 @@ def sense_stone(output_folder="latest", is_simulation=False, is_learning=True, r
 
                 rospy.rostime.wallsleep(1)
 
-                joint_move(group, grasping_points[str(label)]["hovering_joints_position"])
+                if (label_index+1) == len(labels):
+                    joint_move(group, grasping_points[str(label)]["hovering_joints_position"])
 
                 # for waypoint_index, _ in enumerate(sensing_waypoints["orientations"]):
 
@@ -486,6 +575,9 @@ def sense_stone(output_folder="latest", is_simulation=False, is_learning=True, r
                 #     raw_input("Press enter to start sensing.")
                 #     group.execute(plan, wait=True)
                 #     group.stop()
+            number_of_readings = len(sensing_waypoints["joints_positions"]) - 1
+            min_sublist_len = int(100/number_of_readings) + 1
+
             alpha = 0.8
             sensors_data["filtered"]["alpha"] = alpha
             sensors_data["raw"]["label"].append(label)
@@ -505,12 +597,19 @@ def sense_stone(output_folder="latest", is_simulation=False, is_learning=True, r
             # sensors_data["filtered"]["torque"]["y"] = [[item for sublist in sensors_data["raw"]["torque"]["y"][-1] for item in filter_list(sublist, alpha)]]
             # sensors_data["filtered"]["torque"]["z"] = [[item for sublist in sensors_data["raw"]["torque"]["z"][-1] for item in filter_list(sublist, alpha)]]
             
-            sensors_data["filtered"]["force"]["x"] = [[item for sublist in sensors_data["raw"]["force"]["x"][-1] for item in [sum(sublist)/len(sublist)]*len(sublist)]]
-            sensors_data["filtered"]["force"]["y"] = [[item for sublist in sensors_data["raw"]["force"]["y"][-1] for item in [sum(sublist)/len(sublist)]*len(sublist)]]
-            sensors_data["filtered"]["force"]["z"] = [[item for sublist in sensors_data["raw"]["force"]["z"][-1] for item in [sum(sublist)/len(sublist)]*len(sublist)]]
-            sensors_data["filtered"]["torque"]["x"] = [[item for sublist in sensors_data["raw"]["torque"]["x"][-1] for item in [sum(sublist)/len(sublist)]*len(sublist)]]
-            sensors_data["filtered"]["torque"]["y"] = [[item for sublist in sensors_data["raw"]["torque"]["y"][-1] for item in [sum(sublist)/len(sublist)]*len(sublist)]]
-            sensors_data["filtered"]["torque"]["z"] = [[item for sublist in sensors_data["raw"]["torque"]["z"][-1] for item in [sum(sublist)/len(sublist)]*len(sublist)]]
+            # sensors_data["filtered"]["force"]["x"] = [[item for sublist in sensors_data["raw"]["force"]["x"][-1] for item in [sum(sublist)/len(sublist)]*len(sublist)]]
+            # sensors_data["filtered"]["force"]["y"] = [[item for sublist in sensors_data["raw"]["force"]["y"][-1] for item in [sum(sublist)/len(sublist)]*len(sublist)]]
+            # sensors_data["filtered"]["force"]["z"] = [[item for sublist in sensors_data["raw"]["force"]["z"][-1] for item in [sum(sublist)/len(sublist)]*len(sublist)]]
+            # sensors_data["filtered"]["torque"]["x"] = [[item for sublist in sensors_data["raw"]["torque"]["x"][-1] for item in [sum(sublist)/len(sublist)]*len(sublist)]]
+            # sensors_data["filtered"]["torque"]["y"] = [[item for sublist in sensors_data["raw"]["torque"]["y"][-1] for item in [sum(sublist)/len(sublist)]*len(sublist)]]
+            # sensors_data["filtered"]["torque"]["z"] = [[item for sublist in sensors_data["raw"]["torque"]["z"][-1] for item in [sum(sublist)/len(sublist)]*len(sublist)]]
+
+            sensors_data["filtered"]["force"]["x"] = [[item for sublist in sensors_data["raw"]["force"]["x"][-1] for item in [sum(sublist)/len(sublist)]*min_sublist_len]]
+            sensors_data["filtered"]["force"]["y"] = [[item for sublist in sensors_data["raw"]["force"]["y"][-1] for item in [sum(sublist)/len(sublist)]*min_sublist_len]]
+            sensors_data["filtered"]["force"]["z"] = [[item for sublist in sensors_data["raw"]["force"]["z"][-1] for item in [sum(sublist)/len(sublist)]*min_sublist_len]]
+            sensors_data["filtered"]["torque"]["x"] = [[item for sublist in sensors_data["raw"]["torque"]["x"][-1] for item in [sum(sublist)/len(sublist)]*min_sublist_len]]
+            sensors_data["filtered"]["torque"]["y"] = [[item for sublist in sensors_data["raw"]["torque"]["y"][-1] for item in [sum(sublist)/len(sublist)]*min_sublist_len]]
+            sensors_data["filtered"]["torque"]["z"] = [[item for sublist in sensors_data["raw"]["torque"]["z"][-1] for item in [sum(sublist)/len(sublist)]*min_sublist_len]]
 
             sensors_data["filtered"]["subsamples"]["force"]["x"].append(subsample_list(sensors_data["filtered"]["force"]["x"][-1], 100))
             sensors_data["filtered"]["subsamples"]["force"]["y"].append(subsample_list(sensors_data["filtered"]["force"]["y"][-1], 100))
@@ -532,6 +631,9 @@ def sense_stone(output_folder="latest", is_simulation=False, is_learning=True, r
             open_gripper(gripper_move_pub)
             rospy.rostime.wallsleep(1)
             return sensors_data["filtered"]["subsamples"]
+
+        if (repetition+1) % 10 == 0:
+            print("Round {} finished".format(int(repetition/10)))
 
 
     print("End of sensing")
