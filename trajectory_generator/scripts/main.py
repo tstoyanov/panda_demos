@@ -62,7 +62,7 @@ parser.add_argument('--trajectory-writer-script', default="writer_from_generated
 
 parser.add_argument('--no-plot', nargs='?', const=True, default=False, help='whether to plot data or not')
 parser.add_argument('--safe-execution-time', type=int, default=9000000000, help='safe execution time in nanoseconds')
-parser.add_argument('--execution-time', type=int, default=2000000000, help='execution time in nanoseconds')
+parser.add_argument('--execution-time', type=int, default=1700000000, help='execution time in nanoseconds')
 parser.add_argument('--release-frame', type=int, default=95, help='release frame')
 
 parser.add_argument('--save-dir', default=package_path + "/saved_models/policy_network/", help='directory where to save the policy model once trained')
@@ -1245,7 +1245,8 @@ if args.latent_space_data != False:
     actions = [(vel, latent_space_data["vel"][vel]["mean"]) for vel in latent_space_data["vel"]]
     actions.sort()  # slow to fast
     actions = [action[1] for action in actions]
-    initial_actions = [actions[-1]] + [actions[0]] + [actions[-2]] + [actions[-3]]
+    initial_actions = [actions[-4]] + [actions[0]] + [actions[-2]] + [actions[-3]]
+    # initial_actions = [actions[-1]] + [actions[0]] + [actions[-2]] + [actions[-3]]
     initial_actions += random.sample(actions, args.batch_size)
 else:
     initial_means = a200_b001_20000e_latent_space_means
@@ -1517,7 +1518,7 @@ def main(args):
                         safe_throws += 1
                         print("\nn = {}".format(n+1))
                         if "skip" != command:
-                            execute_action(input_folder=False, tot_time_nsecs=args.safe_execution_time, is_simulation=False, is_learning=True, t=trajectory_dict)
+                            # execute_action(input_folder=False, tot_time_nsecs=args.safe_execution_time, is_simulation=False, is_learning=True, t=trajectory_dict)
                             execute_action(input_folder=False, tot_time_nsecs=args.execution_time, is_simulation=False, is_learning=True, t=trajectory_dict)
                         command = raw_input("Press enter to evaluate the board\n")
                         if "print rewards_history" == command:

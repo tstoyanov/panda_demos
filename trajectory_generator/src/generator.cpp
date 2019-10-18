@@ -26,10 +26,10 @@
 
 #include "velocity_profile_generator.cpp"
 
-#define RADIUS 0.2
-#define EQRADIUS 0.2
-// #define RADIUS 1
-// #define EQRADIUS 1
+#define PI 3.14159265
+
+#define RADIUS 1
+#define EQRADIUS 1
 
 #define MAX_PATH_GENERATION_ATTEMPTS 100
 #define MAX_NOISE_GENERATION_ATTEMPTS 100
@@ -309,7 +309,8 @@ int main(int argc, char **argv)
   KDL::ChainIkSolverVel_wdls chainIkSolverVel{my_chain};
   KDL::ChainIkSolverPos_NR_JL chainIkSolverPos{my_chain, q_min, q_max, chainFkSolverPos, chainIkSolverVel, max_iter, eps};
 
-  double release_x_coordinate = 0.088281002938;
+  double release_x_coordinate = 0.018281002938;
+//   double release_x_coordinate = 0.088281002938;
   // double release_x_coordinate = 0.268281002938;
   double noisy_release_x_coordinate;
   // ========== WAYPOINTS ==========
@@ -319,8 +320,10 @@ int main(int argc, char **argv)
       // {x, y, z}
       {-0.481718997062, -0.1102002648095, 0.861710060669},
       {release_x_coordinate, -0.1102002648095, 0.861710060669},
-      {0.118281002938, -0.1102002648095, 0.866710060669}
+    //   {0.118281002938, -0.1102002648095, 0.866710060669}
 
+
+      {0.108281002938, -0.1102002648095, 0.866710060669}
       // testing "safe" height
       // {x, y, z}
       // {-0.471718997062, -0.0112002648095, 0.931710060669},
@@ -399,8 +402,15 @@ int main(int argc, char **argv)
 
   double m;
   double c;
+  double angle;
+  double alpha;
+  double beta;
+  double gamma;
+  double x_dist;
+  double y_dist;
 
   KDL::Rotation starting_orientation;
+  KDL::Rotation angle_orientation;
   KDL::Rotation test_orientation{1, 0, 0, 0, -1, 0, 0, 0, -1};
 
   Json::Value data;
@@ -495,14 +505,18 @@ int main(int argc, char **argv)
           noise = real_distribution(generator) / 100.0;
         //   distribution = std::normal_distribution<double>(NOISE_MATRIX[matrix_index]["mean"], NOISE_MATRIX[matrix_index]["stddev"]);
         //   noise = distribution(generator) / 100.0;
-          if (matrix_index != 2)
+          if (matrix_index == 1)
           {
-            noisy_release_point[matrix_index] += noise;
+            noisy_release_point[matrix_index] += 0.00;
           }
-          else
-          { // we add only positive noise to the Z coordinate
-            noisy_release_point[matrix_index] += abs(noise);
-          }
+        //   else if (matrix_index != 2)
+        //   {
+        //     noisy_release_point[matrix_index] += noise;
+        //   }
+        //   else
+        //   { // we add only positive noise to the Z coordinate
+        //     noisy_release_point[matrix_index] += abs(noise);
+        //   }
         }
         path->Add(KDL::Frame(KDL::Vector(noisy_release_point[0], noisy_release_point[1], noisy_release_point[2])));
         // path -> Add(KDL::Frame(KDL::Vector(noisy_release_point[0], noisy_release_point[1], noisy_release_point[2])));
@@ -564,6 +578,30 @@ int main(int argc, char **argv)
     ret = chainFkSolverPos.JntToCart(last_joint_pos, fk_current_eef_frame);
     // std::cout << "FK RET: " << ret << std::endl;
     starting_orientation = fk_current_eef_frame.M;
+
+
+
+    x_dist = starting_waypoints[2][0] - starting_waypoints[0][0];
+    y_dist = starting_waypoints[2][1] - starting_waypoints[0][1];
+    // angle = fmod((atan2(y_dist, x_dist)*180/PI) + 360, 360);
+    angle = fmod(atan2(y_dist, x_dist) + PI, 2*PI);
+    // angle = angle*PI/180;
+    // angle = atan2(y_dist, x_dist);
+    starting_orientation.GetEulerZYX(alpha, gamma, beta);
+    std::cout << "alpha: " << alpha << std::endl;
+    std::cout << "beta: " << beta << std::endl;
+    std::cout << "gamma: " << gamma << std::endl;
+    std::cout << "angle: " << angle << std::endl;
+
+    // starting_orientation = KDL::Rotation();
+    // starting_orientation.DoRotZ(0);
+    // starting_orientation.DoRotY(3);
+    // starting_orientation.DoRotX(-0);
+
+    // starting_orientation.GetEulerZYX(alpha, gamma, beta);
+    // std::cout << "\nalpha: " << alpha << std::endl;
+    // std::cout << "beta: " << beta << std::endl;
+    // std::cout << "gamma: " << gamma << std::endl;
 
     path_length = path->PathLength();
     ds = path_length / NUMBER_OF_SAMPLES;
@@ -635,6 +673,7 @@ int main(int argc, char **argv)
       {
         current_eef_frame = trajectory->Pos(current_t);
         current_eef_frame.M = test_orientation;
+
         // current_eef_frame.M = starting_orientation;
         eef_trajectory.push_back(current_eef_frame);
 
@@ -681,7 +720,12 @@ int main(int argc, char **argv)
         // current_s += ds;
         current_s += velocity_dist[i];
         current_eef_frame = path->Pos(current_s);
-        current_eef_frame.M = test_orientation;
+        angle_orientation = KDL::Rotation();
+        angle_orientation.DoRotZ(angle);
+        angle_orientation.DoRotY(3.14);
+        angle_orientation.DoRotX(-0.02);
+        current_eef_frame.M = angle_orientation;
+        // current_eef_frame.M = test_orientation;
         // current_eef_frame.M = starting_orientation;
         eef_trajectory.push_back(current_eef_frame);
 

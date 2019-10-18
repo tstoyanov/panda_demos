@@ -20,7 +20,9 @@ int generate_velocity_profile (std::vector<double> &result, int total_frames, in
     
     // std::uniform_real_distribution<> real_distribution(1 * treshold_length / treshold_frame, 3 * treshold_length / treshold_frame);
     // std::uniform_real_distribution<> real_distribution(2 * treshold_length / treshold_frame, 3 * treshold_length / treshold_frame);
-    std::uniform_real_distribution<> real_distribution(2 * treshold_length / treshold_frame, 4 * treshold_length / treshold_frame);
+
+    // std::uniform_real_distribution<> real_distribution(2 * treshold_length / treshold_frame, 4 * treshold_length / treshold_frame);
+    std::uniform_real_distribution<> real_distribution(3.5 * treshold_length / treshold_frame, 3.5 * treshold_length / treshold_frame);
     
     // std::uniform_real_distribution<> real_distribution(2 * treshold_length / treshold_frame, 3 * treshold_length / treshold_frame);
 
@@ -47,10 +49,17 @@ int generate_velocity_profile (std::vector<double> &result, int total_frames, in
     {
         // result[i] = result[treshold_frame-1] * (total_frames - (i+1)) / (total_frames - treshold_frame);
 
-        result[i] = result[treshold_frame-1];
+        // result[i] = result[treshold_frame-1];
         // result[i] = result[i-1] * (total_frames - i) / (total_frames - treshold_frame);
         // result[i] = static_cast<double>(release_velocity * (total_frames - (i+1)) / (total_frames - treshold_frame));
-        // result[i] = result[i-1] * 0.7;
+        if (i == treshold_frame)
+        {
+            result[i] = result[i-1];
+        }
+        else
+        {
+            result[i] = result[i-1] * (0.95*treshold_frame/i);
+        }
         computed_total_distance += result[i];
         // if (computed_total_distance > total_length)
         // {

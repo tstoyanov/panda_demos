@@ -299,7 +299,7 @@ ax = fig.gca(projection='3d')
 ax.set_aspect('equal')
 
 # ax = fig.add_subplot(111, projection='3d')
-ax.scatter3D(eef_pose["origin"]["x"], eef_pose["origin"]["y"], eef_pose["origin"]["z"], c=eef_pose["origin"]["z"], cmap='Greens', label="eef_trajectory")
+ax.scatter3D(eef_pose["origin"]["x"], eef_pose["origin"]["y"], eef_pose["origin"]["z"], c=eef_pose["origin"]["z"], cmap='viridis', label="eef_trajectory")
 
 # fig = plt.figure("fk_eef_trajectory")
 # ax = fig.add_subplot(111, projection='3d')

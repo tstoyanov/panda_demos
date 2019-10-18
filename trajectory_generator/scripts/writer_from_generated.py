@@ -53,7 +53,8 @@ def talker(input_folder="latest", tot_time_nsecs=9000000000, is_simulation=False
         gripper_move_pub = rospy.Publisher('/panda/franka_gripper/move/goal',
                             MoveActionGoal, queue_size=10)
         if not is_learning:
-            with open(input_folder, 'r') as f:
+            package_path = rospack.get_path("trajectory_generator")
+            with open(package_path + "/generated_trajectories/cpp/" + input_folder + "/trajectories.txt", 'r') as f:
                 data = f.read()
     if not is_learning:
         rospy.init_node('myWriter', anonymous=True)
@@ -346,7 +347,7 @@ if __name__ == '__main__':
     try:
         input_folder = "latest"
         is_simulation = False
-        tot_time_nsecs = 2000000000  # total execution time for the trajectory in nanoseconds
+        tot_time_nsecs = 9000000000  # total execution time for the trajectory in nanoseconds
         try:
             opts, args = getopt.getopt(sys.argv[1:],"i:t:s",["input=", "nanoseconds=", "simulation="])
         except getopt.GetoptError:
