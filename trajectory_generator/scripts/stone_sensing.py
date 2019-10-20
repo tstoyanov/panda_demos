@@ -46,7 +46,7 @@ def old_filtered_plot(l, labels):
     sns.scatterplot(range(len(y)), y, color="r", label=labels[-4], legend="full")
     plt.show()
 
-def filtered_plot(l, labels):
+def filtered_plot(l, labels, offset=0):
     fig = plt.figure("filtered_plot")
     ax1 = fig.add_subplot(3, 2, 1)
     ax2 = fig.add_subplot(3, 2, 2)
@@ -60,7 +60,9 @@ def filtered_plot(l, labels):
     ax2.set_title("torque")
     ax3.set_ylabel("y")
     ax5.set_ylabel("z")
-    for i in range(1, 5):
+    min_range = offset * len(args.stones_labels) + 1
+    max_range = min_range + len(args.stones_labels)
+    for i in range(min_range, max_range):
         y = l["force"]["x"][-i]
         g = sns.scatterplot(x=range(len(y)), y=y, color=colors[-i], label=labels[-i], legend="full", alpha=0.8, ax=ax1)
         y = l["force"]["y"][-i]
@@ -398,6 +400,56 @@ def sense_stone(output_folder="latest", is_simulation=False, is_learning=True, r
             # [0.19445120013816, -0.21487730565614868, 0.04427450973878616, -2.3955809373590724, 0.01187810182718171, 2.180555477353596, -0.5547206810216108],
         ],
         "joints_positions": [
+            {
+                # normal
+                "pos": [0.19445120013816, -0.21487730565614868, 0.04427450973878616, -2.3955809373590724, 0.01187810182718171, 2.180555477353596, -0.5547206810216108],
+                "record": False
+            },
+            {
+                # higher normal
+                "pos": [0.1945937183465583, -0.29763553907470264, 0.04148949768466628, -2.216595536661565, 0.012573500959566938, 1.9181392465227391, -0.5571296332728874],
+                "record": False
+            },
+            {
+                # joints rotation initial
+                "pos": [0.09501817749126393, -0.9102240341824137, -0.06039151950529718, -2.498833895985301, -0.048188401254747396, 1.587717976456009, -0.7283916825025041],
+                "record": False
+            },
+            {
+                # joint 5 rotation right
+                "pos": [0.09501817749126393, -0.9102240341824137, -0.06039151950529718, -2.498833895985301, -1.207188401254747396, 1.587717976456009, -0.7283916825025041],
+                "record": False
+            },
+            {
+                # joint 5 rotation left
+                "pos": [0.09501817749126393, -0.9102240341824137, -0.06039151950529718, -2.498833895985301, 1.207188401254747396, 1.587717976456009, -0.7283916825025041],
+                "record": False
+            },
+            {
+                # joint 6 rotation front
+                "pos": [0.09501817749126393, -0.9102240341824137, -0.06039151950529718, -2.498833895985301, -0.048188401254747396, 3.007717976456009, -0.7283916825025041],
+                "record": False
+            },
+            {
+                # normal
+                "pos": [0.19445120013816, -0.21487730565614868, 0.04427450973878616, -2.3955809373590724, 0.01187810182718171, 2.180555477353596, -0.5547206810216108],
+                "record": True
+            },
+            {
+                # almost max force on x
+                "pos": [0.3577381551594371, -0.2212658614213006, -0.15405057695574867, -2.350672152502495, 1.4752342208280778, 1.8857782667261198, -1.3482390514999687],
+                "record": False
+            },
+            {
+                # higher almost max force on x
+                "pos": [0.3568993793187499, -0.30982427137776425, -0.14553087910982557, -2.2229064250856636, 1.4001052575314026, 1.8717732232276834, -1.1211786885173198],
+                "record": False
+            },
+            {
+                # almost max force on x
+                "pos": [0.3577381551594371, -0.2212658614213006, -0.15405057695574867, -2.350672152502495, 1.4752342208280778, 1.8857782667261198, -1.3482390514999687],
+                "record": True
+            }
 
     #         # 8 shape
     # #         [0.3351801368290918, -0.29662777607797913, -0.11244693900398067, -2.3844817042769044, 0.4160744979646716, 1.7924010314720245, -1.3208833060871592],
@@ -414,14 +466,10 @@ def sense_stone(output_folder="latest", is_simulation=False, is_learning=True, r
             # # almost max force on y 2.0
             # [0.21064606387971807, -0.6230041403551178, 0.04318502222761333, -2.5824178610349957, -0.06834458731382768, 3.008495783487955, -0.5523243208382189],
 
-            # almost max force on x
-            [0.3577381551594371, -0.2212658614213006, -0.15405057695574867, -2.350672152502495, 1.4752342208280778, 1.8857782667261198, -1.3482390514999687],
-            # normal
-            [0.19445120013816, -0.21487730565614868, 0.04427450973878616, -2.3955809373590724, 0.01187810182718171, 2.180555477353596, -0.5547206810216108],
-            # almost max force on x
-            [0.3577381551594371, -0.2212658614213006, -0.15405057695574867, -2.350672152502495, 1.4752342208280778, 1.8857782667261198, -1.3482390514999687],
-            # normal
-            [0.19445120013816, -0.21487730565614868, 0.04427450973878616, -2.3955809373590724, 0.01187810182718171, 2.180555477353596, -0.5547206810216108],
+            # # almost max force on x
+            # [0.3577381551594371, -0.2212658614213006, -0.15405057695574867, -2.350672152502495, 1.4752342208280778, 1.8857782667261198, -1.3482390514999687],
+            # # normal
+            # [0.19445120013816, -0.21487730565614868, 0.04427450973878616, -2.3955809373590724, 0.01187810182718171, 2.180555477353596, -0.5547206810216108],
         ]
     }
     pos_not_to_record = len(sensing_waypoints["joints_pos_not_to_record"])
@@ -492,9 +540,9 @@ def sense_stone(output_folder="latest", is_simulation=False, is_learning=True, r
                     joint_move(group, grasping_points["learning_stone"]["hovering_joints_position"])
                 # for pos in sensing_waypoints["predefined_joints_path"]:
                 #     joint_move(group, pos)
-                for pos in sensing_waypoints["joints_pos_not_to_record"]:
-                    joint_move(group, pos)
-                for sensing_pos_index, pos in enumerate(sensing_waypoints["joints_positions"]):
+                # for pos in sensing_waypoints["joints_pos_not_to_record"]:
+                #     joint_move(group, pos)
+                for item in sensing_waypoints["joints_positions"]:
                     sensing_step = {
                         "force": {
                             "x": [],
@@ -507,20 +555,23 @@ def sense_stone(output_folder="latest", is_simulation=False, is_learning=True, r
                             "z": []
                         },
                     }
-                    joint_move(group, pos)
-                    rospy.rostime.wallsleep(1)
-                    sub = rospy.Subscriber("/panda/franka_state_controller/F_ext", geometry_msgs.msg.WrenchStamped, callback, [sensing_step])
-                    rospy.rostime.wallsleep(2)
-                    sub.unregister()
+                    joint_move(group, item["pos"])
+                    if item["record"]:
+                        rospy.rostime.wallsleep(1)
+                        sub = rospy.Subscriber("/panda/franka_state_controller/F_ext", geometry_msgs.msg.WrenchStamped, callback, [sensing_step])
+                        rospy.rostime.wallsleep(4)
+                        sub.unregister()
+
 
                     stone_grasped = check_grasp(robot, gripper_move_pub)
                     if not stone_grasped:
-                        sensors_data["raw"]["force"]["x"][-1] = []
-                        sensors_data["raw"]["force"]["y"][-1] = []
-                        sensors_data["raw"]["force"]["z"][-1] = []
-                        sensors_data["raw"]["torque"]["x"][-1] = []
-                        sensors_data["raw"]["torque"]["y"][-1] = []
-                        sensors_data["raw"]["torque"]["z"][-1] = []
+                        if item["record"]:
+                            sensors_data["raw"]["force"]["x"][-1] = []
+                            sensors_data["raw"]["force"]["y"][-1] = []
+                            sensors_data["raw"]["force"]["z"][-1] = []
+                            sensors_data["raw"]["torque"]["x"][-1] = []
+                            sensors_data["raw"]["torque"]["y"][-1] = []
+                            sensors_data["raw"]["torque"]["z"][-1] = []
                         print("Stone fell off while sensing, repositioning gripper...")
                         rospy.rostime.wallsleep(0.5)
                         joint_move(group, grasping_points[str(label)]["hovering_joints_position"])
@@ -540,13 +591,13 @@ def sense_stone(output_folder="latest", is_simulation=False, is_learning=True, r
                         stone_grasped = False
                         break
                 
-                    # if sensing_pos_index > pos_not_to_record:
-                    sensors_data["raw"]["force"]["x"][-1].append(sensing_step["force"]["x"])
-                    sensors_data["raw"]["force"]["y"][-1].append(sensing_step["force"]["y"])
-                    sensors_data["raw"]["force"]["z"][-1].append(sensing_step["force"]["z"])
-                    sensors_data["raw"]["torque"]["x"][-1].append(sensing_step["torque"]["x"])
-                    sensors_data["raw"]["torque"]["y"][-1].append(sensing_step["torque"]["y"])
-                    sensors_data["raw"]["torque"]["z"][-1].append(sensing_step["torque"]["z"])
+                    if item["record"]:
+                        sensors_data["raw"]["force"]["x"][-1].append(sensing_step["force"]["x"])
+                        sensors_data["raw"]["force"]["y"][-1].append(sensing_step["force"]["y"])
+                        sensors_data["raw"]["force"]["z"][-1].append(sensing_step["force"]["z"])
+                        sensors_data["raw"]["torque"]["x"][-1].append(sensing_step["torque"]["x"])
+                        sensors_data["raw"]["torque"]["y"][-1].append(sensing_step["torque"]["y"])
+                        sensors_data["raw"]["torque"]["z"][-1].append(sensing_step["torque"]["z"])
 
             if not is_learning:
                 joint_move(group, grasping_points[str(label)]["hovering_joints_position"])
@@ -590,8 +641,10 @@ def sense_stone(output_folder="latest", is_simulation=False, is_learning=True, r
                 #     raw_input("Press enter to start sensing.")
                 #     group.execute(plan, wait=True)
                 #     group.stop()
-            number_of_readings = len(sensing_waypoints["joints_positions"]) -1
+            number_of_readings = len([item for item in sensing_waypoints["joints_positions"] if item["record"] == True]) -1
+            # number_of_readings = len(sensing_waypoints["joints_positions"]) -1
             # number_of_readings = len(sensing_waypoints["joints_positions"]) - pos_not_to_record -1
+            # min_sublist_len = 1
             min_sublist_len = int(100/number_of_readings) + 1
 
             alpha = 0.8
