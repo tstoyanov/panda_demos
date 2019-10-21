@@ -505,18 +505,18 @@ int main(int argc, char **argv)
           noise = real_distribution(generator) / 100.0;
         //   distribution = std::normal_distribution<double>(NOISE_MATRIX[matrix_index]["mean"], NOISE_MATRIX[matrix_index]["stddev"]);
         //   noise = distribution(generator) / 100.0;
-          if (matrix_index == 1)
-          {
-            noisy_release_point[matrix_index] += 0.00;
-          }
-        //   else if (matrix_index != 2)
+        //   if (matrix_index == 1)
         //   {
-        //     noisy_release_point[matrix_index] += noise;
+        //     noisy_release_point[matrix_index] += 0.00;
         //   }
-        //   else
-        //   { // we add only positive noise to the Z coordinate
-        //     noisy_release_point[matrix_index] += abs(noise);
-        //   }
+          if (matrix_index != 2)
+          {
+            noisy_release_point[matrix_index] += noise;
+          }
+          else
+          { // we add only positive noise to the Z coordinate
+            noisy_release_point[matrix_index] += abs(noise);
+          }
         }
         path->Add(KDL::Frame(KDL::Vector(noisy_release_point[0], noisy_release_point[1], noisy_release_point[2])));
         // path -> Add(KDL::Frame(KDL::Vector(noisy_release_point[0], noisy_release_point[1], noisy_release_point[2])));
@@ -588,10 +588,13 @@ int main(int argc, char **argv)
     // angle = angle*PI/180;
     // angle = atan2(y_dist, x_dist);
     starting_orientation.GetEulerZYX(alpha, gamma, beta);
-    std::cout << "alpha: " << alpha << std::endl;
-    std::cout << "beta: " << beta << std::endl;
-    std::cout << "gamma: " << gamma << std::endl;
-    std::cout << "angle: " << angle << std::endl;
+    if (!is_batch)
+    {
+        std::cout << "alpha: " << alpha << std::endl;
+        std::cout << "beta: " << beta << std::endl;
+        std::cout << "gamma: " << gamma << std::endl;
+        std::cout << "angle: " << angle << std::endl;
+    }
 
     // starting_orientation = KDL::Rotation();
     // starting_orientation.DoRotZ(0);
