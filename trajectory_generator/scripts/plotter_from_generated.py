@@ -239,7 +239,7 @@ def plot_joints(t):
         # plt.xlabel('steps')
         # plt.legend()
 
-        plt.figure("joint_" + str(joint+1))
+        plt.figure("joint_" + str(joint+1), figsize=(10,9))
         plt.subplot(1, 1, 1)
         plt.plot(steps, joints_trajectory[joint], 'o-g', label="joint_" + str(joint+1) + " trajectory")
         plt.ylabel("pos [rad]")

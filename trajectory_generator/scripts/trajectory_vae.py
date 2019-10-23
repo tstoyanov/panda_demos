@@ -53,6 +53,10 @@ parser.add_argument('--seed', type=int, default=1, metavar='S',
                     help='random seed (default: 1)')
 parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                     help='how many batches to wait before logging training status')
+parser.add_argument('--epoch-log-interval', type=int, default=10, metavar='N',
+                    help='how many epochs to wait before logging training status')
+parser.add_argument('--model-save-interval', default=10000,
+                    help='how many epochs to wait before saving a model')
 
 parser.add_argument('--dataset-dir', default="latest_batch",
                     help='path of the directory containing the input dataset')
@@ -545,13 +549,14 @@ def my_train(epoch, loss_plots):
         #     print ("f.data.shape: ", f.data.shape)
             # print ("f.data: ", f.data)
         # raw_input()
-        if batch_idx % args.log_interval == 0:
+        # if batch_idx % args.log_interval == 0:
+        if epoch % args.epoch_log_interval == 0:
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 epoch, batch_idx * len(data), len(my_train_set_loader.dataset),
                 100. * batch_idx / len(my_train_set_loader),
                 loss.item() / len(data)))
 
-        if args.batch_size == len(my_train_set) or (batch_idx % 10 == 0 and epoch != 1):
+        if args.batch_size == len(my_train_set) or (batch_idx % args.log_interval == 0 and epoch != 1):
             update_graph(loss_plots["loss"]["fig"], loss_plots["loss"]["ax"], loss_plots["loss"]["line1"], batch_idx + epoch*len(my_train_set_loader), loss.item()/len(data))
         #     update_graph(loss_plots["recon_loss"]["fig"], loss_plots["recon_loss"]["ax"], loss_plots["recon_loss"]["line1"], batch_idx + epoch*len(my_train_set_loader), recon_loss.item()/len(data))
         #     update_graph(loss_plots["kld_loss"]["fig"], loss_plots["kld_loss"]["ax"], loss_plots["kld_loss"]["line1"], batch_idx + epoch*len(my_train_set_loader), kld_loss.item()/len(data))
@@ -568,10 +573,11 @@ def my_train(epoch, loss_plots):
             joints_plot(data[0], recon_data.view(1, 100, 7)[0], title)
         # joints_plot(last_data, last_recon_data, title)
 
-    print('====> Epoch: {} Average loss: {:.4f}'.format(
-          epoch, train_loss / len(my_train_set_loader.dataset)))
+    if epoch % args.epoch_log_interval == 0:
+        print('====> Epoch: {} Average loss: {:.4f}'.format(
+            epoch, train_loss / len(my_train_set_loader.dataset)))
     
-    latest_train_loss = train_loss / len(my_train_set_loader.dataset)
+    args.latest_train_loss = train_loss / len(my_train_set_loader.dataset)
 
 
 def my_test(epoch, loss_plots):
@@ -604,7 +610,8 @@ def my_test(epoch, loss_plots):
 
     test_loss /= len(my_test_set_loader.dataset)
     args.latest_test_loss = copy.deepcopy(test_loss)
-    print('====> Test set loss: {:.4f}'.format(test_loss))
+    if type(epoch) == int and epoch % args.epoch_log_interval == 0:
+        print('====> Test set loss: {:.4f}'.format(test_loss))
     if loss_plots != None:
         update_graph(loss_plots["test_loss"]["fig"], loss_plots["test_loss"]["ax"], loss_plots["test_loss"]["line1"], len(my_train_set_loader) + epoch*len(my_train_set_loader), test_loss)
     # update_graph(loss_plots["test_loss"]["fig"], loss_plots["test_loss"]["ax"], loss_plots["test_loss"]["line1"], len(my_train_set_loader) + epoch*len(my_train_set_loader), test_loss.item()/len(data))
@@ -739,9 +746,6 @@ if __name__ == "__main__":
 
             loss_plots["loss"]["ax"].legend()
 
-            manager = plt.get_current_fig_manager()
-            manager.resize(*manager.window.maxsize())
-            plt.show()
 
             for epoch in range(1, args.epochs + 1):
                 my_train(epoch, loss_plots)
@@ -755,9 +759,17 @@ if __name__ == "__main__":
                     #     print (sample[i])
                 if epoch == 1:
                     best_test_loss = args.latest_test_loss
-                elif args.latest_test_loss < best_test_loss:
-                    save_model_state_dict(os.path.dirname(save_path) + "/best_model.pt")
-                    best_test_loss = args.latest_test_loss
+                    best_train_loss = args.latest_train_loss
+                else:
+                    if args.latest_test_loss < best_test_loss:
+                        save_model_state_dict(os.path.dirname(save_path) + "/best_test_model.pt")
+                        best_test_loss = args.latest_test_loss
+                    if args.latest_train_loss < best_train_loss:
+                        save_model_state_dict(os.path.dirname(save_path) + "/best_train_model.pt")
+                        best_train_loss = args.latest_train_loss
+                
+                if epoch % args.model_save_interval == 0:
+                    save_model_state_dict(os.path.dirname(save_path) + "/{}e_model.pt".format(epoch))
             
 
             if args.save_file != False:
@@ -765,9 +777,12 @@ if __name__ == "__main__":
                 # save_model_state_dict(args.save_dir+args.save_file)
             
             if args.parameters_search != False:
+                manager = plt.get_current_fig_manager()
+                manager.resize(*manager.window.maxsize())
+                plt.show()
                 save_model_state_dict(save_path)
                 loss_plots["loss"]["ax"].set_title("ALPHA = " + str(args.alpha) + "   BETA = " + str(args.beta))
-                loss_plots["loss"]["fig"].savefig(os.path.dirname(save_path) + "/loss.svg", format="svg", bbox_inches='tight')
+                # loss_plots["loss"]["fig"].savefig(os.path.dirname(save_path) + "/loss.svg", format="svg", bbox_inches='tight')
                 loss_plots["loss"]["fig"].savefig(os.path.dirname(save_path) + "/loss.png", format="png", bbox_inches='tight')
                 plt.close(loss_plots["loss"]["fig"])
     

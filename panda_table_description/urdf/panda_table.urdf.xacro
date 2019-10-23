@@ -68,6 +68,21 @@
       <origin rpy="0 0 0" xyz="0 0 0.35" />
     </collision>
    </link>
+
+  <link name="board">
+    <visual>
+      <geometry>
+	<box size="2.0 0.45 0.03" />
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0" />
+    </visual>
+    <collision>
+      <geometry>
+	<box size="2.0 0.45 0.03" />
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0" />
+    </collision>
+   </link>
   
    <link name="mount_flange_link">
      <inertial>
@@ -138,6 +153,13 @@
     <parent link="table" />
     <child link = "mount_flange_link" />
     <origin xyz="0.0 0.425 0.7" rpy="0.0 0.0 1.5707" />
+    <!-- <origin xyz="0.0 0.414 0.7" rpy="0.0 0.0 1.5707" /> -->
+  </joint>
+
+  <joint name="table_board" type="fixed">
+    <parent link="table" />
+    <child link = "board" />
+    <origin xyz="0.4 -0.230 0.715" rpy="0.0 0.0 0.0" />
   </joint>
   
   <joint name="table_column1" type="fixed">

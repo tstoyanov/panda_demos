@@ -310,20 +310,30 @@ int main(int argc, char **argv)
   KDL::ChainIkSolverPos_NR_JL chainIkSolverPos{my_chain, q_min, q_max, chainFkSolverPos, chainIkSolverVel, max_iter, eps};
 
   double release_x_coordinate = 0.018281002938;
+  double push_release_x_coordinate = 0.318281002938;
 //   double release_x_coordinate = 0.088281002938;
   // double release_x_coordinate = 0.268281002938;
   double noisy_release_x_coordinate;
   // ========== WAYPOINTS ==========
   std::vector<std::vector<double>> starting_waypoints =
   {
-      // sliding height
+      // pushing
       // {x, y, z}
-      {-0.481718997062, -0.1102002648095, 0.861710060669},
-      {release_x_coordinate, -0.1102002648095, 0.861710060669},
+      {-0.181718997062, -0.1102002648095, 0.861710060669},
+      {push_release_x_coordinate, -0.1102002648095, 0.861710060669},
+    //   {release_x_coordinate, -0.1102002648095, 0.861710060669},
     //   {0.118281002938, -0.1102002648095, 0.866710060669}
+      {0.408281002938, -0.1102002648095, 0.866710060669}
+    
+    //   // sliding height
+    //   // {x, y, z}
+    //   {-0.481718997062, -0.1102002648095, 0.861710060669},
+    //   {release_x_coordinate, -0.1102002648095, 0.861710060669},
+    // //   {release_x_coordinate, -0.1102002648095, 0.861710060669},
+    // //   {0.118281002938, -0.1102002648095, 0.866710060669}
+    //   {0.108281002938, -0.1102002648095, 0.866710060669}
 
 
-      {0.108281002938, -0.1102002648095, 0.866710060669}
       // testing "safe" height
       // {x, y, z}
       // {-0.471718997062, -0.0112002648095, 0.931710060669},
@@ -392,6 +402,8 @@ int main(int argc, char **argv)
   double path_length;
   double ds;
   double start_joint_pos_array[] = {-0.448125769162, 0.32964587676, -0.621680615641, -1.82515059054, 0.269715026327, 2.11438395741, -1.94274845254};
+//   double new_start_joint_pos_array[] = {-1.547825028806401, 1.598492420631542, 1.4699764070176242, -1.5183004197991667, -1.653330215397785, 1.691513459590234, -0.7578849278389568};
+  double push_start_joint_pos_array[] = {-1.60864894845402, 1.6329093634789467, 1.4522765189189357, -2.085324071528737, -1.7060958243476456, 1.6604129666222465, -0.28491070685932524};
   double average_start_joint_pos_array[] = {0, 0, 0, -1.5708, 0, 1.8675, 0};
   double kdl_start_joint_pos_array[] = {-0.443379, 0.702188, -0.556869, -1.9368, -2.55769, 0.667764, -2.56121};
 
@@ -572,7 +584,8 @@ int main(int argc, char **argv)
 
     for (unsigned i = 0; i < nr_of_joints; i++)
     {
-      last_joint_pos(i) = start_joint_pos_array[i];
+      last_joint_pos(i) = push_start_joint_pos_array[i];
+    //   last_joint_pos(i) = start_joint_pos_array[i];
     }
 
     ret = chainFkSolverPos.JntToCart(last_joint_pos, fk_current_eef_frame);

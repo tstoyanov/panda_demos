@@ -45,6 +45,8 @@ parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                     help='how many batches to wait before logging training status')
 parser.add_argument('--epoch-log-interval', type=int, default=10, metavar='N',
                     help='how many epochs to wait before logging training status')
+parser.add_argument('--model-save-interval', default=10000,
+                    help='how many epochs to wait before saving a model')
 
 parser.add_argument('--tsne', nargs='?', const=True, default=False,
                     help='whether or not to perform and plot t-sne on the embedded data')
@@ -572,6 +574,8 @@ if __name__ == "__main__":
                     if args.latest_train_loss < best_train_loss:
                         save_model_state_dict(os.path.dirname(save_path) + "/best_train_model.pt")
                         best_train_loss = args.latest_train_loss
+                if epoch % args.model_save_interval == 0:
+                    save_model_state_dict(os.path.dirname(save_path) + "/{}e_model.pt".format(epoch))
             
 
             if args.save_file != False:

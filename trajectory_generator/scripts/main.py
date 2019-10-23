@@ -1467,7 +1467,8 @@ def main(args):
                                 break
                             except:
                                 print ("The action must be a python list\nEg: [1, 2, 3, 4, 5]")
-                        break
+                        if "q" != a:
+                            break
                     if "test_policy" == command:
                         test_policy(image_reader, algorithm, decoder_model, state, trajectory_dict)
                     if "print_latent_space" == command:
@@ -1496,7 +1497,14 @@ def main(args):
                 for i in range(joints_number):
                     smooth_trajectory.append(trajectory[i])
                 for i, point in enumerate(trajectory[joints_number:], joints_number):
-                    smooth_trajectory.append(0.6*smooth_trajectory[i-joints_number]+0.4*point)
+                    if i % joints_number == 0:
+                        alpha = 0.9 - min((((0.9-0.6) / (50.0*joints_number)) * (i - joints_number)), 0.3)
+                        print ("alpha")
+                        print (alpha)
+                        print ("i")
+                        print (i)
+                    smooth_trajectory.append(alpha*smooth_trajectory[i-joints_number]+(1-alpha)*point)
+                    # smooth_trajectory.append(0.6*smooth_trajectory[i-joints_number]+0.4*point)
                 smooth_trajectory = torch.tensor(smooth_trajectory)
 
                 # safety_res = safety_check_module.check(smooth_trajectory.tolist())

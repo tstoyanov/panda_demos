@@ -124,6 +124,12 @@
             <mu2>0.2</mu2>
 	    <self_collide>true</self_collide>
         </gazebo>
+ <gazebo reference="board">
+            <material>Gazebo/Grey</material>
+            <mu1>0.2</mu1>
+            <mu2>0.2</mu2>
+	    <self_collide>true</self_collide>
+        </gazebo>
  <gazebo reference="column1">
             <material>Gazebo/Grey</material>
             <mu1>0.2</mu1>
