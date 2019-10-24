@@ -99,6 +99,7 @@ int main(int argc, char **argv)
         {
         joint_limits[joint_name].insert({{"lower", std::stod(tiny_joint->FirstChild("limit")->ToElement()->Attribute("lower"))}});
         joint_limits[joint_name].insert({{"upper", std::stod(tiny_joint->FirstChild("limit")->ToElement()->Attribute("upper"))}});
+        joint_limits[joint_name].insert({{"velocity", std::stod(tiny_joint->FirstChild("limit")->ToElement()->Attribute("velocity"))}});
         }
     }
 
@@ -106,6 +107,7 @@ int main(int argc, char **argv)
     my_tree.getChain("world", "panda_hand", my_chain);
     unsigned nr_of_joints = my_chain.getNrOfJoints();
     KDL::JntArray joints_pos{nr_of_joints};
+    KDL::JntArray last_joints_pos{nr_of_joints};
     KDL::Frame eef_frame;
 
     KDL::ChainFkSolverPos_recursive chainFkSolverPos{my_chain};
@@ -141,7 +143,7 @@ int main(int argc, char **argv)
     double y_lower_limit;
     if (!node_handle.getParam("/trajectory_safety_check_server/y_lower_limit", y_lower_limit) && !node_handle.getParam("/panda/trajectory_safety_check_server/y_lower_limit", y_lower_limit))
     {
-        y_lower_limit = -0.16;
+        y_lower_limit = -0.28;
         ROS_ERROR("%s: Could not parse 'y_lower_limit' parameter. Using default value '-0.16' instead", node_name.c_str());
     }
     else
@@ -152,7 +154,7 @@ int main(int argc, char **argv)
     double y_upper_limit;
     if (!node_handle.getParam("/trajectory_safety_check_server/y_upper_limit", y_upper_limit) && !node_handle.getParam("/panda/trajectory_safety_check_server/y_upper_limit", y_upper_limit))
     {
-        y_upper_limit = 0.0;
+        y_upper_limit = -0.12;
         ROS_ERROR("%s: Could not parse 'y_upper_limit' parameter. Using default value '0.0' instead", node_name.c_str());
     }
     else
@@ -161,9 +163,11 @@ int main(int argc, char **argv)
     }
     
 
-    auto safety_check_handler = [&my_chain, &chainFkSolverPos, &joints_pos, &eef_frame, &z_lower_limit, &z_upper_limit, &y_lower_limit, &y_upper_limit, nr_of_joints](trajectory_generator::trajectory_safety_check::Request& req, trajectory_generator::trajectory_safety_check::Response& res)
+    auto safety_check_handler = [&my_chain, &chainFkSolverPos, &joint_names, &joint_limits, &joints_pos, &last_joints_pos, &eef_frame, &z_lower_limit, &z_upper_limit, &y_lower_limit, &y_upper_limit, nr_of_joints](trajectory_generator::trajectory_safety_check::Request& req, trajectory_generator::trajectory_safety_check::Response& res)
     {
         int ret = 0;
+        int joint_index;
+        std::string joint_name;
         double rel_angle;
         double initial_x;
         double initial_y;
@@ -174,23 +178,68 @@ int main(int argc, char **argv)
         double x;
         double y;
         double z;
+        double current_vel;
+        double min_execution_time;
         int unsafe_pt = 0;
         double avg_distance = 0;
         std::vector<double> fk_y;
         std::vector<double> fk_z;
+        std::vector<double> joints_min_execution_time;
         res.is_safe = true;
         res.too_left = false;
         res.too_right = false;
         res.too_high = false;
         res.too_low = false;
+        res.too_fast = false;
         res.error = false;
         res.unsafe_pts = 0;
         res.z_unsafe_pts = 0;
         res.y_unsafe_pts = 0;
         for (int i = 0; i < req.joints_pos.size(); i++) {
-            joints_pos(i % nr_of_joints) = req.joints_pos[i];
+            unsafe_pt = 0;
+            joint_index = i % nr_of_joints;
+            joint_name = joint_names[joint_index];
+            joints_pos(joint_index) = req.joints_pos[i];
+            if (i < 7)
+            {
+                res.joints_min_execution_time.push_back(-1);
+                res.joints_too_fast.push_back(0);
+                // min_exe_time_it = joints_min_execution_time.find(joint_name); 
+                // if (min_exe_time_it != joints_min_execution_time.end())
+                // {
+                //     min_exe_time_it->second = -1;
+                // }
+                // else
+                // {
+                //     joints_min_execution_time.insert({joint_name, -1});
+                // }
+            }
+            else
+            {
+                current_vel = joints_pos(joint_index) - last_joints_pos(joint_index);
+                min_execution_time = fabs(current_vel) / joint_limits[joint_name]["velocity"] * req.joints_pos.size();
+                if (req.execution_time > 0)
+                {
+                    if (req.execution_time < (min_execution_time*1000000000))
+                    {
+                        // unsafe_pt = 1;
+                        res.joints_too_fast[joint_index]++;
+                        res.too_fast = true;
+                    }
+                }
+                if (res.joints_min_execution_time[joint_index] < min_execution_time)
+                {
+                    res.joints_min_execution_time[joint_index] = min_execution_time;
+                }
+                // min_exe_time_it = joints_min_execution_time.find(joint_name); 
+                // if (min_exe_time_it != joints_min_execution_time.end() && min_exe_time_it->second < min_execution_time)
+                // {
+                //     min_exe_time_it->second = min_execution_time;
+                // }
+            }
+            last_joints_pos(joint_index) = joints_pos(joint_index);
+
             if (i % 7 == 6) {
-                unsafe_pt = 0;
                 ret = chainFkSolverPos.JntToCart(joints_pos, eef_frame);
                 if (i == 6)
                 {

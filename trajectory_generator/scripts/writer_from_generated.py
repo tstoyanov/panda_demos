@@ -20,7 +20,7 @@ import rospkg
 rospack = rospkg.RosPack()
 
 deceleration_frames = 5     # number of frames used to decelerate
-deceleration_time = 0.5    # deceleration time in seconds
+deceleration_time = 0.7    # deceleration time in seconds
 # deceleration_time = 0.25    # deceleration time in seconds
 deceleration_dt = float(deceleration_time) / deceleration_frames
 

@@ -923,11 +923,11 @@ def trajectory_safety_check_client(t):
         print ("Service call failed: %s" % e)
 
 
-def check(t):
+def check(trajectory, execution_time):
     # rospy.wait_for_service('/panda/trajectory_safety_check')
     try:
         local_trajectory_safety_check = rospy.ServiceProxy('/panda/trajectory_safety_check', trajectory_safety_check)
-        res = local_trajectory_safety_check(t)
+        res = local_trajectory_safety_check(trajectory, execution_time)
         return res
     except rospy.ServiceException as e:
         print ("Service call failed: %s"%e)

@@ -114,6 +114,8 @@ parser.add_argument('--parameters-search', nargs='?', const=True, default=False,
                     help='wether to perform parameter search or not')
 parser.add_argument('--write-latent', nargs='?', const=True, default=False,
                     help='wether to write to a file insights on the latent space or not')
+parser.add_argument('--execution-time', default=8000000000,
+                    help='execution time used to check the feasibility of the trajectories')
 
 args, unknown = parser.parse_known_args()
 # args = parser.parse_args()
@@ -912,7 +914,7 @@ if __name__ == "__main__":
                         if ((batch_idx * args.batch_size) + n) % 500 == 0:
                             print ((batch_idx * args.batch_size) + n)
                         decoded_t = vae_model.decode(s)
-                        safety_res = safety_check_module.check(decoded_t)
+                        safety_res = safety_check_module.check(decoded_t, args.execution_time)
                         safe_list_item = ""
                         if safety_res.is_safe:
                             safe_list.append("Safe")
@@ -937,6 +939,11 @@ if __name__ == "__main__":
                                     safe_list_item = "too_low"
                                 else:
                                     safe_list_item += "-too_low"
+                            if safety_res.too_fast:
+                                if safe_list_item == "":
+                                    safe_list_item = "too_fast"
+                                else:
+                                    safe_list_item += "-too_fast"
                             if safe_list_item == "":
                                 safe_list_item = "Unsafe"
                             safe_list.append(safe_list_item)
@@ -965,7 +972,7 @@ if __name__ == "__main__":
                         if ((batch_idx * args.batch_size) + n) % 500 == 0:
                             print ((batch_idx * args.batch_size) + n)
                         decoded_t = vae_model.decode(s)
-                        safety_res = safety_check_module.check(decoded_t)
+                        safety_res = safety_check_module.check(decoded_t, args.execution_time)
                         safe_list_item = ""
                         if safety_res.is_safe:
                             safe_list.append("Safe")

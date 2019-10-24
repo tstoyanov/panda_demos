@@ -136,7 +136,8 @@ int main(int argc, char **argv)
   int batch_count = 1;
   int generated_trajectories = 0;
   double release_velocity = 1;
-  double trajectory_duration = 4;
+  double trajectory_duration = 1.45;    // seconds
+//   double trajectory_duration = 1.45;    // seconds
   double dt = trajectory_duration / NUMBER_OF_SAMPLES;
   namespace po = boost::program_options;
   // Declare the supported options.
@@ -247,6 +248,7 @@ int main(int argc, char **argv)
   TiXmlDocument tiny_doc;
   tiny_doc.Parse(robot_desc_string.c_str());
   std::map<std::string, std::map<std::string, double>> joint_limits;
+  std::map<std::string, double> joints_min_execution_time;
 
   TiXmlHandle doc_handle{&tiny_doc};
   std::string joint_name;
@@ -259,6 +261,7 @@ int main(int argc, char **argv)
     {
       joint_limits[joint_name].insert({{"lower", std::stod(tiny_joint->FirstChild("limit")->ToElement()->Attribute("lower"))}});
       joint_limits[joint_name].insert({{"upper", std::stod(tiny_joint->FirstChild("limit")->ToElement()->Attribute("upper"))}});
+      joint_limits[joint_name].insert({{"velocity", std::stod(tiny_joint->FirstChild("limit")->ToElement()->Attribute("velocity"))}});
     }
   }
 
@@ -317,14 +320,21 @@ int main(int argc, char **argv)
   // ========== WAYPOINTS ==========
   std::vector<std::vector<double>> starting_waypoints =
   {
-      // pushing
+    //   // pushing
+    //   // {x, y, z}
+    //   {-0.181718997062, -0.1102002648095, 0.861710060669},
+    //   {push_release_x_coordinate, -0.1102002648095, 0.861710060669},
+    // //   {release_x_coordinate, -0.1102002648095, 0.861710060669},
+    //   {0.408281002938, -0.1102002648095, 0.861710060669}
+    
+      // new urdf sliding height
       // {x, y, z}
-      {-0.181718997062, -0.1102002648095, 0.861710060669},
-      {push_release_x_coordinate, -0.1102002648095, 0.861710060669},
+      {-0.481718997062, -0.2302002648095, 0.861710060669},
+      {release_x_coordinate, -0.2302002648095, 0.861710060669},
     //   {release_x_coordinate, -0.1102002648095, 0.861710060669},
     //   {0.118281002938, -0.1102002648095, 0.866710060669}
-      {0.408281002938, -0.1102002648095, 0.866710060669}
-    
+      {0.108281002938, -0.2302002648095, 0.866710060669}
+      
     //   // sliding height
     //   // {x, y, z}
     //   {-0.481718997062, -0.1102002648095, 0.861710060669},
@@ -388,6 +398,8 @@ int main(int argc, char **argv)
 
   double current_s;
   double current_t;
+  double current_vel;
+  double min_execution_time;
   KDL::Frame current_eef_frame;
   KDL::Frame fk_current_eef_frame;
   std::vector<KDL::Frame> eef_trajectory;
@@ -449,6 +461,7 @@ int main(int argc, char **argv)
   std::map<std::string, double> m_map;
   std::map<std::string, double> c_map;
   std::map<std::string, double>::iterator mc_it;
+  std::map<std::string, double>::iterator min_exe_time_it;
 
   while (generated_trajectories < batch_count)
   {
@@ -519,7 +532,7 @@ int main(int argc, char **argv)
         //   noise = distribution(generator) / 100.0;
         //   if (matrix_index == 1)
         //   {
-        //     noisy_release_point[matrix_index] += 0.00;
+        //     noisy_release_point[matrix_index] -= 0.05;
         //   }
           if (matrix_index != 2)
           {
@@ -584,8 +597,8 @@ int main(int argc, char **argv)
 
     for (unsigned i = 0; i < nr_of_joints; i++)
     {
-      last_joint_pos(i) = push_start_joint_pos_array[i];
-    //   last_joint_pos(i) = start_joint_pos_array[i];
+    //   last_joint_pos(i) = push_start_joint_pos_array[i];
+      last_joint_pos(i) = start_joint_pos_array[i];
     }
 
     ret = chainFkSolverPos.JntToCart(last_joint_pos, fk_current_eef_frame);
@@ -679,10 +692,14 @@ int main(int argc, char **argv)
     // ======================== NEW TRAJECTORY ========================
     if (is_new)
     {
+      release_velocity = 1.5;
+      trajectory_duration = 1.45;
       // SetProfileDuration(double pos1, double vel1, double acc1, double pos2, double vel2, double acc2, double duration)
-      // vel_prof->SetProfileDuration(0.0, 0.0, 0.0, path_length, release_velocity, 0, trajectory_duration);
+    //   vel_prof->SetProfileDuration(0.0, 0.0, 0.0, path_length, release_velocity, 0, trajectory_duration);
+      // SetProfileDuration (double pos1, double vel1, double pos2, double vel2, double duration)
+      vel_prof->SetProfileDuration(0.0, 0.0, path_length, release_velocity, trajectory_duration);
       // SetProfileDuration(double pos1, double pos2, double duration)
-      vel_prof->SetProfileDuration(0.0, path_length, trajectory_duration);
+    //   vel_prof->SetProfileDuration(0.0, path_length, trajectory_duration);
       trajectory = new KDL::Trajectory_Segment(path, vel_prof);
       current_t = 0;
       for (unsigned i = 0; i <= NUMBER_OF_SAMPLES; i++)
@@ -700,6 +717,26 @@ int main(int argc, char **argv)
         // std::cout << "\t\t\tZ: " << Z << std::endl;
 
         ret = chainIkSolverPos.CartToJnt(last_joint_pos, current_eef_frame, q_out);
+        for (unsigned joint_index = 0; joint_index < joint_names.size(); joint_index++)
+        {
+            joint_name = joint_names[joint_index];
+            current_vel = q_out.data[joint_index] - last_joint_pos.data[joint_index];
+            min_execution_time = fabs(current_vel) / joint_limits[joint_name]["velocity"] * NUMBER_OF_SAMPLES;
+            if (i == 1)
+            {
+                joints_min_execution_time.insert({joint_name, min_execution_time});
+            }
+            else
+            // else if (i != 1)
+            {
+                min_exe_time_it = joints_min_execution_time.find(joint_name); 
+                if (min_exe_time_it != joints_min_execution_time.end() && min_exe_time_it->second < min_execution_time)
+                {
+                    min_exe_time_it->second = min_execution_time;
+                }
+            }
+        }
+        // current_eef_frame.p.x();
         // std::cout << "RET TRUE: " << ret << std::endl;
 
         joint_trajectory.push_back(q_out);
@@ -752,6 +789,25 @@ int main(int argc, char **argv)
         // std::cout << "\t\t\tZ: " << Z << std::endl;
 
         ret = chainIkSolverPos.CartToJnt(last_joint_pos, current_eef_frame, q_out);
+        for (unsigned joint_index = 0; joint_index < joint_names.size(); joint_index++)
+        {
+            joint_name = joint_names[joint_index];
+            current_vel = q_out.data[joint_index] - last_joint_pos.data[joint_index];
+            min_execution_time = fabs(current_vel) / joint_limits[joint_name]["velocity"] * NUMBER_OF_SAMPLES;
+            if (i == 1)
+            {
+                joints_min_execution_time.insert({joint_name, min_execution_time});
+            }
+            else
+            // else if (i != 1)
+            {
+                min_exe_time_it = joints_min_execution_time.find(joint_name); 
+                if (min_exe_time_it != joints_min_execution_time.end() && min_exe_time_it->second < min_execution_time)
+                {
+                    min_exe_time_it->second = min_execution_time;
+                }
+            }
+        }
         // std::cout << "RET TRUE: " << ret << std::endl;
         joint_trajectory.push_back(q_out);
 
@@ -915,6 +971,11 @@ int main(int argc, char **argv)
   }
   std::cout << "c_map:" << std::endl;
   for(auto elem : c_map)
+  {
+    std::cout << elem.first << " - " << elem.second << std::endl;
+  }
+  std::cout << "joints_min_execution_time:" << std::endl;
+  for(auto elem : joints_min_execution_time)
   {
     std::cout << elem.first << " - " << elem.second << std::endl;
   }

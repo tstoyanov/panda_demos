@@ -72,6 +72,7 @@ parser.add_argument('--load-dir', default=package_path + "/saved_models/policy_n
 parser.add_argument('--load-checkpoint', default=False, help='name of the file containing the checkpoint of the trained policy model')
 parser.add_argument('--load-file', default=False, help='name of the file containing the state dictionary of the trained policy model')
 parser.add_argument('--measure-performance', nargs='?', const=True, default=False, help='whether or not to test the performance of the policy')
+parser.add_argument('--collect-state-data', nargs='?', const=True, default=False, help='whether or not to collect state data')
 
 parser.add_argument('--trajectory-folder', default="latest", help='folder where to look for the trajectory to execute')
 parser.add_argument('--trajectory-file', default="trajectories.txt", help='file describing the trajectory to follow')
@@ -1326,9 +1327,48 @@ def evaluate_board(image_reader=None):
 				distance = "out"
 				angle = "out"
 				break
-			elif "t" == command:
+            elif "xy" == command:
+                stone_x = raw_input("Insert stone_x value: ")
+                stone_y = raw_input("Insert stone_y value: ")
+            elif "t" == command:
 				pass
-	return reward, distance, angle
+	return reward, distance, angle, stone_x, stone_y
+
+def collect_state_data(encoded_trajectory=None, labels=None, repetitions=None, output_folder="latest", image_reader=None, trajectory_dict=None, decoder_model=None):
+    trajectory = decoder_model.decode(encoded_trajectory)
+    smooth_trajectory = []
+    for i in range(joints_number):
+		smooth_trajectory.append(trajectory[i])
+    for i, point in enumerate(trajectory[joints_number:], joints_number):
+		smooth_trajectory.append(0.6*smooth_trajectory[i-joints_number]+0.4*point)
+    smooth_trajectory = torch.tensor(smooth_trajectory)
+    trajectory_dict["joint_trajectory"] = smooth_trajectory.view(100, -1).tolist()
+    safety_res = safety_check_module.check(trajectory.tolist(), args.execution_time)
+    state_data = {}
+    if safety_res.is_safe:
+        output_folder = package_path + "/sensing_data/slide_sensing/" + output_folder
+        os.makedirs(output_folder, exist_ok=True)
+        for label in labels:
+            print("Collecting state data for stone labeled: {}".format(label))
+            state_data[label] = {
+                "x": [],
+                "y": []
+            }
+            for repetition in range(repetitions):
+                print("Repetition {}/{}".format(repetition+1, repetitions))
+                command = raw_input("Press enter to execute the action: ")
+                if "skip" != command:
+                    execute_action(input_folder=False, tot_time_nsecs=args.execution_time, is_simulation=False, is_learning=True, t=trajectory_dict)
+                command = raw_input("Press enter to evaluate the board\n")
+                reward, distance, angle, stone_x, stone_y = evaluate_board(image_reader=image_reader)
+                state_data[label]["x"].append(stone_x)
+                state_data[label]["y"].append(stone_y)
+                if repetition % 10 == 0:
+                    with open(output_folder+"/state_data.txt", "w") as f:
+                        json.dump(state_data, f)
+
+            with open(output_folder+"/state_data.txt", "w") as f:
+                        json.dump(state_data, f)
 
 def measure_performance(image_reader=None, trajectory_dict=None, algorithm=None, decoder_model=None, safety_check_module=None):
 	state = get_state(algorithm.policy.in_dim)
@@ -1342,7 +1382,7 @@ def measure_performance(image_reader=None, trajectory_dict=None, algorithm=None,
 		smooth_trajectory.append(0.6*smooth_trajectory[i-joints_number]+0.4*point)
 	smooth_trajectory = torch.tensor(smooth_trajectory)
 	trajectory_dict["joint_trajectory"] = smooth_trajectory.view(100, -1).tolist()
-	safety_res = safety_check_module.check(trajectory.tolist())
+	safety_res = safety_check_module.check(trajectory.tolist(), args.execution_time)
 	if safety_res.is_safe:
 		performance = {
 			"tot": 0,
@@ -1361,7 +1401,7 @@ def measure_performance(image_reader=None, trajectory_dict=None, algorithm=None,
 					command = raw_input("Insert command:\n")
 			execute_action(input_folder=False, tot_time_nsecs=args.execution_time, is_simulation=False, is_learning=True, t=trajectory_dict)
 			raw_input("Press enter to evaluate the board")
-			reward, distance, angle = evaluate_board(image_reader=image_reader)
+			reward, distance, angle, stone_x, stone_y = evaluate_board(image_reader=image_reader)
 			try:
 				if 0 <= int(distance) <= 50:
 					performance["50"] += 1
@@ -1386,7 +1426,7 @@ def test_policy(image_reader=None, algorithm=None, decoder_model=None, state=Non
 		smooth_trajectory.append(0.6*smooth_trajectory[i-joints_number]+0.4*point)
 	smooth_trajectory = torch.tensor(smooth_trajectory)
 	trajectory_dict["joint_trajectory"] = smooth_trajectory.view(100, -1).tolist()
-	safety_res = safety_check_module.check(trajectory.tolist())
+	safety_res = safety_check_module.check(trajectory.tolist(), args.execution_time)
 	performance = {
 		"tot": 0,
 		"50": 0,
@@ -1397,7 +1437,7 @@ def test_policy(image_reader=None, algorithm=None, decoder_model=None, state=Non
 			raw_input("Press enter to execute a trajectory from the policy mean")
 			execute_action(input_folder=False, tot_time_nsecs=args.execution_time, is_simulation=False, is_learning=True, t=trajectory_dict)
 			raw_input("Press enter to evaluate the board")
-			reward, distance, angle = evaluate_board(image_reader=image_reader)
+			reward, distance, angle, stone_x, stone_y = evaluate_board(image_reader=image_reader)
 			try:
 				if 0 <= int(distance) <= 50:
 					performance["50"] += 1
@@ -1442,6 +1482,9 @@ def main(args):
 
         if args.measure_performance != False:
             measure_performance(image_reader=image_reader, trajectory_dict=trajectory_dict, algorithm=algorithm, decoder_model=decoder_model, safety_check_module=safety_check_module)
+        
+        if args.collect_state_data != False:
+            collect_state_data()
 
         safe_throws = 0
         epoch = 0
@@ -1499,16 +1542,12 @@ def main(args):
                 for i, point in enumerate(trajectory[joints_number:], joints_number):
                     if i % joints_number == 0:
                         alpha = 0.9 - min((((0.9-0.6) / (50.0*joints_number)) * (i - joints_number)), 0.3)
-                        print ("alpha")
-                        print (alpha)
-                        print ("i")
-                        print (i)
                     smooth_trajectory.append(alpha*smooth_trajectory[i-joints_number]+(1-alpha)*point)
                     # smooth_trajectory.append(0.6*smooth_trajectory[i-joints_number]+0.4*point)
                 smooth_trajectory = torch.tensor(smooth_trajectory)
 
-                # safety_res = safety_check_module.check(smooth_trajectory.tolist())
-                safety_res = safety_check_module.check(trajectory.tolist())
+                smooth_safety_res = safety_check_module.check(smooth_trajectory.tolist(), args.execution_time)
+                safety_res = safety_check_module.check(trajectory.tolist(), args.execution_time)
                 
                 if safety_res.is_safe:
                     print("Distribution mean:")
@@ -1532,7 +1571,7 @@ def main(args):
                         if "print rewards_history" == command:
                             print ("rewards_history:")
                             print (algorithm.policy.rewards_history)
-                        reward, distance, angle = evaluate_board(image_reader=image_reader)
+                        reward, distance, angle, stone_x, stone_y = evaluate_board(image_reader=image_reader)
 						# while True:
                         #     distance, stone_x, stone_y = image_reader.evaluate_board()
                         #     if distance != -1:
