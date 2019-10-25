@@ -31,7 +31,7 @@ package_path = rospack.get_path("trajectory_generator")
 
 parser = argparse.ArgumentParser(description='stone sensing')
 
-parser.add_argument('--stones_labels', nargs='+', default=None, type=str, help='list of the labels of the stones')
+parser.add_argument('--stones-labels', nargs='+', default=None, type=str, help='list of the labels of the stones')
 parser.add_argument('--repetitions', default=2, type=int, help='number of times to sense each stone')
 
 args, unknown = parser.parse_known_args()

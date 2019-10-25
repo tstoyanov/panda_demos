@@ -7,6 +7,7 @@ import json, ast, collections, sys, getopt, os, math
 scale = 1
 input_folder = "latest"
 filter_alpha = 0.9
+plt.ion()
 # if len(sys.arvg) == 2:
 #     input_folder = sys.argv[1]
 
@@ -248,7 +249,7 @@ for i in range(len(trajectories["joint_trajectory"][0])):
     plt.plot(steps, joint_trajectories[i], 'o-g', label="joint_trajectory " + str(i))
     plt.ylabel(str(i))
     # plt.title(joint_name)
-    plt.legend()
+    # plt.legend()
         
     # plt.subplot(2, 1, 2)
     # plt.plot(ts_feedback, feedback["actual"]["positions"][joint_name], 'o-g', label="actual positions")
@@ -259,16 +260,16 @@ for i in range(len(trajectories["joint_trajectory"][0])):
     # plt.legend()
 
     plt.xlabel('steps')
-    plt.legend()
+    # plt.legend()
 
 
     # plt.figure(input_folder + " joint_velocity " + str(i))
     plt.subplot(2, 1, 2)
     plt.plot(steps, joint_velocities[i], 'o-g', label="joint_velocity " + str(i))
     plt.ylabel(str(i))
-    plt.legend()
+    # plt.legend()
     plt.xlabel('steps')
-    plt.legend()
+    # plt.legend()
 
 
 for axis in eef_distances["euclidean_distances"]:
@@ -339,6 +340,7 @@ set_axes_equal(ax)
 print("processing completed")
 print("showing graphs")
 plt.show()
+input("Press Enter to close...")
 
 # for joint_name in joint_names:
 #     plt.plot(ts, positions[joint_name], marker='o', linewidth=2)

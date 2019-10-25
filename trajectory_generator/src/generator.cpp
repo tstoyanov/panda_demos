@@ -312,14 +312,22 @@ int main(int argc, char **argv)
   KDL::ChainIkSolverVel_wdls chainIkSolverVel{my_chain};
   KDL::ChainIkSolverPos_NR_JL chainIkSolverPos{my_chain, q_min, q_max, chainFkSolverPos, chainIkSolverVel, max_iter, eps};
 
-  double release_x_coordinate = 0.018281002938;
+  double release_x_coordinate = 0.020281002938;
   double push_release_x_coordinate = 0.318281002938;
+  double elbow_first_release_x_coordinate = -0.048281002938;
 //   double release_x_coordinate = 0.088281002938;
   // double release_x_coordinate = 0.268281002938;
   double noisy_release_x_coordinate;
   // ========== WAYPOINTS ==========
   std::vector<std::vector<double>> starting_waypoints =
   {
+    //   // elbow first
+    //   // {x, y, z}
+    //   {-0.431718997062, -0.2302002648095, 0.861710060669},
+    //   {elbow_first_release_x_coordinate, -0.2302002648095, 0.861710060669},
+    // //   {release_x_coordinate, -0.1102002648095, 0.861710060669},
+    //   {0.058281002938, -0.2302002648095, 0.862710060669}
+    
     //   // pushing
     //   // {x, y, z}
     //   {-0.181718997062, -0.1102002648095, 0.861710060669},
@@ -329,11 +337,11 @@ int main(int argc, char **argv)
     
       // new urdf sliding height
       // {x, y, z}
-      {-0.481718997062, -0.2302002648095, 0.861710060669},
+      {-0.461718997062, -0.2302002648095, 0.861710060669},
       {release_x_coordinate, -0.2302002648095, 0.861710060669},
     //   {release_x_coordinate, -0.1102002648095, 0.861710060669},
     //   {0.118281002938, -0.1102002648095, 0.866710060669}
-      {0.108281002938, -0.2302002648095, 0.866710060669}
+      {0.128281002938, -0.2302002648095, 0.866710060669}
       
     //   // sliding height
     //   // {x, y, z}
@@ -413,8 +421,14 @@ int main(int argc, char **argv)
   int ret;
   double path_length;
   double ds;
+
+  double left_test[] = {-0.077235275171305, 1.1048619692529187, -0.8513244480763084, -1.4185140619442633, 0.9112366011341413, 2.131054658748485, -1.9308082009554988};
+  double right_test[] = {-0.9117365299965204, 0.8700663910466688, 0.26306596901763923, -1.500111004846137, -0.19470499986410136, 2.4250543754889207, -1.4167937111554167};
+  double bent_test[] = {-1.5673447221614194, 1.7283925611583961, 1.600207030158307, -1.4305450502590926, -1.8139610840135125, 1.6117727255345327, -0.879587150979955};
+  double elbow_first[] = {0.10635736243363764, 1.4900843031226025, -1.3238531985717912, -1.3702379363758692, 1.4941375321812838, 1.818093645711391, -1.9917309573385749};
+  
   double start_joint_pos_array[] = {-0.448125769162, 0.32964587676, -0.621680615641, -1.82515059054, 0.269715026327, 2.11438395741, -1.94274845254};
-//   double new_start_joint_pos_array[] = {-1.547825028806401, 1.598492420631542, 1.4699764070176242, -1.5183004197991667, -1.653330215397785, 1.691513459590234, -0.7578849278389568};
+  double good_start_joint_pos_array[] = {-0.4385408868406217, 0.97796379816593138, -0.42510480666790013, -1.3566301885001291, 0.47105463493042737, 2.2513508344955504, -1.7757913197863211};
   double push_start_joint_pos_array[] = {-1.60864894845402, 1.6329093634789467, 1.4522765189189357, -2.085324071528737, -1.7060958243476456, 1.6604129666222465, -0.28491070685932524};
   double average_start_joint_pos_array[] = {0, 0, 0, -1.5708, 0, 1.8675, 0};
   double kdl_start_joint_pos_array[] = {-0.443379, 0.702188, -0.556869, -1.9368, -2.55769, 0.667764, -2.56121};
@@ -530,18 +544,18 @@ int main(int argc, char **argv)
           noise = real_distribution(generator) / 100.0;
         //   distribution = std::normal_distribution<double>(NOISE_MATRIX[matrix_index]["mean"], NOISE_MATRIX[matrix_index]["stddev"]);
         //   noise = distribution(generator) / 100.0;
-        //   if (matrix_index == 1)
-        //   {
-        //     noisy_release_point[matrix_index] -= 0.05;
-        //   }
-          if (matrix_index != 2)
-          {
-            noisy_release_point[matrix_index] += noise;
-          }
-          else
-          { // we add only positive noise to the Z coordinate
-            noisy_release_point[matrix_index] += abs(noise);
-          }
+          // if (matrix_index == 1)
+          // {
+          //   noisy_release_point[matrix_index] += 0.00;
+          // }
+          // if (matrix_index != 2)
+          // {
+          //   noisy_release_point[matrix_index] += noise;
+          // }
+          // else
+          // { // we add only positive noise to the Z coordinate
+          //   noisy_release_point[matrix_index] += abs(noise);
+          // }
         }
         path->Add(KDL::Frame(KDL::Vector(noisy_release_point[0], noisy_release_point[1], noisy_release_point[2])));
         // path -> Add(KDL::Frame(KDL::Vector(noisy_release_point[0], noisy_release_point[1], noisy_release_point[2])));
@@ -598,7 +612,8 @@ int main(int argc, char **argv)
     for (unsigned i = 0; i < nr_of_joints; i++)
     {
     //   last_joint_pos(i) = push_start_joint_pos_array[i];
-      last_joint_pos(i) = start_joint_pos_array[i];
+      last_joint_pos(i) = good_start_joint_pos_array[i];
+      // last_joint_pos(i) = elbow_first[i];
     }
 
     ret = chainFkSolverPos.JntToCart(last_joint_pos, fk_current_eef_frame);

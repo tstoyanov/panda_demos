@@ -72,10 +72,13 @@ parser.add_argument('--load-dir', default=package_path + "/saved_models/policy_n
 parser.add_argument('--load-checkpoint', default=False, help='name of the file containing the checkpoint of the trained policy model')
 parser.add_argument('--load-file', default=False, help='name of the file containing the state dictionary of the trained policy model')
 parser.add_argument('--measure-performance', nargs='?', const=True, default=False, help='whether or not to test the performance of the policy')
-parser.add_argument('--collect-state-data', nargs='?', const=True, default=False, help='whether or not to collect state data')
+parser.add_argument('--collect-state-data', nargs='+', default=False, help='list of the labels of the stones')
+# parser.add_argument('--stones-labels', nargs='+', default=None, type=str, help='list of the labels of the stones')
 
 parser.add_argument('--trajectory-folder', default="latest", help='folder where to look for the trajectory to execute')
 parser.add_argument('--trajectory-file', default="trajectories.txt", help='file describing the trajectory to follow')
+parser.add_argument('--state-folder', default="latest", help='folder where to save the state data')
+parser.add_argument('--state-repetitions', default=50, type=int, help='number of repetitions for each label')
 
 args, unknown = parser.parse_known_args()
 # args = parser.parse_args()
@@ -86,9 +89,11 @@ args.cuda = not args.no_cuda and torch.cuda.is_available()
 device = "cpu"
 
 if args.save_file != False:
-    save_path = args.save_dir+args.save_file
+    save_path = args.save_dir+args.decoder_sd[0:args.decoder_sd.rfind("/")]+"/"+args.save_file
 else:
-    save_path = args.save_dir+datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+    save_path = args.save_dir+args.decoder_sd[0:args.decoder_sd.rfind("/")]+"/"+datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+if not os.path.exists(os.path.dirname(save_path)):
+	os.makedirs(save_path)
 
 items = []
 
@@ -103,10 +108,13 @@ else:
     decoder_model.load_state_dict(decoder_sd)
     decoder_model.eval()
 
+if "SLIDING_STATE" == args.encoder_sd.upper():
+	args.state_dim = 2
+
 if not args.encoder_sd:
     print ("No encoder state dictionary specified: provide the file name of the encoder trained model using the '--encoder-sd' argument")
     sys.exit(2)
-elif "DUMMY" != args.encoder_sd.upper():
+elif args.encoder_sd.upper() not in ["DUMMY", "SLIDING_STATE"]:
     encoder_sd = torch.load(args.encoder_dir+args.encoder_sd)
     args.state_dim = len(encoder_sd["fc21.bias"])
     encoder_module = importlib.import_module(args.models_dir + "." + args.encoder_model_file)
@@ -1043,10 +1051,916 @@ test = [
 			-0.72790239404202817
 		]
 	]
-
 test2 = []
 for point in test:
     test2.extend(point)
+
+state_trajectory_raw = [
+	[
+		-0.40027911454373782,
+		0.93548593130916302,
+		-0.42683719346722948,
+		-1.4389933668440875,
+		0.47369998613317199,
+		2.2887031662468549,
+		-1.7686069190824814
+	],
+	[
+		-0.40027911454373782,
+		0.93548593130916302,
+		-0.42683719346722948,
+		-1.4389933668440875,
+		0.47369998613317199,
+		2.2887031662468549,
+		-1.7686069190824814
+	],
+	[
+		-0.40027911454373782,
+		0.93548593130916302,
+		-0.42683719346722948,
+		-1.4389933668440875,
+		0.47369998613317199,
+		2.2887031662468549,
+		-1.7686069190824814
+	],
+	[
+		-0.40027911454373782,
+		0.93548593130916302,
+		-0.42683719346722948,
+		-1.4389933668440875,
+		0.47369998613317199,
+		2.2887031662468549,
+		-1.7686069190824814
+	],
+	[
+		-0.40027911454373782,
+		0.93548593130916302,
+		-0.42683719346722948,
+		-1.4389933668440875,
+		0.47369998613317199,
+		2.2887031662468549,
+		-1.7686069190824814
+	],
+	[
+		-0.40027911454373782,
+		0.93548593130916302,
+		-0.42683719346722948,
+		-1.4389933668440875,
+		0.47369998613317199,
+		2.2887031662468549,
+		-1.7686069190824814
+	],
+	[
+		-0.40027911454373782,
+		0.93548593130916302,
+		-0.42683719346722948,
+		-1.4389933668440875,
+		0.47369998613317199,
+		2.2887031662468549,
+		-1.7686069190824814
+	],
+	[
+		-0.40027911454373782,
+		0.93548593130916302,
+		-0.42683719346722948,
+		-1.4389933668440875,
+		0.47369998613317199,
+		2.2887031662468549,
+		-1.7686069190824814
+	],
+	[
+		-0.40027911454373782,
+		0.93548593130916302,
+		-0.42683719346722948,
+		-1.4389933668440875,
+		0.47369998613317199,
+		2.2887031662468549,
+		-1.7686069190824814
+	],
+	[
+		-0.40027911454373782,
+		0.93548593130916302,
+		-0.42683719346722948,
+		-1.4389933668440875,
+		0.47369998613317199,
+		2.2887031662468549,
+		-1.7686069190824814
+	],
+	[
+		-0.40027911454373782,
+		0.93548593130916302,
+		-0.42683719346722948,
+		-1.4389933668440875,
+		0.47369998613317199,
+		2.2887031662468549,
+		-1.7686069190824814
+	],
+	[
+		-0.40027911454373782,
+		0.93548593130916302,
+		-0.42683719346722948,
+		-1.4389933668440875,
+		0.47369998613317199,
+		2.2887031662468549,
+		-1.7686069190824814
+	],
+	[
+		-0.40027911454373782,
+		0.93548593130916302,
+		-0.42683719346722948,
+		-1.4389933668440875,
+		0.47369998613317199,
+		2.2887031662468549,
+		-1.7686069190824814
+	],
+	[
+		-0.40027911454373782,
+		0.93548593130916302,
+		-0.42683719346722948,
+		-1.4389933668440875,
+		0.47369998613317199,
+		2.2887031662468549,
+		-1.7686069190824814
+	],
+	[
+		-0.40027911454373782,
+		0.93548593130916302,
+		-0.42683719346722948,
+		-1.4389933668440875,
+		0.47369998613317199,
+		2.2887031662468549,
+		-1.7686069190824814
+	],
+	[
+		-0.40027911454373782,
+		0.93548593130916302,
+		-0.42683719346722948,
+		-1.4389933668440875,
+		0.47369998613317199,
+		2.2887031662468549,
+		-1.7686069190824814
+	],
+	[
+		-0.40027911454373782,
+		0.93548593130916302,
+		-0.42683719346722948,
+		-1.4389933668440875,
+		0.47369998613317199,
+		2.2887031662468549,
+		-1.7686069190824814
+	],
+	[
+		-0.40027911454373782,
+		0.93548593130916302,
+		-0.42683719346722948,
+		-1.4389933668440875,
+		0.47369998613317199,
+		2.2887031662468549,
+		-1.7686069190824814
+	],
+	[
+		-0.40027911454373782,
+		0.93548593130916302,
+		-0.42683719346722948,
+		-1.4389933668440875,
+		0.47369998613317199,
+		2.2887031662468549,
+		-1.7686069190824814
+	],
+	[
+		-0.40027911454373782,
+		0.93548593130916302,
+		-0.42683719346722948,
+		-1.4389933668440875,
+		0.47369998613317199,
+		2.2887031662468549,
+		-1.7686069190824814
+	],
+	[
+		-0.40027911454373782,
+		0.93548593130916302,
+		-0.42683719346722948,
+		-1.4389933668440875,
+		0.47369998613317199,
+		2.2887031662468549,
+		-1.7686069190824814
+	],
+	[
+		-0.40027911454373782,
+		0.93548593130916302,
+		-0.42683719346722948,
+		-1.4389933668440875,
+		0.47369998613317199,
+		2.2887031662468549,
+		-1.7686069190824814
+	],
+	[
+		-0.40027911454373782,
+		0.93548593130916302,
+		-0.42683719346722948,
+		-1.4389933668440875,
+		0.47369998613317199,
+		2.2887031662468549,
+		-1.7686069190824814
+	],
+	[
+		-0.40027911454373782,
+		0.93548593130916302,
+		-0.42683719346722948,
+		-1.4389933668440875,
+		0.47369998613317199,
+		2.2887031662468549,
+		-1.7686069190824814
+	],
+	[
+		-0.40027911454373782,
+		0.93548593130916302,
+		-0.42683719346722948,
+		-1.4389933668440875,
+		0.47369998613317199,
+		2.2887031662468549,
+		-1.7686069190824814
+	],
+	[
+		-0.40027911454373782,
+		0.93548593130916302,
+		-0.42683719346722948,
+		-1.4389933668440875,
+		0.47369998613317199,
+		2.2887031662468549,
+		-1.7686069190824814
+	],
+	[
+		-0.40027911454373782,
+		0.93548593130916302,
+		-0.42683719346722948,
+		-1.4389933668440875,
+		0.47369998613317199,
+		2.2887031662468549,
+		-1.7686069190824814
+	],
+	[
+		-0.40027911454373782,
+		0.93548593130916302,
+		-0.42683719346722948,
+		-1.4389933668440875,
+		0.47369998613317199,
+		2.2887031662468549,
+		-1.7686069190824814
+	],
+	[
+		-0.40027911454373782,
+		0.93548593130916302,
+		-0.42683719346722948,
+		-1.4389933668440875,
+		0.47369998613317199,
+		2.2887031662468549,
+		-1.7686069190824814
+	],
+	[
+		-0.40027911454373782,
+		0.93548593130916302,
+		-0.42683719346722948,
+		-1.4389933668440875,
+		0.47369998613317199,
+		2.2887031662468549,
+		-1.7686069190824814
+	],
+	[
+		-0.40027911454373782,
+		0.93548593130916302,
+		-0.42683719346722948,
+		-1.4389933668440875,
+		0.47369998613317199,
+		2.2887031662468549,
+		-1.7686069190824814
+	],
+	[
+		-0.40027911454373782,
+		0.93548593130916302,
+		-0.42683719346722948,
+		-1.4389933668440875,
+		0.47369998613317199,
+		2.2887031662468549,
+		-1.7686069190824814
+	],
+	[
+		-0.40027911454373782,
+		0.93548593130916302,
+		-0.42683719346722948,
+		-1.4389933668440875,
+		0.47369998613317199,
+		2.2887031662468549,
+		-1.7686069190824814
+	],
+	[
+		-0.39980332232353899,
+		0.93497187169608265,
+		-0.42685621313509248,
+		-1.439986134016318,
+		0.47372916515771518,
+		2.289156343766491,
+		-1.7684992608020293
+	],
+	[
+		-0.39885232373277318,
+		0.93394550280335076,
+		-0.42689413349131405,
+		-1.4419680136895034,
+		0.4737872845378554,
+		2.2900611291512698,
+		-1.7682828739539944
+	],
+	[
+		-0.39742727382868831,
+		0.93241028419768657,
+		-0.42695070367662002,
+		-1.4449317972035143,
+		0.4738738824806179,
+		2.2914145302188822,
+		-1.7679555473688755
+	],
+	[
+		-0.39552953893158538,
+		0.93037121055662431,
+		-0.42702571804634254,
+		-1.4488675186048978,
+		0.47398889248289966,
+		2.2932139363752149,
+		-1.7675129649220087
+	],
+	[
+		-0.3931617131158251,
+		0.92783514333062467,
+		-0.42711846428779998,
+		-1.4537603817281197,
+		0.47413070552324255,
+		2.2954515778577065,
+		-1.7669518400818633
+	],
+	[
+		-0.39032628214226694,
+		0.92481022926090539,
+		-0.42722840598677431,
+		-1.4595936551676132,
+		0.47429855260848303,
+		2.2981214403708443,
+		-1.7662661496681129
+	],
+	[
+		-0.38702628845608855,
+		0.92130607101969664,
+		-0.42735480719644714,
+		-1.4663473696264919,
+		0.47449118415062347,
+		2.3012155172687052,
+		-1.7654492996472222
+	],
+	[
+		-0.38326511148275205,
+		0.9173335496757502,
+		-0.42749681974914383,
+		-1.4739988890679712,
+		0.47470716733235874,
+		2.3047247328455573,
+		-1.7644937083269394
+	],
+	[
+		-0.37904639815279628,
+		0.91290469803892071,
+		-0.42765348897552713,
+		-1.4825231727504258,
+		0.47494489759012526,
+		2.3086390465939921,
+		-1.7633908509388401
+	],
+	[
+		-0.37437399000982047,
+		0.9080325691995722,
+		-0.42782375955073454,
+		-1.4918930479325996,
+		0.47520261036431649,
+		2.3129475613693691,
+		-1.7621313057502574
+	],
+	[
+		-0.36925184871857808,
+		0.90273110397100786,
+		-0.42800648128151009,
+		-1.5020794857785393,
+		0.47547839273572007,
+		2.3176386323897318,
+		-1.7607048003686867
+	],
+	[
+		-0.36368398165302807,
+		0.89701500065036177,
+		-0.42820041466581094,
+		-1.5130518735789029,
+		0.47577019460303155,
+		2.3226999742393755,
+		-1.7591002570203853
+	],
+	[
+		-0.3576743690529518,
+		0.89089959011140496,
+		-0.42840423608157624,
+		-1.5247782772136262,
+		0.47607583910197626,
+		2.3281187633736495,
+		-1.7573058357436671
+	],
+	[
+		-0.35122689401243129,
+		0.88440071876895454,
+		-0.42861654249038877,
+		-1.5372256887343578,
+		0.47639303201964806,
+		2.3338817340113378,
+		-1.7553089746250543
+	],
+	[
+		-0.34434527632216466,
+		0.87753464144584181,
+		-0.42883585557261006,
+		-1.5503602549694606,
+		0.4767193700141521,
+		2.3399752657186252,
+		-1.753096426409718
+	],
+	[
+		-0.33703301094640559,
+		0.87031792566230837,
+		-0.42906062524140337,
+		-1.5641474840841518,
+		0.47705234750608738,
+		2.346385461408488,
+		-1.7506542910248521
+	],
+	[
+		-0.32929331168755288,
+		0.86276736838097468,
+		-0.42928923251250234,
+		-1.5785524280095005,
+		0.47738936216203448,
+		2.3530982148791768,
+		-1.747968043756204
+	],
+	[
+		-0.32112906038715772,
+		0.85489992579805696,
+		-0.42951999173363703,
+		-1.5935398395463132,
+		0.47772771893907739,
+		2.3600992673789416,
+		-1.7450225590069084
+	],
+	[
+		-0.31254276183814206,
+		0.84673265638638773,
+		-0.42975115220157956,
+		-1.6090743037268103,
+		0.47806463270229022,
+		2.367374253000508,
+		-1.7418021297395234
+	],
+	[
+		-0.30353650444310615,
+		0.83828267707470971,
+		-0.42998089921563104,
+		-1.6251203436645489,
+		0.47839722946354085,
+		2.3749087329723686,
+		-1.7382904828545522
+	],
+	[
+		-0.29411192654901325,
+		0.82956713219206923,
+		-0.4302073546340569,
+		-1.6416425016380782,
+		0.47872254632004274,
+		2.3826882191236556,
+		-1.7344707908915966
+	],
+	[
+		-0.28427018831858342,
+		0.82060317461332299,
+		-0.43042857701476123,
+		-1.658605396541234,
+		0.47903753019531914,
+		2.3906981869572603,
+		-1.7303256805538945
+	],
+	[
+		-0.27401194896131414,
+		0.81140795840592561,
+		-0.4306425614337871,
+		-1.6759737591040071,
+		0.47933903550450802,
+		2.3989240788768074,
+		-1.7258372386559238
+	],
+	[
+		-0.26333734913924045,
+		0.80199864219186612,
+		-0.43084723908545841,
+		-1.693712446457198,
+		0.47962382088127509,
+		2.4073512981831997,
+		-1.7209870161800549
+	],
+	[
+		-0.25224599838103184,
+		0.79239240239326225,
+		-0.43104047677663632,
+		-1.7117864376983307,
+		0.47988854511615292,
+		2.4159651944928315,
+		-1.7157560312055316
+	],
+	[
+		-0.24073696737937303,
+		0.78260645551706176,
+		-0.43122007643503396,
+		-1.7301608121326024,
+		0.48012976246704975,
+		2.424751041239428,
+		-1.7101247715448551
+	],
+	[
+		-0.22880878510762415,
+		0.77265808864507546,
+		-0.43138377475816564,
+		-1.7488007118274729,
+		0.48034391751310018,
+		2.4336940059118,
+		-1.7040731979923951
+	],
+	[
+		-0.21645944076958346,
+		0.76256469732247734,
+		-0.43152924313550944,
+		-1.7676712900480271,
+		0.48052733973403067,
+		2.4427791136571253,
+		-1.6975807491608512
+	],
+	[
+		-0.2036863906883552,
+		0.75234383007408101,
+		-0.43165408798193006,
+		-1.7867376470458141,
+		0.48067623800975651,
+		2.4519912048494725,
+		-1.6906263489555771
+	],
+	[
+		-0.19048657034475905,
+		0.7420132388171492,
+		-0.43175585162526381,
+		-1.8059647545681792,
+		0.4807866952499027,
+		2.4613148871912056,
+		-1.6831884178169827
+	],
+	[
+		-0.17685641189067733,
+		0.73159093447728796,
+		-0.43183201389498405,
+		-1.8253173703478156,
+		0.48085466338116251,
+		2.4707344828851432,
+		-1.6752448889484779
+	],
+	[
+		-0.16279186758672809,
+		0.72109524714589557,
+		-0.43187999456161752,
+		-1.8447599437314646,
+		0.48087595894253715,
+		2.4802339713913595,
+		-1.666773230842586
+	],
+	[
+		-0.14828843974527051,
+		0.71054489014044186,
+		-0.43189715677743812,
+		-1.8642565135189597,
+		0.48084625956517968,
+		2.4897969282676677,
+		-1.6577504775206933
+	],
+	[
+		-0.13334121789750628,
+		0.69995902733985615,
+		-0.43188081166710368,
+		-1.8837705990143314,
+		0.48076110164522057,
+		2.4994064605894,
+		-1.6481532680113509
+	],
+	[
+		-0.11794492404552104,
+		0.68935734316448272,
+		-0.43182822421126954,
+		-1.9032650852438218,
+		0.48061587955492302,
+		2.5090451394544653,
+		-1.6379578967058854
+	],
+	[
+		-0.10209396700429646,
+		0.67876011455210172,
+		-0.43173662055546341,
+		-1.9227021032745388,
+		0.48040584677994624,
+		2.5186949301054309,
+		-1.6271403763447765
+	],
+	[
+		-0.08578250698179439,
+		0.66818828424729459,
+		-0.43160319685924237,
+		-1.9420429065748464,
+		0.4801261194181356,
+		2.5283371202429241,
+		-1.6156765154986816
+	],
+	[
+		-0.069004531683101417,
+		0.65766353467078942,
+		-0.4314251297750647,
+		-1.9612477443952039,
+		0.47977168252765845,
+		2.5379522471650424,
+		-1.603542012507208
+	],
+	[
+		-0.051753945351622539,
+		0.64720836156833528,
+		-0.43119958861069857,
+		-1.9802757332173542,
+		0.4793373998682639,
+		2.5475200244462468,
+		-1.5907125679173733
+	],
+	[
+		-0.034024672269143276,
+		0.63684614655608396,
+		-0.43092374918143694,
+		-1.9990847274209409,
+		0.47881802763724446,
+		2.5570192689665507,
+		-1.5771640175105877
+	],
+	[
+		-0.015810776317688898,
+		0.62660122758282033,
+		-0.43059480929733407,
+		-2.0176311904494568,
+		0.47820823285842923,
+		2.5664278292170719,
+		-1.5628724880073723
+	],
+	[
+		0.0028934017523719992,
+		0.61649896622122791,
+		-0.43021000575474561,
+		-2.0358700679203996,
+		0.47750261713433595,
+		2.5757225159400607,
+		-1.547814577475435
+	],
+	[
+		0.022093087716329791,
+		0.60656581058407544,
+		-0.42976663261021203,
+		-2.0537546643146869,
+		0.47669574651273733,
+		2.5848790363077083,
+		-1.5319675623182138
+	],
+	[
+		0.041792896384241503,
+		0.5968293525416003,
+		-0.42926206040870185,
+		-2.0712365250930298,
+		0.47578218824200752,
+		2.5938719330009792,
+		-1.5153096324635653
+	],
+	[
+		0.061996631855186383,
+		0.58731837779955531,
+		-0.42869375591977826,
+		-2.0882653263150388,
+		0.47475655518489607,
+		2.6026745297118641,
+		-1.4978201559788593
+	],
+	[
+		0.082707064439222669,
+		0.57806290729119558,
+		-0.42805930180890284,
+		-2.1047887740704634,
+		0.47361355861579474,
+		2.611258884752647,
+		-1.4794799737802509
+	],
+	[
+		0.10392568360260385,
+		0.56909422825053513,
+		-0.42735641554427517,
+		-2.1207525162578573,
+		0.47234807002747198,
+		2.619595754604382,
+		-1.4602717243504091
+	],
+	[
+		0.12565242689093947,
+		0.56044491327989332,
+		-0.42658296672318685,
+		-2.1361000694469636,
+		0.47095519240284994,
+		2.6276545693615567,
+		-1.4401801974019794
+	],
+	[
+		0.14788538557445255,
+		0.55214882571533752,
+		-0.42573699191041592,
+		-2.1507727637156893,
+		0.46943034114742821,
+		2.6354034221158598,
+		-1.4191927141995373
+	],
+	[
+		0.1706204887591781,
+		0.5442411096440245,
+		-0.42481670603293314,
+		-2.1647097084344318,
+		0.46776933451008962,
+		2.6428090743510224,
+		-1.3972995307654308
+	],
+	[
+		0.19385116892936907,
+		0.53675816305383028,
+		-0.4238205093911695,
+		-2.1778477819489743,
+		0.46596849282831909,
+		2.6498369793724104,
+		-1.3744942584435615
+	],
+	[
+		0.21756801332783571,
+		0.52973759281468691,
+		-0.42274698944975464,
+		-2.1901216479531405,
+		0.46402474530769028,
+		2.6564513256462252,
+		-1.3507742942989376
+	],
+	[
+		0.24175840722115211,
+		0.52321815051945131,
+		-0.4215949167804271,
+		-2.2014638010056906,
+		0.46193574228459688,
+		2.6626151016501889,
+		-1.3261412516367115
+	],
+	[
+		0.26640617688878226,
+		0.51723964866483652,
+		-0.42036323486189431,
+		-2.2118046430928389,
+		0.45969997003998897,
+		2.6682901834162167,
+		-1.3006013786135864
+	],
+	[
+		0.29149124203997034,
+		0.51184285724233636,
+		-0.41905104389961234,
+		-2.2210725923295187,
+		0.45731686426581825,
+		2.6734374453547369,
+		-1.2741659506088225
+	],
+	[
+		0.31698928918352548,
+		0.50706938154296932,
+		-0.41765757940006359,
+		-2.2291942237947033,
+		0.454786917295666,
+		2.6780168941733757,
+		-1.246851619886828
+	],
+	[
+		0.3428714790982168,
+		0.50296152285961315,
+		-0.41618218688425118,
+		-2.2360944410825732,
+		0.45211177328561131,
+		2.681987824731392,
+		-1.218680704325483
+	],
+	[
+		0.3691042027840083,
+		0.49956212479089596,
+		-0.4146242947931057,
+		-2.241696675408781,
+		0.44929430478700499,
+		2.6853089955086622,
+		-1.1896813958443446
+	],
+	[
+		0.39564890089939386,
+		0.49691440899586237,
+		-0.41298338823753122,
+		-2.245923107043565,
+		0.44633866372568065,
+		2.6879388200313894,
+		-1.1598878689009275
+	],
+	[
+		0.42248230091139455,
+		0.49502596244336367,
+		-0.41128527886208394,
+		-2.248704931010526,
+		0.44322296890518276,
+		2.6898101281864308,
+		-1.1293204810535615
+	],
+	[
+		0.44979303539120313,
+		0.49351604482493938,
+		-0.40983911616073287,
+		-2.2500806730585698,
+		0.439631440202847,
+		2.6905796956076209,
+		-1.0977939273717783
+	],
+	[
+		0.47759139204920237,
+		0.49228110743252285,
+		-0.40873832153202605,
+		-2.2500094958961832,
+		0.43546092246393947,
+		2.690102617849957,
+		-1.06528713798219
+	],
+	[
+		0.50533516599339923,
+		0.49139349324883674,
+		-0.40795619124878241,
+		-2.2484414834103741,
+		0.43081702084302176,
+		2.6883902433037652,
+		-1.0324110295844215
+	],
+	[
+		0.5310927541815943,
+		0.49127813706255763,
+		-0.40719953751623778,
+		-2.2454898173793367,
+		0.42633814988096536,
+		2.6859446261755795,
+		-1.0014360721451572
+	],
+	[
+		0.55468711883946109,
+		0.49189062450713583,
+		-0.40640220339165373,
+		-2.2414320078423464,
+		0.42215907720378321,
+		2.6830114280986281,
+		-0.97265541900145336
+	],
+	[
+		0.57607070939634719,
+		0.49306967846898259,
+		-0.40558421484785062,
+		-2.2365773037071373,
+		0.41831462748927595,
+		2.6797528325030644,
+		-0.94622335254619339
+	],
+	[
+		0.59525513777106909,
+		0.49465899111545281,
+		-0.40476599293480331,
+		-2.2312185137148539,
+		0.41482384156559116,
+		2.676319577033202,
+		-0.92221701669863565
+	]
+]
+
+state_trajectory = []
+for point in state_trajectory_raw:
+    state_trajectory.extend(point)
 
 # ========== a200_b01_mc ==========
 a200_b01_mc_latent_space_means = [-0.95741573,  0.60835766,  0.03808778, -0.70411791,  0.15081754]
@@ -1256,23 +2170,13 @@ else:
 
 best_det_reward = None
 
-def get_state(dim):
-    if "DUMMY" == args.encoder_sd.upper():
-        return torch.ones(dim)
-    else:
-        sensors_data = sensing_script.sense_stone()
-        forces_tensor = []
-        forces_tensor.append(sensors_data["force"]["x"][-1])
-        forces_tensor.append(sensors_data["force"]["y"][-1])
-        forces_tensor.append(sensors_data["force"]["z"][-1])
-        forces_tensor.append(sensors_data["torque"]["x"][-1])
-        forces_tensor.append(sensors_data["torque"]["y"][-1])
-        forces_tensor.append(sensors_data["torque"]["z"][-1])
-        state_mu, state_logvar = encoder_model.encode(torch.tensor(forces_tensor).view(-1, 600))
-        state_mu = state_mu[0].detach()
-        return state_mu
-    # return torch.randn(dim)
-    # return torch.zeros(dim)
+state_data = None
+if "SLIDING_STATE" == args.encoder_sd.upper():
+	input_folder = package_path + "/sensing_data/slide_sensing/" + args.state_folder
+	with open(input_folder+"/state_data.txt", 'r') as f:
+		data = f.read()
+	state_data = json.loads(data)
+	state_data = ast.literal_eval(json.dumps(state_data))
 
 def get_dummy_action(dim):
     # return torch.tensor([-1.0398e+00,  1.2563e+00,  8.3643e-02, -5.1169e-01,  1.4186e-01])
@@ -1290,9 +2194,14 @@ def close_all(items):
 def get_angle(x, y):
     return (math.atan2(y, x)*180/math.pi + 360) % 360
 
-def evaluate_board(image_reader=None):
+def evaluate_board(image_reader=None, epoch=None, batch_index=None, repetition=None, label=None):
 	while True:
-		distance, stone_x, stone_y = image_reader.evaluate_board()
+		if epoch != None:
+			dr_filename = "/dr_{}-e_{}-i_{}-r_{}-l.jpg".format(epoch, batch_index, repetition, label)
+			cv_filename = "/cv_{}-e_{}-i_{}-r_{}-l.jpg".format(epoch, batch_index, repetition, label)
+			distance, stone_x, stone_y = image_reader.evaluate_board(dr_save_path=os.path.dirname(save_path)+dr_filename, cv_save_path=os.path.dirname(save_path)+cv_filename)
+		else:
+			distance, stone_x, stone_y = image_reader.evaluate_board()
 		if distance != -1:
 			if args.reward_type.upper() in ["D", "DISCRETE"]:
 				reward = max(0, 4 - distance//100)
@@ -1327,27 +2236,84 @@ def evaluate_board(image_reader=None):
 				distance = "out"
 				angle = "out"
 				break
-            elif "xy" == command:
-                stone_x = raw_input("Insert stone_x value: ")
-                stone_y = raw_input("Insert stone_y value: ")
-            elif "t" == command:
+			elif "xy" == command:
+				stone_x = raw_input("Insert stone_x value: ")
+				stone_y = raw_input("Insert stone_y value: ")
+			elif "t" == command:
 				pass
 	return reward, distance, angle, stone_x, stone_y
 
-def collect_state_data(encoded_trajectory=None, labels=None, repetitions=None, output_folder="latest", image_reader=None, trajectory_dict=None, decoder_model=None):
-    trajectory = decoder_model.decode(encoded_trajectory)
-    smooth_trajectory = []
-    for i in range(joints_number):
-		smooth_trajectory.append(trajectory[i])
-    for i, point in enumerate(trajectory[joints_number:], joints_number):
-		smooth_trajectory.append(0.6*smooth_trajectory[i-joints_number]+0.4*point)
-    smooth_trajectory = torch.tensor(smooth_trajectory)
-    trajectory_dict["joint_trajectory"] = smooth_trajectory.view(100, -1).tolist()
-    safety_res = safety_check_module.check(trajectory.tolist(), args.execution_time)
-    state_data = {}
+def get_state(dim=args.state_dim, image_reader=None, trajectory_dict=None, decoder_model=None):
+    if "DUMMY" == args.encoder_sd.upper():
+        return torch.ones(dim)
+    elif "SLIDING_STATE" == args.encoder_sd.upper():
+		labels = [label for label in state_data]
+		print("The available labels are:")
+		for label in labels:
+			print ("\t{}".format(label))
+		command = raw_input("Select a label or leave blank to sense a new stone:\n> ")
+		if command in labels:
+			label = command
+			x_t = torch.FloatTensor(state_data[label]["x"])
+			y_t = torch.FloatTensor(state_data[label]["y"])
+			x_mean = x_t.mean()
+			x_std = x_t.std()
+			y_mean = y_t.mean()
+			y_std = y_t.std()
+			mean_vector = torch.tensor([x_mean, y_mean])
+			cov_matrix = torch.diag(torch.tensor([x_std**2, y_std**2]))
+			dist = MultivariateNormal(mean_vector, cov_matrix)
+			state = dist.sample()
+			return state, label
+		else:
+			label = "sensed"
+			decoded_trajectory = torch.tensor(state_trajectory)
+			trajectory_dict["joint_trajectory"] = decoded_trajectory.view(100, -1).tolist()
+			safety_res = safety_check_module.check(decoded_trajectory.tolist(), args.execution_time)
+			if safety_res.is_safe:
+				repetitions = 1
+				state_x = 0
+				state_y = 0
+				for repetition in range(repetitions):
+					print("Repetition {}/{}".format(repetition+1, repetitions))
+					command = raw_input("Press enter to execute the action: ")
+					if "skip" != command:
+						execute_action(input_folder=False, tot_time_nsecs=args.execution_time, is_simulation=False, is_learning=True, t=trajectory_dict)
+					command = raw_input("Press enter to evaluate the board\n")
+					reward, distance, angle, stone_x, stone_y = evaluate_board(image_reader=image_reader)
+					state_x += stone_x
+					state_y += stone_y
+				state_x = state_x / float(repetitions)
+				state_y = state_y / float(repetitions)
+				state = torch.tensor([state_x, state_y])
+				return state, label
+			else:
+				print("Unsafe trajectory")
+    else:
+        sensors_data = sensing_script.sense_stone()
+        forces_tensor = []
+        forces_tensor.append(sensors_data["force"]["x"][-1])
+        forces_tensor.append(sensors_data["force"]["y"][-1])
+        forces_tensor.append(sensors_data["force"]["z"][-1])
+        forces_tensor.append(sensors_data["torque"]["x"][-1])
+        forces_tensor.append(sensors_data["torque"]["y"][-1])
+        forces_tensor.append(sensors_data["torque"]["z"][-1])
+        state_mu, state_logvar = encoder_model.encode(torch.tensor(forces_tensor).view(-1, 600))
+        state_mu = state_mu[0].detach()
+        return state_mu
+    # return torch.randn(dim)
+    # return torch.zeros(dim)
+
+def collect_state_data(encoded_trajectory=None, decoded_trajectory=None, labels=None, repetitions=None, output_folder="latest", image_reader=None, trajectory_dict=None, decoder_model=None):
+    decoded_trajectory = torch.tensor(decoded_trajectory)
+    trajectory_dict["joint_trajectory"] = decoded_trajectory.view(100, -1).tolist()
+    safety_res = safety_check_module.check(decoded_trajectory.tolist(), args.execution_time)
     if safety_res.is_safe:
+    	state_data = {}
         output_folder = package_path + "/sensing_data/slide_sensing/" + output_folder
-        os.makedirs(output_folder, exist_ok=True)
+        # os.makedirs(output_folder, exist_ok=True)
+        if not os.path.exists(output_folder):
+    		os.makedirs(output_folder)
         for label in labels:
             print("Collecting state data for stone labeled: {}".format(label))
             state_data[label] = {
@@ -1363,15 +2329,18 @@ def collect_state_data(encoded_trajectory=None, labels=None, repetitions=None, o
                 reward, distance, angle, stone_x, stone_y = evaluate_board(image_reader=image_reader)
                 state_data[label]["x"].append(stone_x)
                 state_data[label]["y"].append(stone_y)
-                if repetition % 10 == 0:
-                    with open(output_folder+"/state_data.txt", "w") as f:
-                        json.dump(state_data, f)
+                if repetition % 2 == 0:
+					with open(output_folder+"/state_data_odd.txt", "w") as f:
+						json.dump(state_data, f)
+                else:
+					with open(output_folder+"/state_data_even.txt", "w") as f:
+						json.dump(state_data, f)
 
-            with open(output_folder+"/state_data.txt", "w") as f:
-                        json.dump(state_data, f)
+            # with open(output_folder+"/state_data.txt", "w") as f:
+            #             json.dump(state_data, f)
 
 def measure_performance(image_reader=None, trajectory_dict=None, algorithm=None, decoder_model=None, safety_check_module=None):
-	state = get_state(algorithm.policy.in_dim)
+	state, label= get_state(algorithm.policy.in_dim, image_reader=image_reader, trajectory_dict=trajectory_dict, decoder_model=decoder_model)
 	mean = algorithm.get_policy_mean(state)
 	print ("mean: {}".format(mean))
 	trajectory = decoder_model.decode(mean)
@@ -1457,12 +2426,19 @@ def test_policy(image_reader=None, algorithm=None, decoder_model=None, state=Non
 
 def main(args):
     try:
+        trajectory_dict = {
+            "joint_trajectory": [],
+            "joint_names": joint_names,
+            "realease_frame": args.release_frame
+        }
         plot_joints = False
         image_reader = image_reader_module.image_converter()
         items.append(image_reader)
         image_reader.initialize_board()
         algorithm = algorithm_module.ALGORITHM(args.state_dim, args.action_dim, args.learning_rate, plot=True, batch_size=args.batch_size)
         items.append(algorithm)
+        if args.collect_state_data != False:
+			collect_state_data(encoded_trajectory=None, decoded_trajectory=state_trajectory, labels=args.collect_state_data, repetitions=args.state_repetitions, output_folder=args.state_folder, image_reader=image_reader, trajectory_dict=trajectory_dict, decoder_model=decoder_model)
         if args.load_file != False:
             algorithm.load_model_state_dict(args.load_dir+args.load_file)
         elif args.load_checkpoint != False:
@@ -1474,18 +2450,10 @@ def main(args):
             algorithm.plot = True
         ret = [0, 0]
         reward = None
-        trajectory_dict = {
-            "joint_trajectory": [],
-            "joint_names": joint_names,
-            "realease_frame": args.release_frame
-        }
 
         if args.measure_performance != False:
             measure_performance(image_reader=image_reader, trajectory_dict=trajectory_dict, algorithm=algorithm, decoder_model=decoder_model, safety_check_module=safety_check_module)
-        
-        if args.collect_state_data != False:
-            collect_state_data()
-
+    
         safe_throws = 0
         epoch = 0
         while safe_throws < args.safe_throws:
@@ -1495,7 +2463,7 @@ def main(args):
             episode_reward = 0
             for t in range(args.batch_size):
                 print ("t = {}".format(t))
-                state = get_state(algorithm.policy.in_dim)
+                state, label = get_state(algorithm.policy.in_dim, image_reader=image_reader, trajectory_dict=trajectory_dict, decoder_model=decoder_model)
                 command = True
                 while "" != command:
                     command = raw_input("Enter command (leave blank to execute action): ")
@@ -1571,7 +2539,7 @@ def main(args):
                         if "print rewards_history" == command:
                             print ("rewards_history:")
                             print (algorithm.policy.rewards_history)
-                        reward, distance, angle, stone_x, stone_y = evaluate_board(image_reader=image_reader)
+                        reward, distance, angle, stone_x, stone_y = evaluate_board(image_reader=image_reader, epoch=epoch, batch_index=t, repetition=n, label=label)
 						# while True:
                         #     distance, stone_x, stone_y = image_reader.evaluate_board()
                         #     if distance != -1:

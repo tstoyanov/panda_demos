@@ -23,7 +23,7 @@ int generate_velocity_profile (std::vector<double> &result, int total_frames, in
 
     // std::uniform_real_distribution<> real_distribution(2 * treshold_length / treshold_frame, 4 * treshold_length / treshold_frame);
     // std::uniform_real_distribution<> real_distribution(2 * treshold_length / treshold_frame, 3.5 * treshold_length / treshold_frame);
-    std::uniform_real_distribution<> real_distribution(3.5 * treshold_length / treshold_frame, 3.5 * treshold_length / treshold_frame);
+    std::uniform_real_distribution<> real_distribution(3.1 * treshold_length / treshold_frame, 3.1 * treshold_length / treshold_frame);
     
     // std::uniform_real_distribution<> real_distribution(2 * treshold_length / treshold_frame, 3 * treshold_length / treshold_frame);
 

@@ -204,6 +204,8 @@ class image_converter:
         self.iteration = 0
         self.iteration_treshold = iteration_treshold
         self.single_serach_flag = False
+        self.cv_image = None
+        self.drawable_image = None
 
         # while not rospy.core.is_shutdown():
         #     while not self.board.center_found():
@@ -326,6 +328,7 @@ class image_converter:
     def callback(self,data):
         try:
             cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")
+            self.cv_image = cv_image
         except CvBridgeError as e:
             print(e)
 
@@ -381,6 +384,7 @@ class image_converter:
                 cv2.putText(drawable_image, str(distance_from_center), s.get_center(), cv2.FONT_HERSHEY_SIMPLEX, 1.0, s.get_color_bgr(), lineType=cv2.LINE_AA)
             # cv2.putText(drawable_image, s.get_color_name(), s.get_center(), cv2.FONT_HERSHEY_SIMPLEX, 1.0, s.get_color_bgr(), lineType=cv2.LINE_AA)
         
+        self.drawable_image = drawable_image
         cv2.imshow("drawable_image window", drawable_image)
         cv2.waitKey(3)
 
@@ -410,16 +414,19 @@ class image_converter:
     def close(self):
         cv2.destroyAllWindows()
 
-    def evaluate_board(self):
+    def evaluate_board(self, dr_save_path=None, cv_save_path=None):
         # input()
         self.single_stone_search()
         rospy.rostime.wallsleep(1)
         while self.single_serach_flag:
             pass
         if len(self.so.stones) == 1:
+            if dr_save_path != None:
+                cv2.imwrite(dr_save_path, self.drawable_image)
+                cv2.imwrite(cv_save_path, self.cv_image)
             return self.so.stones[0].get_distance_from_center(), self.so.stones[0].x, self.so.stones[0].y
         else:
-            return -1, False, False
+            return -1, -1, -1
 
 def main(args):
     ic = image_converter()

@@ -262,7 +262,7 @@ class ALGORITHM:
 
         self.policy.train()
 
-    def select_action(self, state, cov_mat=None, target_action=None):
+    def select_action(self, state, cov_mat=None, target_action=None, no_state=False):
         mean, log_var = self.policy(state)
         std = torch.exp(0.5*log_var)
         # print ("mean = {}".format(mean.data))
