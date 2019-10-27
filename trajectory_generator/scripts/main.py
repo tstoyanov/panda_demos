@@ -62,7 +62,7 @@ parser.add_argument('--trajectory-writer-script', default="writer_from_generated
 
 parser.add_argument('--no-plot', nargs='?', const=True, default=False, help='whether to plot data or not')
 parser.add_argument('--safe-execution-time', type=int, default=9000000000, help='safe execution time in nanoseconds')
-parser.add_argument('--execution-time', type=int, default=1700000000, help='execution time in nanoseconds')
+parser.add_argument('--execution-time', type=int, default=1600000000, help='execution time in nanoseconds')
 parser.add_argument('--release-frame', type=int, default=95, help='release frame')
 
 parser.add_argument('--save-dir', default=package_path + "/saved_models/policy_network/", help='directory where to save the policy model once trained')
@@ -92,8 +92,11 @@ if args.save_file != False:
     save_path = args.save_dir+args.decoder_sd[0:args.decoder_sd.rfind("/")]+"/"+args.save_file
 else:
     save_path = args.save_dir+args.decoder_sd[0:args.decoder_sd.rfind("/")]+"/"+datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+checkpoint_save_dir = os.path.dirname(save_path)+"/checkpoint/"
 if not os.path.exists(os.path.dirname(save_path)):
 	os.makedirs(save_path)
+if not os.path.exists(checkpoint_save_dir):
+	os.makedirs(checkpoint_save_dir)
 
 items = []
 
@@ -2160,7 +2163,7 @@ if args.latent_space_data != False:
     actions = [(vel, latent_space_data["vel"][vel]["mean"]) for vel in latent_space_data["vel"]]
     actions.sort()  # slow to fast
     actions = [action[1] for action in actions]
-    initial_actions = [actions[-4]] + [actions[0]] + [actions[-2]] + [actions[-3]]
+    initial_actions = [actions[-1]] + [actions[0]]
     # initial_actions = [actions[-1]] + [actions[0]] + [actions[-2]] + [actions[-3]]
     initial_actions += random.sample(actions, args.batch_size)
 else:
@@ -2169,6 +2172,9 @@ else:
     initial_actions = a200_b001_20000_shuffled_initial_means
 
 best_det_reward = None
+normal_center = None
+curved_center = None
+last_label = None
 
 state_data = None
 if "SLIDING_STATE" == args.encoder_sd.upper():
@@ -2244,18 +2250,36 @@ def evaluate_board(image_reader=None, epoch=None, batch_index=None, repetition=N
 	return reward, distance, angle, stone_x, stone_y
 
 def get_state(dim=args.state_dim, image_reader=None, trajectory_dict=None, decoder_model=None):
+    global normal_center
+    global curved_center
+    global last_label
     if "DUMMY" == args.encoder_sd.upper():
         return torch.ones(dim)
     elif "SLIDING_STATE" == args.encoder_sd.upper():
 		labels = [label for label in state_data]
-		print("The available labels are:")
-		for label in labels:
-			print ("\t{}".format(label))
-		command = raw_input("Select a label or leave blank to sense a new stone:\n> ")
-		if command in labels:
-			label = command
-			x_t = torch.FloatTensor(state_data[label]["x"])
-			y_t = torch.FloatTensor(state_data[label]["y"])
+		done = False
+		while not done:
+			print("The available labels are:")
+			for label in labels:
+				print ("\t{}".format(label))
+			print ("\tsense (sense a new stone)")
+			if last_label == None:
+				command = raw_input("Select a label\n> ")
+			else:
+				command = raw_input("Select a label or leave blank to use the last label: '{}'\n> ".format(last_label))
+			if command == "" or command == "sense" or command in labels:
+				done = True
+				if command != "":
+					last_label = command
+			else:
+				print("The inserted label: '{}' was not recognized.".format(command))
+		if last_label in labels:
+			if last_label == "curved":
+				image_reader.board.set_center(curved_center)
+			else:
+				image_reader.board.set_center(normal_center)
+			x_t = torch.FloatTensor(state_data[last_label]["x"])
+			y_t = torch.FloatTensor(state_data[last_label]["y"])
 			x_mean = x_t.mean()
 			x_std = x_t.std()
 			y_mean = y_t.mean()
@@ -2266,7 +2290,8 @@ def get_state(dim=args.state_dim, image_reader=None, trajectory_dict=None, decod
 			state = dist.sample()
 			return state, label
 		else:
-			label = "sensed"
+			print("Sensing a new stone")
+			image_reader.board.set_center(normal_center)
 			decoded_trajectory = torch.tensor(state_trajectory)
 			trajectory_dict["joint_trajectory"] = decoded_trajectory.view(100, -1).tolist()
 			safety_res = safety_check_module.check(decoded_trajectory.tolist(), args.execution_time)
@@ -2286,7 +2311,7 @@ def get_state(dim=args.state_dim, image_reader=None, trajectory_dict=None, decod
 				state_x = state_x / float(repetitions)
 				state_y = state_y / float(repetitions)
 				state = torch.tensor([state_x, state_y])
-				return state, label
+				return state, last_label
 			else:
 				print("Unsafe trajectory")
     else:
@@ -2306,6 +2331,16 @@ def get_state(dim=args.state_dim, image_reader=None, trajectory_dict=None, decod
 
 def collect_state_data(encoded_trajectory=None, decoded_trajectory=None, labels=None, repetitions=None, output_folder="latest", image_reader=None, trajectory_dict=None, decoder_model=None):
     decoded_trajectory = torch.tensor(decoded_trajectory)
+    smooth_trajectory = []
+    for i in range(joints_number):
+		smooth_trajectory.append(decoded_trajectory[i])
+    for i, point in enumerate(decoded_trajectory[joints_number:], joints_number):
+		if i % joints_number == 0:
+			alpha = 0.9 - min((((0.9-0.6) / (50.0*joints_number)) * (i - joints_number)), 0.3)
+		smooth_trajectory.append(alpha*smooth_trajectory[i-joints_number]+(1-alpha)*point)
+		# smooth_trajectory.append(0.6*smooth_trajectory[i-joints_number]+0.4*point)
+    smooth_trajectory = torch.tensor(smooth_trajectory)
+    # trajectory_dict["joint_trajectory"] = smooth_trajectory.view(100, -1).tolist()
     trajectory_dict["joint_trajectory"] = decoded_trajectory.view(100, -1).tolist()
     safety_res = safety_check_module.check(decoded_trajectory.tolist(), args.execution_time)
     if safety_res.is_safe:
@@ -2426,6 +2461,8 @@ def test_policy(image_reader=None, algorithm=None, decoder_model=None, state=Non
 
 def main(args):
     try:
+        global normal_center
+        global curved_center
         trajectory_dict = {
             "joint_trajectory": [],
             "joint_names": joint_names,
@@ -2435,6 +2472,8 @@ def main(args):
         image_reader = image_reader_module.image_converter()
         items.append(image_reader)
         image_reader.initialize_board()
+        normal_center = image_reader.board.get_center()
+        curved_center= (normal_center[0], normal_center[1]-127)
         algorithm = algorithm_module.ALGORITHM(args.state_dim, args.action_dim, args.learning_rate, plot=True, batch_size=args.batch_size)
         items.append(algorithm)
         if args.collect_state_data != False:
@@ -2607,7 +2646,8 @@ def main(args):
 
             print("Saving policy model...")
             algorithm.save_model_state_dict(save_path)
-            checkpoint_save_path = args.save_dir+"checkpoint/"+datetime.now().strftime("%Y-%m-%d_%H:%M:%S")+"_r"+str(round(latest_det_reward, 3))+".tar"
+            checkpoint_save_path = checkpoint_save_dir+datetime.now().strftime("%Y-%m-%d_%H:%M:%S")+"_r"+str(round(latest_det_reward, 3))+".tar"
+            # checkpoint_save_path = args.save_dir+"checkpoint/"+datetime.now().strftime("%Y-%m-%d_%H:%M:%S")+"_r"+str(round(latest_det_reward, 3))+".tar"
             algorithm.save_checkpoint(checkpoint_save_path)
             print("Policy model saved...")
 

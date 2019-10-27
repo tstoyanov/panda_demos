@@ -322,6 +322,9 @@ class image_converter:
             else:
                 rospy.loginfo("Single center found")
                 cv2.circle(drawable_image,self.board.get_center(),2,(0,0,0),2)
+                curved_center = self.board.get_center()
+                curved_center = (curved_center[0], curved_center[1]-127)
+                cv2.circle(drawable_image, curved_center, 2, (0,0,0), 2)
                 cv2.putText(drawable_image, self.board.get_color_name(), self.board.get_center(), cv2.FONT_HERSHEY_SIMPLEX, 1.0, self.board.get_color_bgr(), lineType=cv2.LINE_AA)
 
     
