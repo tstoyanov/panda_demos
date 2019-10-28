@@ -60,15 +60,15 @@ def talker(input_folder="latest", tot_time_nsecs=9000000000, is_simulation=False
         rospy.init_node('myWriter', anonymous=True)
     rate = rospy.Rate(0.1)  # hz
 
-    print ("Waiting for '/panda/franka_gripper/move_service' service...")
+    # print ("Waiting for '/panda/franka_gripper/move_service' service...")
     rospy.wait_for_service('/panda/franka_gripper/move_service')
-    print ("Service found!")
+    # print ("Service found!")
     try:
         move_gripper = rospy.ServiceProxy('/panda/franka_gripper/move_service', gripper_service)
     # except rospy.ServiceException, e:
     except rospy.ServiceException as e:
         print ("Service connection failed: %s", e)
-    print ("Service connected!")
+    # print ("Service connected!")
 
     moveit_commander.roscpp_initialize(sys.argv)
     group_name = "panda_arm"

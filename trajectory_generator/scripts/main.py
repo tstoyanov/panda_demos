@@ -27,8 +27,9 @@ parser.add_argument('--gamma', type=float, default=0.99, metavar='G', help='disc
 parser.add_argument('--seed', type=int, default=543, metavar='N', help='random seed (default: 543)')
 parser.add_argument('--no-cuda', action='store_true', default=False, help='enables CUDA training')
 
-parser.add_argument('--pre-train-log-interval', type=int, default=10, metavar='N', help='interval between training status logs (default: 100)')
-parser.add_argument('--pre-train-epochs', type=int, default=100, help='number of epochs for training (default: 1000)')
+parser.add_argument('--pre-train', nargs='?', const=True, default=False, help='whether to pre train the poilicy network or not, if false the network will be leaded')
+parser.add_argument('--pre-train-log-interval', type=int, default=1, metavar='N', help='interval between training status logs (default: 100)')
+parser.add_argument('--pre-train-epochs', type=int, default=30, help='number of epochs for training (default: 1000)')
 parser.add_argument('--pre-train-batch-size', type=int, default=100, metavar='N', help='input batch size for training (default: 1000)')
 parser.add_argument('--log-interval', type=int, default=1, metavar='N', help='interval between training status logs (default: 1)')
 parser.add_argument('--epochs', type=int, default=12, help='number of epochs for training (default: 10)')
@@ -80,6 +81,8 @@ parser.add_argument('--trajectory-file', default="trajectories.txt", help='file 
 parser.add_argument('--state-folder', default="latest", help='folder where to save the state data')
 parser.add_argument('--state-repetitions', default=50, type=int, help='number of repetitions for each label')
 
+parser.add_argument('--train-labels', nargs='+', default="10", help='list of the labels of the stones to use while training')
+
 args, unknown = parser.parse_known_args()
 # args = parser.parse_args()
 
@@ -93,6 +96,7 @@ if args.save_file != False:
 else:
     save_path = args.save_dir+args.decoder_sd[0:args.decoder_sd.rfind("/")]+"/"+datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
 checkpoint_save_dir = os.path.dirname(save_path)+"/checkpoint/"
+pre_train_save_path = os.path.dirname(save_path)+"/pre_trained_policy.pt"
 if not os.path.exists(os.path.dirname(save_path)):
 	os.makedirs(save_path)
 if not os.path.exists(checkpoint_save_dir):
@@ -2174,7 +2178,12 @@ else:
 best_det_reward = None
 normal_center = None
 curved_center = None
+observed_labels = set()
+if type(args.train_labels) != list:
+	args.train_labels = [args.train_labels]
 last_label = None
+label_index = 0
+test_index = 1
 
 state_data = None
 if "SLIDING_STATE" == args.encoder_sd.upper():
@@ -2183,6 +2192,13 @@ if "SLIDING_STATE" == args.encoder_sd.upper():
 		data = f.read()
 	state_data = json.loads(data)
 	state_data = ast.literal_eval(json.dumps(state_data))
+
+	# regularizing state data from 0 to 1
+	max_x = 639
+	max_y = 479
+	for label in state_data:
+		state_data[label]["x"] = torch.FloatTensor(state_data[label]["x"])/float(max_x)
+		state_data[label]["y"] = torch.FloatTensor(state_data[label]["y"])/float(max_y)
 
 def get_dummy_action(dim):
     # return torch.tensor([-1.0398e+00,  1.2563e+00,  8.3643e-02, -5.1169e-01,  1.4186e-01])
@@ -2200,14 +2216,22 @@ def close_all(items):
 def get_angle(x, y):
     return (math.atan2(y, x)*180/math.pi + 360) % 360
 
-def evaluate_board(image_reader=None, epoch=None, batch_index=None, repetition=None, label=None):
+def evaluate_board(image_reader=None, epoch=None, batch_index=None, repetition=None, label=None, test_policy=False):
+	global test_index
 	while True:
 		if epoch != None:
 			dr_filename = "/dr_{}-e_{}-i_{}-r_{}-l.jpg".format(epoch, batch_index, repetition, label)
 			cv_filename = "/cv_{}-e_{}-i_{}-r_{}-l.jpg".format(epoch, batch_index, repetition, label)
 			distance, stone_x, stone_y = image_reader.evaluate_board(dr_save_path=os.path.dirname(save_path)+dr_filename, cv_save_path=os.path.dirname(save_path)+cv_filename)
 		else:
-			distance, stone_x, stone_y = image_reader.evaluate_board()
+			if test_policy:
+				dr_filename = "/dr_test_policy-{}.jpg".format(test_index)
+				cv_filename = "/cv_test_policy-{}.jpg".format(test_index)
+				distance, stone_x, stone_y = image_reader.evaluate_board(dr_save_path=os.path.dirname(save_path)+dr_filename, cv_save_path=os.path.dirname(save_path)+cv_filename)
+			else:
+				dr_filename = "/dr_"+datetime.now().strftime("%Y-%m-%d_%H:%M:%S")+".jpg"
+				cv_filename = "/cv_"+datetime.now().strftime("%Y-%m-%d_%H:%M:%S")+".jpg"
+				distance, stone_x, stone_y = image_reader.evaluate_board(dr_save_path=os.path.dirname(save_path)+dr_filename, cv_save_path=os.path.dirname(save_path)+cv_filename)
 		if distance != -1:
 			if args.reward_type.upper() in ["D", "DISCRETE"]:
 				reward = max(0, 4 - distance//100)
@@ -2249,71 +2273,109 @@ def evaluate_board(image_reader=None, epoch=None, batch_index=None, repetition=N
 				pass
 	return reward, distance, angle, stone_x, stone_y
 
-def get_state(dim=args.state_dim, image_reader=None, trajectory_dict=None, decoder_model=None):
+def get_state(dim=args.state_dim, image_reader=None, trajectory_dict=None, decoder_model=None, test_policy=False, pre_train=False):
     global normal_center
     global curved_center
+    global observed_labels
     global last_label
+    global label_index
     if "DUMMY" == args.encoder_sd.upper():
         return torch.ones(dim)
     elif "SLIDING_STATE" == args.encoder_sd.upper():
-		labels = [label for label in state_data]
-		done = False
-		while not done:
-			print("The available labels are:")
-			for label in labels:
-				print ("\t{}".format(label))
-			print ("\tsense (sense a new stone)")
-			if last_label == None:
-				command = raw_input("Select a label\n> ")
-			else:
-				command = raw_input("Select a label or leave blank to use the last label: '{}'\n> ".format(last_label))
-			if command == "" or command == "sense" or command in labels:
-				done = True
-				if command != "":
-					last_label = command
-			else:
-				print("The inserted label: '{}' was not recognized.".format(command))
-		if last_label in labels:
-			if last_label == "curved":
-				image_reader.board.set_center(curved_center)
-			else:
-				image_reader.board.set_center(normal_center)
-			x_t = torch.FloatTensor(state_data[last_label]["x"])
-			y_t = torch.FloatTensor(state_data[last_label]["y"])
-			x_mean = x_t.mean()
-			x_std = x_t.std()
-			y_mean = y_t.mean()
-			y_std = y_t.std()
-			mean_vector = torch.tensor([x_mean, y_mean])
-			cov_matrix = torch.diag(torch.tensor([x_std**2, y_std**2]))
-			dist = MultivariateNormal(mean_vector, cov_matrix)
-			state = dist.sample()
-			return state, label
+		if test_policy:
+			ret = []
+			for obs_label in observed_labels:
+				x_t = torch.FloatTensor(state_data[obs_label]["x"])
+				y_t = torch.FloatTensor(state_data[obs_label]["y"])
+				x_mean = x_t.mean()
+				x_std = x_t.std()
+				y_mean = y_t.mean()
+				y_std = y_t.std()
+				y_std = y_t.std()
+				mean_vector = torch.tensor([x_mean, y_mean])
+				cov_matrix = torch.diag(torch.tensor([(x_std/3)**2, (y_std/3)**2]))
+				dist = MultivariateNormal(mean_vector, cov_matrix)
+				state = dist.sample()
+				ret.append({
+					"state": state,
+					"label": obs_label
+				})
+			return ret
+		elif pre_train:
+			ret = []
+			for label in args.train_labels:
+				x_t = torch.FloatTensor(state_data[label]["x"])
+				y_t = torch.FloatTensor(state_data[label]["y"])
+				x_mean = x_t.mean()
+				x_std = x_t.std()
+				y_mean = y_t.mean()
+				y_std = y_t.std()
+				y_std = y_t.std()
+				mean_vector = torch.tensor([x_mean, y_mean])
+				cov_matrix = torch.diag(torch.tensor([(x_std/2)**2, (y_std/2)**2]))
+				dist = MultivariateNormal(mean_vector, cov_matrix)
+				states = dist.sample((10,))
+				ret.extend(states)
+			return ret
 		else:
-			print("Sensing a new stone")
-			image_reader.board.set_center(normal_center)
-			decoded_trajectory = torch.tensor(state_trajectory)
-			trajectory_dict["joint_trajectory"] = decoded_trajectory.view(100, -1).tolist()
-			safety_res = safety_check_module.check(decoded_trajectory.tolist(), args.execution_time)
-			if safety_res.is_safe:
-				repetitions = 1
-				state_x = 0
-				state_y = 0
-				for repetition in range(repetitions):
-					print("Repetition {}/{}".format(repetition+1, repetitions))
-					command = raw_input("Press enter to execute the action: ")
-					if "skip" != command:
-						execute_action(input_folder=False, tot_time_nsecs=args.execution_time, is_simulation=False, is_learning=True, t=trajectory_dict)
-					command = raw_input("Press enter to evaluate the board\n")
-					reward, distance, angle, stone_x, stone_y = evaluate_board(image_reader=image_reader)
-					state_x += stone_x
-					state_y += stone_y
-				state_x = state_x / float(repetitions)
-				state_y = state_y / float(repetitions)
-				state = torch.tensor([state_x, state_y])
+			labels = [label for label in state_data]
+			done = False
+			while not done:
+				print("The available labels are:")
+				for label in labels:
+					print ("\t{}".format(label))
+				print ("\tsense (sense a new stone)")
+				command = raw_input("Select a label or leave blank to use the next label: '{}'\n> ".format(args.train_labels[label_index]))
+				if command == "" or command == "sense" or command in labels:
+					done = True
+					if command != "":
+						last_label = command
+					else:
+						last_label = args.train_labels[label_index]
+						label_index = (label_index+1)%len(args.train_labels)
+				else:
+					print("The inserted label: '{}' was not recognized.".format(command))
+			if last_label in labels:
+				if last_label == "curved":
+					image_reader.board.set_center(curved_center)
+				else:
+					image_reader.board.set_center(normal_center)
+				x_t = torch.FloatTensor(state_data[last_label]["x"])
+				y_t = torch.FloatTensor(state_data[last_label]["y"])
+				x_mean = x_t.mean()
+				x_std = x_t.std()
+				y_mean = y_t.mean()
+				y_std = y_t.std()
+				mean_vector = torch.tensor([x_mean, y_mean])
+				cov_matrix = torch.diag(torch.tensor([x_std**2, y_std**2]))
+				dist = MultivariateNormal(mean_vector, cov_matrix)
+				state = dist.sample()
 				return state, last_label
 			else:
-				print("Unsafe trajectory")
+				print("Sensing a new stone")
+				image_reader.board.set_center(normal_center)
+				decoded_trajectory = torch.tensor(state_trajectory)
+				trajectory_dict["joint_trajectory"] = decoded_trajectory.view(100, -1).tolist()
+				safety_res = safety_check_module.check(decoded_trajectory.tolist(), args.execution_time)
+				if safety_res.is_safe:
+					repetitions = 1
+					state_x = 0
+					state_y = 0
+					for repetition in range(repetitions):
+						print("Repetition {}/{}".format(repetition+1, repetitions))
+						command = raw_input("Press enter to execute the action: ")
+						if "skip" != command:
+							execute_action(input_folder=False, tot_time_nsecs=args.execution_time, is_simulation=False, is_learning=True, t=trajectory_dict)
+						command = raw_input("Press enter to evaluate the board\n")
+						reward, distance, angle, stone_x, stone_y = evaluate_board(image_reader=image_reader)
+						state_x += stone_x
+						state_y += stone_y
+					state_x = state_x / float(repetitions)
+					state_y = state_y / float(repetitions)
+					state = torch.tensor([state_x, state_y])
+					return state, last_label
+				else:
+					print("Unsafe trajectory")
     else:
         sensors_data = sensing_script.sense_stone()
         forces_tensor = []
@@ -2420,49 +2482,62 @@ def measure_performance(image_reader=None, trajectory_dict=None, algorithm=None,
 		print("Unsafe trajectory")
 
 def test_policy(image_reader=None, algorithm=None, decoder_model=None, state=None, trajectory_dict=None):
+	global test_index
 	test_reward = 0
-	mean = algorithm.get_policy_mean(state)
-	trajectory = decoder_model.decode(mean)
-	smooth_trajectory = []
-	for i in range(joints_number):
-		smooth_trajectory.append(trajectory[i])
-	for i, point in enumerate(trajectory[joints_number:], joints_number):
-		smooth_trajectory.append(0.6*smooth_trajectory[i-joints_number]+0.4*point)
-	smooth_trajectory = torch.tensor(smooth_trajectory)
-	trajectory_dict["joint_trajectory"] = smooth_trajectory.view(100, -1).tolist()
-	safety_res = safety_check_module.check(trajectory.tolist(), args.execution_time)
-	performance = {
-		"tot": 0,
-		"50": 0,
-		"115": 0
-	}
-	if safety_res.is_safe:
-		for n in range(max(args.performance_repetition, args.test_repetition)):
-			raw_input("Press enter to execute a trajectory from the policy mean")
-			execute_action(input_folder=False, tot_time_nsecs=args.execution_time, is_simulation=False, is_learning=True, t=trajectory_dict)
-			raw_input("Press enter to evaluate the board")
-			reward, distance, angle, stone_x, stone_y = evaluate_board(image_reader=image_reader)
-			try:
-				if 0 <= int(distance) <= 50:
-					performance["50"] += 1
-					performance["115"] += 1
-				elif 50 < int(distance) <= 115:
-					performance["115"] += 1
-				performance["tot"] += 1
-			except ValueError:
-				pass
-			test_reward += reward
-		test_reward /= max(args.performance_repetition, args.test_repetition)
-	else:
-		test_reward = -1
-	print("Red circle hit: {}\nBlue circle hit: {}".format(performance["50"], performance["115"]))	
+	state_label_list = get_state(algorithm.policy.in_dim, image_reader=image_reader, trajectory_dict=trajectory_dict, decoder_model=decoder_model, test_policy=True)
+	performance_list = []
+	mean_list = []
+	for state_label_dict in state_label_list:
+		state = state_label_dict["state"]
+		label = state_label_dict["label"]
+		mean = algorithm.get_policy_mean(state)
+		trajectory = decoder_model.decode(mean)
+		smooth_trajectory = []
+		for i in range(joints_number):
+			smooth_trajectory.append(trajectory[i])
+		for i, point in enumerate(trajectory[joints_number:], joints_number):
+			smooth_trajectory.append(0.6*smooth_trajectory[i-joints_number]+0.4*point)
+		smooth_trajectory = torch.tensor(smooth_trajectory)
+		trajectory_dict["joint_trajectory"] = smooth_trajectory.view(100, -1).tolist()
+		safety_res = safety_check_module.check(trajectory.tolist(), args.execution_time)
+		performance = {
+			"label": label,
+			"tot": 0,
+			"50": 0,
+			"115": 0
+		}
+		if safety_res.is_safe:
+			for n in range(max(args.performance_repetition, args.test_repetition)):
+				print("Testing label: {}".format(label))
+				raw_input("Press enter to execute a trajectory from the policy mean")
+				execute_action(input_folder=False, tot_time_nsecs=args.execution_time, is_simulation=False, is_learning=True, t=trajectory_dict)
+				raw_input("Press enter to evaluate the board")
+				reward, distance, angle, stone_x, stone_y = evaluate_board(image_reader=image_reader)
+				try:
+					if 0 <= int(distance) <= 50:
+						performance["50"] += 1
+						performance["115"] += 1
+					elif 50 < int(distance) <= 115:
+						performance["115"] += 1
+					performance["tot"] += 1
+				except ValueError:
+					pass
+				test_reward += reward
+		else:
+			test_reward = -1
+		performance_list.append(performance)
+		mean_list.append(mean)
+	test_reward /= (max(args.performance_repetition, args.test_repetition) * len(state_label_list))
+	print("Red circle hit: {}\nBlue circle hit: {}".format(sum([performance["50"] for performance in performance_list]), sum([performance["115"] for performance in performance_list])))	
 	print ("Average reward of deterministic policy = {}".format(test_reward))
-	return test_reward, mean, performance
+	test_index += 1
+	return test_reward, mean_list, performance_list
 
 def main(args):
     try:
         global normal_center
         global curved_center
+        global observed_labels
         trajectory_dict = {
             "joint_trajectory": [],
             "joint_names": joint_names,
@@ -2482,11 +2557,19 @@ def main(args):
             algorithm.load_model_state_dict(args.load_dir+args.load_file)
         elif args.load_checkpoint != False:
             algorithm.load_checkpoint(args.load_dir+args.load_checkpoint)
-        else:
+        elif args.pre_train != False:
             algorithm.plot = False
-            algorithm.pre_train(args.pre_train_epochs, args.pre_train_batch_size, args.pre_train_log_interval, target=torch.tensor(initial_means))
+            states_list = get_state(algorithm.policy.in_dim, image_reader=image_reader, trajectory_dict=trajectory_dict, decoder_model=decoder_model, pre_train=True)
+            algorithm.pre_train(args.pre_train_epochs, args.pre_train_batch_size, args.pre_train_log_interval, target=torch.tensor(initial_means), starting_states=states_list)
             print ("Pre train over")
+            if args.pre_train == "save":
+				print("Saving pre trained model...")
+				algorithm.save_pre_trained_net(pre_train_save_path)
+				print("Pre trained model saved.")
             algorithm.plot = True
+        else:
+			print("Loading pre trained network...")
+			algorithm.load_pre_trained_net(pre_train_save_path)
         ret = [0, 0]
         reward = None
 
@@ -2503,6 +2586,10 @@ def main(args):
             for t in range(args.batch_size):
                 print ("t = {}".format(t))
                 state, label = get_state(algorithm.policy.in_dim, image_reader=image_reader, trajectory_dict=trajectory_dict, decoder_model=decoder_model)
+                observed_labels.add(label)
+                print("Observed labels: {}".format(observed_labels))
+                print("Current label: {}".format(label))
+                print("Current state: {}".format(state))
                 command = True
                 while "" != command:
                     command = raw_input("Enter command (leave blank to execute action): ")
@@ -2526,11 +2613,14 @@ def main(args):
                             print(latent_space_data)
                         except:
                             print("Cannot print variable 'latent_space_data'.")
+                    if "end" == command:
+                        safe_throws = args.safe_throws
+                        break
 
                 if "set_action" != command:
                     cov_mat = torch.diag((torch.tensor(initial_stds))*math.pow(0.5, epoch))
-                    print("cov_mat: ")
-                    print(cov_mat)
+                    # print("cov_mat: ")
+                    # print(cov_mat)
                     if epoch == 0:
                         action, mean = algorithm.select_action(state, cov_mat=cov_mat, target_action=torch.tensor(initial_actions[t]))
                     else:
@@ -2619,7 +2709,7 @@ def main(args):
                         #             pass
                         cumulative_reward += reward
                         algorithm.set_stone_position(distance, angle)
-                        print ("distance = {}".format(distance))
+                        # print ("distance = {}".format(distance))
                         print ("reward = {}".format(reward))
                         print ("cumulative_reward = {}".format(cumulative_reward))
                     reward = float(cumulative_reward)/args.action_repetition

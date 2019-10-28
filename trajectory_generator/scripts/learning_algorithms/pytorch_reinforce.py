@@ -42,13 +42,21 @@ class Policy(nn.Module):
         self.in_dim = in_dim
         self.out_dim = out_dim
 
-        self.fc1 = nn.Linear(self.in_dim, 24)
+        self.fc1 = nn.Linear(self.in_dim, 8)
         
-        self.fc21 = nn.Linear(24, 24)  # mean layer
-        self.fc31 = nn.Linear(24, self.out_dim)
+        self.fc21 = nn.Linear(8, 8)  # mean layer
+        self.fc31 = nn.Linear(8, self.out_dim)
 
-        self.fc22 = nn.Linear(24, 24)  # log_var layer
-        self.fc32 = nn.Linear(24, self.out_dim)
+        self.fc22 = nn.Linear(8, 8)  # log_var layer
+        self.fc32 = nn.Linear(8, self.out_dim)
+
+        # self.fc1 = nn.Linear(self.in_dim, 24)
+        
+        # self.fc21 = nn.Linear(24, 24)  # mean layer
+        # self.fc31 = nn.Linear(24, self.out_dim)
+
+        # self.fc22 = nn.Linear(24, 24)  # log_var layer
+        # self.fc32 = nn.Linear(24, self.out_dim)
 
         # episode data
         self.saved_log_probs = []
@@ -59,11 +67,12 @@ class Policy(nn.Module):
         self.log_probs_history = []
         self.rewards_history = []
         self.deterministic_policy_rewards_history = []
-        self.deterministic_policy_performance_history = {
-            "tot": [],
-            "50": [],
-            "115": []
-        }
+        self.deterministic_policy_performance_history = []
+        # self.deterministic_policy_performance_history = {
+        #     "tot": [],
+        #     "50": [],
+        #     "115": []
+        # }
         self.deterministic_policy_means_history = []
         self.episode_rewards_history = []
         self.means_history = []
@@ -157,6 +166,7 @@ class ALGORITHM:
     def save_model_state_dict(self, save_path):
         torch.save(self.policy.state_dict(), save_path)
 
+
     def load_model_state_dict(self, load_path):
         model_sd = torch.load(load_path, map_location=torch.device('cpu'))
         loaded_model = Policy(self.state_dim, self.action_dim)
@@ -165,6 +175,18 @@ class ALGORITHM:
         self.policy = loaded_model
         return loaded_model
         # return VAE().to(device).load_state_dict(torch.load(load_path)).eval()
+    
+    def save_pre_trained_net(self, save_path):
+        self.save_model_state_dict(save_path)
+
+    def load_pre_trained_net(self, load_path):
+        model_sd = torch.load(load_path, map_location=torch.device('cpu'))
+        loaded_model = Policy(self.state_dim, self.action_dim)
+        loaded_model.load_state_dict(model_sd)
+        loaded_model.train()
+        self.policy = loaded_model
+        self.optimizer = optim.Adam(self.policy.parameters(), lr=self.lr)
+        return loaded_model
     
     def save_checkpoint(self, save_path):
         torch.save({
@@ -338,12 +360,13 @@ class ALGORITHM:
         self.policy.deterministic_policy_rewards_history.append(reward)
 
     def set_deterministic_policy_performance(self, performance):
-        self.policy.deterministic_policy_performance_history["50"].append(performance["50"])
-        self.policy.deterministic_policy_performance_history["115"].append(performance["115"])
-        self.policy.deterministic_policy_performance_history["tot"].append(performance["tot"])
+        self.policy.deterministic_policy_performance_history.append(performance)
+        # self.policy.deterministic_policy_performance_history["50"].append(performance["50"])
+        # self.policy.deterministic_policy_performance_history["115"].append(performance["115"])
+        # self.policy.deterministic_policy_performance_history["tot"].append(performance["tot"])
     
-    def set_deterministic_policy_mean(self, reward):
-        self.policy.deterministic_policy_means_history.append(reward)
+    def set_deterministic_policy_mean(self, mean):
+        self.policy.deterministic_policy_means_history.append(mean)
     
     def set_episode_reward(self, reward):
         self.policy.episode_rewards_history.append(reward)
@@ -368,9 +391,10 @@ class ALGORITHM:
             self.update_graph(self.live_plots["loss"]["fig"], self.live_plots["loss"]["ax"], self.live_plots["loss"]["line1"], (self.current_epoch)*self.batch_size, self.policy.losses_history[-1].item())
         if len(self.policy.episode_rewards_history) > 0:
             self.update_graph(self.live_plots["reward"]["fig"], self.live_plots["reward"]["ax"], self.live_plots["reward"]["line1"], (self.current_epoch)*self.batch_size, self.policy.episode_rewards_history[-1])
-        if len(self.policy.deterministic_policy_performance_history["50"]) > 0:
-            self.update_graph(self.live_plots["performance"]["fig"], self.live_plots["performance"]["ax_50"], self.live_plots["performance"]["line_50"], (self.current_epoch)*self.batch_size, self.policy.deterministic_policy_performance_history["50"][-1])
-            self.update_graph(self.live_plots["performance"]["fig"], self.live_plots["performance"]["ax_115"], self.live_plots["performance"]["line_115"], (self.current_epoch)*self.batch_size, self.policy.deterministic_policy_performance_history["115"][-1])
+        if len(self.policy.deterministic_policy_performance_history) > 0:
+            lp = [last_performance for last_performance in self.policy.deterministic_policy_performance_history[-1]]
+            self.update_graph(self.live_plots["performance"]["fig"], self.live_plots["performance"]["ax_50"], self.live_plots["performance"]["line_50"], (self.current_epoch)*self.batch_size, sum([label_performance["50"] for label_performance in lp]))
+            self.update_graph(self.live_plots["performance"]["fig"], self.live_plots["performance"]["ax_115"], self.live_plots["performance"]["line_115"], (self.current_epoch)*self.batch_size, sum([label_performance["115"] for label_performance in lp]))
         if len(self.policy.means_history) > 0:
             for i in range(self.action_dim):
                 self.update_graph(self.live_plots["theta"]["fig"][i], self.live_plots["theta"]["ax"][i], self.live_plots["theta"]["lines"][i], (self.current_epoch)*self.batch_size, self.policy.means_history[-1][i].item())
@@ -382,27 +406,33 @@ class ALGORITHM:
         # else:
         #     reward = -1
         if target is not None:
-            reward = -(abs(action-target)).sum().pow(2).item() * 100
+            reward = -(abs(action-target)).sum().item()
+            # reward = -(abs(action-target)).sum().pow(2).item()
+            # reward = -(abs(action-target)).sum().pow(2).item() * 100
         else:
-            reward = -(abs(action)).sum().pow(2).item() * 100
+            reward = -(abs(action)).sum().item()
+            # reward = -(abs(action)).sum().pow(2).item()
+            # reward = -(abs(action)).sum().pow(2).item() * 100
 
         return error, reward
 
-    def pre_train(self, epochs, batch_size, log_interval, target=None, target_action=None):
+    def pre_train(self, epochs, batch_size, log_interval, target=None, target_action=None, starting_states=None):
+        if starting_states == None:
+            starting_states = [torch.ones(self.policy.in_dim)]
         for epoch in range(epochs):
             reward = 0
-            for t in range(0, batch_size):  # Don't infinite loop while learning
-
-                starting_state = torch.ones(self.policy.in_dim)
-                # starting_state = torch.zeros(self.policy.in_dim)
-                # starting_state = torch.randn(self.policy.in_dim)
-                if target_action is not None:
-                    action, mean = self.select_action(starting_state, target_action=target_action)
-                else:
-                    action, mean = self.select_action(starting_state)
-                error, reward = self.execute_action(action, target=target)
-                self.policy.rewards.append(reward)
-                self.policy.rewards_history.append(reward)
+            for t in range(0, batch_size):
+                for starting_state in starting_states:
+                    # starting_state = torch.ones(self.policy.in_dim)
+                    # starting_state = torch.zeros(self.policy.in_dim)
+                    # starting_state = torch.randn(self.policy.in_dim)
+                    if target_action is not None:
+                        action, mean = self.select_action(starting_state, target_action=target_action)
+                    else:
+                        action, mean = self.select_action(starting_state)
+                    error, reward = self.execute_action(action, target=target)
+                    self.policy.rewards.append(reward)
+                    self.policy.rewards_history.append(reward)
 
             loss = self.finish_episode(pre_training=True)
 

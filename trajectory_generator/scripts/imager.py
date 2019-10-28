@@ -279,7 +279,7 @@ class image_converter:
             else:
                 self.stone_search_flag = False
                 self.single_serach_flag = False
-                rospy.loginfo("Number of stone(s) found: " + str(len(self.so.stones)))
+                # rospy.loginfo("Number of stone(s) found: " + str(len(self.so.stones)))
 
     def center_search(self):
         if not self.center_search_flag:
@@ -423,10 +423,9 @@ class image_converter:
         rospy.rostime.wallsleep(1)
         while self.single_serach_flag:
             pass
+        cv2.imwrite(dr_save_path, self.drawable_image)
+        cv2.imwrite(cv_save_path, self.cv_image)
         if len(self.so.stones) == 1:
-            if dr_save_path != None:
-                cv2.imwrite(dr_save_path, self.drawable_image)
-                cv2.imwrite(cv_save_path, self.cv_image)
             return self.so.stones[0].get_distance_from_center(), self.so.stones[0].x, self.so.stones[0].y
         else:
             return -1, -1, -1
