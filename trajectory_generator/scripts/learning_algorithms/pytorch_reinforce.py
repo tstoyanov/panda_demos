@@ -94,7 +94,7 @@ class Policy(nn.Module):
 
 
 class ALGORITHM:
-    def __init__(self, state_dim, action_dim, lr, plot=True, batch_size=None):
+    def __init__(self, state_dim, action_dim, lr, plot=True, batch_size=None, label_state_dict=None):
         self.live_plots = {
             "loss": {
                 "fig": None,
@@ -152,16 +152,28 @@ class ALGORITHM:
             self.live_plots["performance"]["ax_115"] = self.live_plots["performance"]["fig"].add_subplot(2, 1, 2)
             self.live_plots["performance"]["line_115"], = self.live_plots["performance"]["ax_115"].plot([], [], 'o-b', label="Blue hits")
 
-            for i in range(self.action_dim):
-                self.live_plots["theta"]["fig"].append(plt.figure("theta-"+str(i), figsize=(6, 2)))
-                self.live_plots["theta"]["ax"].append(self.live_plots["theta"]["fig"][-1].add_subplot(1, 1, 1))
-                self.live_plots["theta"]["lines"].append(self.live_plots["theta"]["ax"][-1].plot([], [], label="["+str(i)+"]", marker="o")[0])
+            if label_state_dict is None:
+                for i in range(self.action_dim):
+                    self.live_plots["theta"]["fig"].append(plt.figure("theta-"+str(i), figsize=(6, 2)))
+                    self.live_plots["theta"]["ax"].append(self.live_plots["theta"]["fig"][-1].add_subplot(1, 1, 1))
+                    self.live_plots["theta"]["lines"].append(self.live_plots["theta"]["ax"][-1].plot([], [], label="["+str(i)+"]", marker="o")[0])
+            else:
+                for i in range(self.action_dim):
+                    self.live_plots["theta"]["fig"].append(plt.figure("theta-"+str(i), figsize=(6, 2)))
+                    self.live_plots["theta"]["ax"].append(self.live_plots["theta"]["fig"][-1].add_subplot(1, 1, 1))
+                    labels_lines = {}
+                    for label in label_state_dict:
+                        labels_lines[label] = self.live_plots["theta"]["ax"][-1].plot([], [], label=label, marker="o")[0]
+                        # labels_lines[label] = []
+                        # labels_lines[label].append(self.live_plots["theta"]["ax"][-1].plot([], [], label=label, marker="o")[0])
+                    self.live_plots["theta"]["lines"].append(labels_lines)
             # self.live_plots["theta"]["ax"].axhline(y=0, color="k")
 
 
             self.live_plots["loss"]["ax"].legend()
             self.live_plots["reward"]["ax"].legend()
-            # self.live_plots["theta"]["ax"].legend()
+            for ax in self.live_plots["theta"]["ax"]:
+                ax.legend()
     
     def save_model_state_dict(self, save_path):
         torch.save(self.policy.state_dict(), save_path)
@@ -386,7 +398,7 @@ class ALGORITHM:
         fig.canvas.draw()
         fig.canvas.flush_events()
 
-    def update_graphs(self):
+    def update_graphs(self, label_state_dict=None):
         if len(self.policy.losses_history) > 0:
             self.update_graph(self.live_plots["loss"]["fig"], self.live_plots["loss"]["ax"], self.live_plots["loss"]["line1"], (self.current_epoch)*self.batch_size, self.policy.losses_history[-1].item())
         if len(self.policy.episode_rewards_history) > 0:
@@ -397,16 +409,28 @@ class ALGORITHM:
             self.update_graph(self.live_plots["performance"]["fig"], self.live_plots["performance"]["ax_115"], self.live_plots["performance"]["line_115"], (self.current_epoch)*self.batch_size, sum([label_performance["115"] for label_performance in lp]))
         if len(self.policy.means_history) > 0:
             for i in range(self.action_dim):
-                self.update_graph(self.live_plots["theta"]["fig"][i], self.live_plots["theta"]["ax"][i], self.live_plots["theta"]["lines"][i], (self.current_epoch)*self.batch_size, self.policy.means_history[-1][i].item())
+                if label_state_dict is None:
+                    self.update_graph(self.live_plots["theta"]["fig"][i], self.live_plots["theta"]["ax"][i], self.live_plots["theta"]["lines"][i], (self.current_epoch)*self.batch_size, self.policy.means_history[-1][i].item())
+                else:
+                    for label in label_state_dict:
+                        state = label_state_dict[label]
+                        mean, log_var = self.policy(state)
+                        self.update_graph(self.live_plots["theta"]["fig"][i], self.live_plots["theta"]["ax"][i], self.live_plots["theta"]["lines"][i][label], (self.current_epoch)*self.batch_size, mean[i].item())
     
-    def execute_action(self, action, target=None):
+    def execute_action(self, action, target=None, std=None):
         error = False
         # if all(action < 0.2) and all(action > -0.2):
         #     reward = 1
         # else:
         #     reward = -1
         if target is not None:
-            reward = -(abs(action-target)).sum().item()
+            if std is not None:
+                if all(abs(action-target) <= std):
+                    reward = 0
+                else:
+                    reward = -(abs(action-target)).sum().item()
+            else:
+                reward = -(abs(action-target)).sum().item()
             # reward = -(abs(action-target)).sum().pow(2).item()
             # reward = -(abs(action-target)).sum().pow(2).item() * 100
         else:
@@ -416,7 +440,7 @@ class ALGORITHM:
 
         return error, reward
 
-    def pre_train(self, epochs, batch_size, log_interval, target=None, target_action=None, starting_states=None):
+    def pre_train(self, epochs, batch_size, log_interval, target=None, target_action=None, starting_states=None, std=None):
         if starting_states == None:
             starting_states = [torch.ones(self.policy.in_dim)]
         for epoch in range(epochs):
@@ -430,7 +454,7 @@ class ALGORITHM:
                         action, mean = self.select_action(starting_state, target_action=target_action)
                     else:
                         action, mean = self.select_action(starting_state)
-                    error, reward = self.execute_action(action, target=target)
+                    error, reward = self.execute_action(action, target=target, std=std)
                     self.policy.rewards.append(reward)
                     self.policy.rewards_history.append(reward)
 

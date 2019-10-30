@@ -33,7 +33,7 @@ parser.add_argument('--pre-train-epochs', type=int, default=30, help='number of 
 parser.add_argument('--pre-train-batch-size', type=int, default=100, metavar='N', help='input batch size for training (default: 1000)')
 parser.add_argument('--log-interval', type=int, default=1, metavar='N', help='interval between training status logs (default: 1)')
 parser.add_argument('--epochs', type=int, default=12, help='number of epochs for training (default: 10)')
-parser.add_argument('--batch-size', type=int, default=5, metavar='N', help='input batch size for training (default: 12)')
+parser.add_argument('--batch-size', type=int, default=5, metavar='N', help='input batch size for training (default: 5)')
 parser.add_argument('--action-repetition', type=int, default=3 , help='number of times to  repeat the same action')
 parser.add_argument('--test-repetition', type=int, default=5 , help='number of times to  repeat the same action while testing the deterministic policy')
 parser.add_argument('--performance-repetition', type=int, default=5 , help='number of times to  repeat the same action while testing the performance metric of the deterministic policy')
@@ -92,9 +92,9 @@ args.cuda = not args.no_cuda and torch.cuda.is_available()
 device = "cpu"
 
 if args.save_file != False:
-    save_path = args.save_dir+args.decoder_sd[0:args.decoder_sd.rfind("/")]+"/"+args.save_file
+    save_path = args.save_dir+args.decoder_sd[0:args.decoder_sd.rfind("/")]+"/latest/"+args.save_file
 else:
-    save_path = args.save_dir+args.decoder_sd[0:args.decoder_sd.rfind("/")]+"/"+datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+    save_path = args.save_dir+args.decoder_sd[0:args.decoder_sd.rfind("/")]+"/latest/"+datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
 checkpoint_save_dir = os.path.dirname(save_path)+"/checkpoint/"
 pre_train_save_path = os.path.dirname(save_path)+"/pre_trained_policy.pt"
 if not os.path.exists(os.path.dirname(save_path)):
@@ -2195,10 +2195,18 @@ if "SLIDING_STATE" == args.encoder_sd.upper():
 
 	# regularizing state data from 0 to 1
 	max_x = 639
+	avg_x = max_x/2.0
 	max_y = 479
+	avg_y = max_y/2.0
 	for label in state_data:
-		state_data[label]["x"] = torch.FloatTensor(state_data[label]["x"])/float(max_x)
-		state_data[label]["y"] = torch.FloatTensor(state_data[label]["y"])/float(max_y)
+		state_data[label]["x"] = (torch.FloatTensor(state_data[label]["x"])-avg_x)/float(avg_x)
+		state_data[label]["x_mean"] = state_data[label]["x"].mean()
+		state_data[label]["y"] = (torch.FloatTensor(state_data[label]["y"])-avg_y)/float(avg_y)
+		state_data[label]["y_mean"] = state_data[label]["y"].mean()
+		state_data[label]["sample_std"] = torch.FloatTensor(latent_space_data["std"])/2
+	label_state_dict = {}
+	for l in args.train_labels:
+		label_state_dict[l] = torch.tensor([state_data[l]["x_mean"], state_data[l]["y_mean"]])
 
 def get_dummy_action(dim):
     # return torch.tensor([-1.0398e+00,  1.2563e+00,  8.3643e-02, -5.1169e-01,  1.4186e-01])
@@ -2373,6 +2381,13 @@ def get_state(dim=args.state_dim, image_reader=None, trajectory_dict=None, decod
 					state_x = state_x / float(repetitions)
 					state_y = state_y / float(repetitions)
 					state = torch.tensor([state_x, state_y])
+					# regularizing state data from 0 to 1
+					max_x = 639
+					avg_x = max_x/2.0
+					max_y = 479
+					avg_y = max_y/2.0
+					state[0] = (state[0]-avg_x)/float(avg_x)
+					state[1] = (state[1]-avg_y)/float(avg_y)
 					return state, last_label
 				else:
 					print("Unsafe trajectory")
@@ -2538,18 +2553,20 @@ def main(args):
         global normal_center
         global curved_center
         global observed_labels
+        global label_state_dict
         trajectory_dict = {
             "joint_trajectory": [],
             "joint_names": joint_names,
             "realease_frame": args.release_frame
         }
+        end = False
         plot_joints = False
         image_reader = image_reader_module.image_converter()
         items.append(image_reader)
         image_reader.initialize_board()
         normal_center = image_reader.board.get_center()
         curved_center= (normal_center[0], normal_center[1]-127)
-        algorithm = algorithm_module.ALGORITHM(args.state_dim, args.action_dim, args.learning_rate, plot=True, batch_size=args.batch_size)
+        algorithm = algorithm_module.ALGORITHM(args.state_dim, args.action_dim, args.learning_rate, plot=True, batch_size=args.batch_size, label_state_dict=label_state_dict)
         items.append(algorithm)
         if args.collect_state_data != False:
 			collect_state_data(encoded_trajectory=None, decoded_trajectory=state_trajectory, labels=args.collect_state_data, repetitions=args.state_repetitions, output_folder=args.state_folder, image_reader=image_reader, trajectory_dict=trajectory_dict, decoder_model=decoder_model)
@@ -2560,7 +2577,7 @@ def main(args):
         elif args.pre_train != False:
             algorithm.plot = False
             states_list = get_state(algorithm.policy.in_dim, image_reader=image_reader, trajectory_dict=trajectory_dict, decoder_model=decoder_model, pre_train=True)
-            algorithm.pre_train(args.pre_train_epochs, args.pre_train_batch_size, args.pre_train_log_interval, target=torch.tensor(initial_means), starting_states=states_list)
+            algorithm.pre_train(args.pre_train_epochs, args.pre_train_batch_size, args.pre_train_log_interval, target=torch.tensor(initial_means), std=torch.tensor(initial_stds), starting_states=states_list)
             print ("Pre train over")
             if args.pre_train == "save":
 				print("Saving pre trained model...")
@@ -2578,6 +2595,8 @@ def main(args):
     
         safe_throws = 0
         epoch = 0
+        performance = None
+        last_performance = {}
         while safe_throws < args.safe_throws:
         # for epoch in range(args.epochs):
             # t = 0
@@ -2615,19 +2634,26 @@ def main(args):
                             print("Cannot print variable 'latent_space_data'.")
                     if "end" == command:
                         safe_throws = args.safe_throws
+                        end = True
                         break
 
+                if end:
+					break
                 if "set_action" != command:
-                    cov_mat = torch.diag((torch.tensor(initial_stds))*math.pow(0.5, epoch))
-                    # print("cov_mat: ")
-                    # print(cov_mat)
-                    if epoch == 0:
-                        action, mean = algorithm.select_action(state, cov_mat=cov_mat, target_action=torch.tensor(initial_actions[t]))
-                    else:
-                        action, mean = algorithm.select_action(state, cov_mat=cov_mat)
+					if "sense" != label:
+						cov_mat = torch.diag((state_data[label]["sample_std"]))
+					else:
+						cov_matrix = torch.diag(torch.tensor([0.001]*len(latent_space_data["mean"])))
+                    # cov_mat = torch.diag((torch.tensor(initial_stds))*math.pow(0.5, epoch))
+					print("cov_mat: ")
+					print(cov_mat)
+					if epoch == 0:
+						action, mean = algorithm.select_action(state, cov_mat=cov_mat, target_action=torch.tensor(initial_actions[t]))
+					else:
+						action, mean = algorithm.select_action(state, cov_mat=cov_mat)
                 # action, mean = algorithm.select_action(state, cov_mat=cov_mat)
                 if epoch % args.log_interval == 0 and t == 0 and algorithm.plot:
-                    algorithm.update_graphs()
+					algorithm.update_graphs(label_state_dict=label_state_dict)
                 # action = get_dummy_action(algorithm.policy.out_dim)
                 trajectory = decoder_model.decode(action)
 
@@ -2638,7 +2664,7 @@ def main(args):
                     smooth_trajectory.append(trajectory[i])
                 for i, point in enumerate(trajectory[joints_number:], joints_number):
                     if i % joints_number == 0:
-                        alpha = 0.9 - min((((0.9-0.6) / (50.0*joints_number)) * (i - joints_number)), 0.3)
+                        alpha = 0.99 - min((((0.99-0.6) / (50.0*joints_number)) * (i - joints_number)), 0.39)
                     smooth_trajectory.append(alpha*smooth_trajectory[i-joints_number]+(1-alpha)*point)
                     # smooth_trajectory.append(0.6*smooth_trajectory[i-joints_number]+0.4*point)
                 smooth_trajectory = torch.tensor(smooth_trajectory)
@@ -2646,11 +2672,18 @@ def main(args):
                 smooth_safety_res = safety_check_module.check(smooth_trajectory.tolist(), args.execution_time)
                 safety_res = safety_check_module.check(trajectory.tolist(), args.execution_time)
                 
+                print("Distribution mean:")
+                print(mean)
+                print("Action to execute:")
+                print(action)
+                for dim_index, dim in enumerate(action):
+					m = latent_space_data["mean"][dim_index]
+					std = latent_space_data["std"][dim_index]
+					if dim.item() <= (m-(3*std)) or dim.item() >= (m+(3*std)):
+						safety_res.unsafe_pts += 1
+                if safety_res.unsafe_pts > 0:
+					safety_res.is_safe = False
                 if safety_res.is_safe:
-                    print("Distribution mean:")
-                    print(mean)
-                    print("Action to execute:")
-                    print(action)
                     ret[0] += 1
                     trajectory_dict["joint_trajectory"] = smooth_trajectory.view(100, -1).tolist()
                     if plot_joints:
@@ -2729,7 +2762,31 @@ def main(args):
             loss = algorithm.finish_episode()
 
             raw_input("Press enter to test the policy")
+            # if performance is not None:
+			# 	for item in performance:
+			# 		last_performance[item["label"]] = item["50"] + item["115"]
             latest_det_reward, latest_det_mean, performance = test_policy(image_reader, algorithm, decoder_model, state, trajectory_dict)
+            for item in performance:
+				start_std = torch.tensor(latent_space_data["std"])
+				sum_perf = item["50"]+item["115"]
+				max_perf = (len(item)-2)*item["tot"]
+				if item["tot"] != 0:
+					state_data[item["label"]]["sample_std"] = (start_std-(((start_std-0.01)*sum_perf)/max_perf))*math.pow(0.9, epoch+1)
+				else:
+					state_data[item["label"]]["sample_std"] = start_std
+				state_data[item["label"]]["sample_std"][0] /= 6
+            # if last_performance:
+			# 	for item in performance:
+			# 		if (item["50"]+item["115"]) > last_performance[item["label"]]:
+			# 			if max(state_data[item["label"]]["sample_std"]/2) < 0.01:
+			# 				state_data[item["label"]]["sample_std"] = torch.tensor([0.01]*len(state_data[item["label"]]["sample_std"]))
+			# 			else:
+			# 				state_data[item["label"]]["sample_std"] = state_data[item["label"]]["sample_std"]/2
+			# 		elif (item["50"]+item["115"]) < last_performance[item["label"]]:
+			# 			if min(state_data[item["label"]]["sample_std"]*2) < (min(latent_space_data["std"])/2):
+			# 				state_data[item["label"]]["sample_std"] = state_data[item["label"]]["sample_std"]*2
+			# 			else:
+			# 				state_data[item["label"]]["sample_std"] = torch.tensor(latent_space_data["std"])/2
             algorithm.set_deterministic_policy_performance(performance)
             algorithm.set_deterministic_policy_reward(latest_det_reward)
             algorithm.set_deterministic_policy_mean(latest_det_mean)
@@ -2746,7 +2803,7 @@ def main(args):
                     epoch, episode_reward))
             epoch += 1
 
-        algorithm.update_graphs()
+        algorithm.update_graphs(label_state_dict=label_state_dict)
         raw_input("Execution finished, press enter to close the program.")
         raw_input("Execution finished, press enter to close the program.")
         raw_input("Execution finished, press enter to close the program.")
