@@ -37,12 +37,14 @@ parser.add_argument('--batch-size', type=int, default=5, metavar='N', help='inpu
 parser.add_argument('--action-repetition', type=int, default=3 , help='number of times to  repeat the same action')
 parser.add_argument('--test-repetition', type=int, default=5 , help='number of times to  repeat the same action while testing the deterministic policy')
 parser.add_argument('--performance-repetition', type=int, default=5 , help='number of times to  repeat the same action while testing the performance metric of the deterministic policy')
-parser.add_argument('--safe-throws', type=int, default=180 , help='number of safe throws to execute before stopping the learning loop')
+parser.add_argument('--safe-throws', type=int, default=150 , help='number of safe throws to execute before stopping the learning loop')
 parser.add_argument('--reward-type', default="discrete" , help='type of reward function to use during learning')
+parser.add_argument('--imaginary-samples', default=20 , help='number of imaginary state samples to use while training the policy')
 
 parser.add_argument('--state-dim', type=int, default=4, help='policy input dimension (default: 4)')
 parser.add_argument('--action-dim', type=int, default=5, help='policy output dimension (default: 5)')
 parser.add_argument('--learning-rate', type=float, default=0.1, help='learning rate of the optimizer')
+parser.add_argument('--optimizer', default="adam", help='type of optimizer')
 
 parser.add_argument('--models-dir', default="nn_models", help='directory from where to load the network shape of the action decoder')
 parser.add_argument('--decoder-model-file', default="model_trajectory_vae", help='file from where to load the network shape of the action decoder')
@@ -2169,7 +2171,9 @@ if args.latent_space_data != False:
     actions = [action[1] for action in actions]
     initial_actions = [actions[-1]] + [actions[0]]
     # initial_actions = [actions[-1]] + [actions[0]] + [actions[-2]] + [actions[-3]]
-    initial_actions += random.sample(actions, args.batch_size)
+    for _ in range(args.batch_size):
+    	initial_actions += random.sample(actions, 1)
+    # initial_actions += random.sample(actions, args.batch_size)
 else:
     initial_means = a200_b001_20000e_latent_space_means
     initial_stds = a200_b001_20000e_latent_space_stds
@@ -2281,7 +2285,7 @@ def evaluate_board(image_reader=None, epoch=None, batch_index=None, repetition=N
 				pass
 	return reward, distance, angle, stone_x, stone_y
 
-def get_state(dim=args.state_dim, image_reader=None, trajectory_dict=None, decoder_model=None, test_policy=False, pre_train=False):
+def get_state(dim=args.state_dim, image_reader=None, trajectory_dict=None, decoder_model=None, test_policy=False, pre_train=False, imaginary_samples=0):
     global normal_center
     global curved_center
     global observed_labels
@@ -2358,7 +2362,8 @@ def get_state(dim=args.state_dim, image_reader=None, trajectory_dict=None, decod
 				cov_matrix = torch.diag(torch.tensor([x_std**2, y_std**2]))
 				dist = MultivariateNormal(mean_vector, cov_matrix)
 				state = dist.sample()
-				return state, last_label
+				imaginary_states = dist.sample((imaginary_samples,))
+				return state, last_label, imaginary_states
 			else:
 				print("Sensing a new stone")
 				image_reader.board.set_center(normal_center)
@@ -2452,7 +2457,7 @@ def collect_state_data(encoded_trajectory=None, decoded_trajectory=None, labels=
             #             json.dump(state_data, f)
 
 def measure_performance(image_reader=None, trajectory_dict=None, algorithm=None, decoder_model=None, safety_check_module=None):
-	state, label= get_state(algorithm.policy.in_dim, image_reader=image_reader, trajectory_dict=trajectory_dict, decoder_model=decoder_model)
+	state, label, _ = get_state(algorithm.policy.in_dim, image_reader=image_reader, trajectory_dict=trajectory_dict, decoder_model=decoder_model)
 	mean = algorithm.get_policy_mean(state)
 	print ("mean: {}".format(mean))
 	trajectory = decoder_model.decode(mean)
@@ -2464,6 +2469,13 @@ def measure_performance(image_reader=None, trajectory_dict=None, algorithm=None,
 	smooth_trajectory = torch.tensor(smooth_trajectory)
 	trajectory_dict["joint_trajectory"] = smooth_trajectory.view(100, -1).tolist()
 	safety_res = safety_check_module.check(trajectory.tolist(), args.execution_time)
+	for dim_index, dim in enumerate(mean):
+		m = latent_space_data["mean"][dim_index]
+		std = latent_space_data["std"][dim_index]
+		if dim.item() <= (m-(3*std)) or dim.item() >= (m+(3*std)):
+			safety_res.unsafe_pts += 1
+	if safety_res.unsafe_pts > 0:
+		safety_res.is_safe = False
 	if safety_res.is_safe:
 		performance = {
 			"tot": 0,
@@ -2521,6 +2533,13 @@ def test_policy(image_reader=None, algorithm=None, decoder_model=None, state=Non
 			"50": 0,
 			"115": 0
 		}
+		for dim_index, dim in enumerate(mean):
+			m = latent_space_data["mean"][dim_index]
+			std = latent_space_data["std"][dim_index]
+			if dim.item() <= (m-(3*std)) or dim.item() >= (m+(3*std)):
+				safety_res.unsafe_pts += 1
+		if safety_res.unsafe_pts > 0:
+			safety_res.is_safe = False
 		if safety_res.is_safe:
 			for n in range(max(args.performance_repetition, args.test_repetition)):
 				print("Testing label: {}".format(label))
@@ -2539,6 +2558,8 @@ def test_policy(image_reader=None, algorithm=None, decoder_model=None, state=Non
 					pass
 				test_reward += reward
 		else:
+			print("Testing label: {}".format(label))
+			print("Unsafe tesing trajectory")
 			test_reward = -1
 		performance_list.append(performance)
 		mean_list.append(mean)
@@ -2566,7 +2587,7 @@ def main(args):
         image_reader.initialize_board()
         normal_center = image_reader.board.get_center()
         curved_center= (normal_center[0], normal_center[1]-127)
-        algorithm = algorithm_module.ALGORITHM(args.state_dim, args.action_dim, args.learning_rate, plot=True, batch_size=args.batch_size, label_state_dict=label_state_dict)
+        algorithm = algorithm_module.ALGORITHM(args.state_dim, args.action_dim, args.learning_rate, plot=True, batch_size=args.batch_size, label_state_dict=label_state_dict, optimizer_type=args.optimizer)
         items.append(algorithm)
         if args.collect_state_data != False:
 			collect_state_data(encoded_trajectory=None, decoded_trajectory=state_trajectory, labels=args.collect_state_data, repetitions=args.state_repetitions, output_folder=args.state_folder, image_reader=image_reader, trajectory_dict=trajectory_dict, decoder_model=decoder_model)
@@ -2575,9 +2596,9 @@ def main(args):
         elif args.load_checkpoint != False:
             algorithm.load_checkpoint(args.load_dir+args.load_checkpoint)
         elif args.pre_train != False:
-            algorithm.plot = False
+            # algorithm.plot = False
             states_list = get_state(algorithm.policy.in_dim, image_reader=image_reader, trajectory_dict=trajectory_dict, decoder_model=decoder_model, pre_train=True)
-            algorithm.pre_train(args.pre_train_epochs, args.pre_train_batch_size, args.pre_train_log_interval, target=torch.tensor(initial_means), std=torch.tensor(initial_stds), starting_states=states_list)
+            algorithm.pre_train(args.pre_train_epochs, args.pre_train_batch_size, args.pre_train_log_interval, target=torch.tensor(initial_means), std=torch.tensor(initial_stds)/10, starting_states=states_list)
             print ("Pre train over")
             if args.pre_train == "save":
 				print("Saving pre trained model...")
@@ -2604,7 +2625,7 @@ def main(args):
             episode_reward = 0
             for t in range(args.batch_size):
                 print ("t = {}".format(t))
-                state, label = get_state(algorithm.policy.in_dim, image_reader=image_reader, trajectory_dict=trajectory_dict, decoder_model=decoder_model)
+                state, label, imaginary_states = get_state(algorithm.policy.in_dim, image_reader=image_reader, trajectory_dict=trajectory_dict, decoder_model=decoder_model, imaginary_samples=args.imaginary_samples)
                 observed_labels.add(label)
                 print("Observed labels: {}".format(observed_labels))
                 print("Current label: {}".format(label))
@@ -2643,7 +2664,7 @@ def main(args):
 					if "sense" != label:
 						cov_mat = torch.diag((state_data[label]["sample_std"]))
 					else:
-						cov_matrix = torch.diag(torch.tensor([0.001]*len(latent_space_data["mean"])))
+						cov_mat = torch.diag(torch.tensor([0.001]*len(latent_space_data["mean"])))
                     # cov_mat = torch.diag((torch.tensor(initial_stds))*math.pow(0.5, epoch))
 					print("cov_mat: ")
 					print(cov_mat)
@@ -2756,6 +2777,11 @@ def main(args):
                 print ("reward = {}".format(reward))      
                 algorithm.set_reward(reward)
                 episode_reward += reward
+
+				# imaginary executions
+                for imaginary_state in imaginary_states:
+					action, mean = algorithm.select_action(imaginary_state, cov_mat=cov_mat, target_action=action, imaginary_state=True)
+					algorithm.set_reward(reward, imaginary_state=True)
 			
             episode_reward /= int(args.batch_size)
             algorithm.set_episode_reward(episode_reward)

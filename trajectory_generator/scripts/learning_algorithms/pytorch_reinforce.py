@@ -94,7 +94,7 @@ class Policy(nn.Module):
 
 
 class ALGORITHM:
-    def __init__(self, state_dim, action_dim, lr, plot=True, batch_size=None, label_state_dict=None):
+    def __init__(self, state_dim, action_dim, lr, plot=True, batch_size=None, label_state_dict=None, optimizer_type="adam"):
         self.live_plots = {
             "loss": {
                 "fig": None,
@@ -119,13 +119,22 @@ class ALGORITHM:
                 "lines": []
             }
         }
-        self.lr = lr
         self.plot = plot
         self.current_epoch = 0
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.policy = Policy(self.state_dim, self.action_dim)
-        self.optimizer = optim.Adam(self.policy.parameters(), lr=self.lr)
+        self.optimizer_type = optimizer_type
+        self.label_state_dict = label_state_dict
+        if "adam" == self.optimizer_type.lower():
+            self.lr = lr
+            self.optimizer = optim.Adam(self.policy.parameters(), lr=self.lr)
+        elif "sgd" == self.optimizer_type:
+            self.lr = lr/100
+            self.optimizer = torch.optim.SGD(self.policy.parameters(), lr=self.lr, momentum=0.5, dampening=0, weight_decay=0, nesterov=False)
+        else:
+            self.lr = lr
+            self.optimizer = optim.Adam(self.policy.parameters(), lr=self.lr)
         self.eps = np.finfo(np.float32).eps.item()
         self.stones_positions = {
             "distance": [],
@@ -152,7 +161,7 @@ class ALGORITHM:
             self.live_plots["performance"]["ax_115"] = self.live_plots["performance"]["fig"].add_subplot(2, 1, 2)
             self.live_plots["performance"]["line_115"], = self.live_plots["performance"]["ax_115"].plot([], [], 'o-b', label="Blue hits")
 
-            if label_state_dict is None:
+            if self.label_state_dict is None:
                 for i in range(self.action_dim):
                     self.live_plots["theta"]["fig"].append(plt.figure("theta-"+str(i), figsize=(6, 2)))
                     self.live_plots["theta"]["ax"].append(self.live_plots["theta"]["fig"][-1].add_subplot(1, 1, 1))
@@ -162,7 +171,7 @@ class ALGORITHM:
                     self.live_plots["theta"]["fig"].append(plt.figure("theta-"+str(i), figsize=(6, 2)))
                     self.live_plots["theta"]["ax"].append(self.live_plots["theta"]["fig"][-1].add_subplot(1, 1, 1))
                     labels_lines = {}
-                    for label in label_state_dict:
+                    for label in self.label_state_dict:
                         labels_lines[label] = self.live_plots["theta"]["ax"][-1].plot([], [], label=label, marker="o")[0]
                         # labels_lines[label] = []
                         # labels_lines[label].append(self.live_plots["theta"]["ax"][-1].plot([], [], label=label, marker="o")[0])
@@ -174,6 +183,7 @@ class ALGORITHM:
             self.live_plots["reward"]["ax"].legend()
             for ax in self.live_plots["theta"]["ax"]:
                 ax.legend()
+            plt.ioff()
     
     def save_model_state_dict(self, save_path):
         torch.save(self.policy.state_dict(), save_path)
@@ -197,7 +207,10 @@ class ALGORITHM:
         loaded_model.load_state_dict(model_sd)
         loaded_model.train()
         self.policy = loaded_model
-        self.optimizer = optim.Adam(self.policy.parameters(), lr=self.lr)
+        if "adam" == self.optimizer_type.lower():
+            self.optimizer = optim.Adam(self.policy.parameters(), lr=self.lr)
+        elif "sgd" == self.optimizer_type:
+            self.optimizer = torch.optim.SGD(self.policy.parameters(), lr=self.lr, momentum=0.5, dampening=0, weight_decay=0, nesterov=False)
         return loaded_model
     
     def save_checkpoint(self, save_path):
@@ -205,6 +218,7 @@ class ALGORITHM:
             "algorithm": {
                 'model_state_dict': self.policy.state_dict(),
                 'optimizer_state_dict': self.optimizer.state_dict(),
+                "optimizer_type": self.optimizer_type,
                 "lr": self.lr,
                 "current_epoch": self.current_epoch,
                 "state_dim": self.state_dim,
@@ -212,6 +226,7 @@ class ALGORITHM:
                 "eps": self.eps,
                 "batch_size": self.batch_size,
                 "stones_positions": self.stones_positions,
+                "label_state_dict": self.label_state_dict
             },
             "policy": {
                 "in_dim": self.policy.in_dim,
@@ -237,6 +252,8 @@ class ALGORITHM:
         if checkpoint.has_key("algorithm"):
             if checkpoint["algorithm"].has_key("lr"):
                 self.lr = checkpoint["algorithm"]["lr"]
+            if checkpoint["algorithm"].has_key("optimizer_type"):
+                self.optimizer_type = checkpoint["algorithm"]["optimizer_type"]
             if checkpoint["algorithm"].has_key("current_epoch"):
                 self.current_epoch = checkpoint["algorithm"]["current_epoch"]
             if checkpoint["algorithm"].has_key("state_dim"):
@@ -249,6 +266,8 @@ class ALGORITHM:
                 self.batch_size = checkpoint["algorithm"]["batch_size"]
             if checkpoint["algorithm"].has_key("stones_positions"):
                 self.stones_positions = checkpoint["algorithm"]["stones_positions"]
+            if checkpoint["algorithm"].has_key("label_state_dict"):
+                self.label_state_dict = checkpoint["algorithm"]["label_state_dict"]
             self.policy = Policy(self.state_dim, self.action_dim)        
 
         if checkpoint.has_key("policy"):
@@ -290,13 +309,16 @@ class ALGORITHM:
                 self.policy.load_state_dict(checkpoint["algorithm"]['model_state_dict'])
                 self.policy.train()
             if checkpoint["algorithm"].has_key("optimizer_state_dict"):
-                self.optimizer = optim.Adam(self.policy.parameters(), lr=self.lr)
+                if "adam" == self.optimizer_type.lower():
+                    self.optimizer = optim.Adam(self.policy.parameters(), lr=self.lr)
+                elif "sgd" == self.optimizer_type:
+                    self.optimizer = torch.optim.SGD(self.policy.parameters(), lr=self.lr, momentum=0, dampening=0, weight_decay=0, nesterov=False)
                 self.optimizer.load_state_dict(checkpoint["algorithm"]['optimizer_state_dict'])
 
 
         self.policy.train()
 
-    def select_action(self, state, cov_mat=None, target_action=None, no_state=False):
+    def select_action(self, state, cov_mat=None, target_action=None, no_state=False, imaginary_state=False):
         mean, log_var = self.policy(state)
         std = torch.exp(0.5*log_var)
         # print ("mean = {}".format(mean.data))
@@ -320,9 +342,10 @@ class ALGORITHM:
         log_prob = dist.log_prob(action_sample)
         self.policy.saved_log_probs.append(log_prob)
 
-        self.policy.actions_history.append(action_sample)
-        self.policy.log_probs_history.append(log_prob)
-        self.policy.means_history.append(mean)
+        if not imaginary_state:
+            self.policy.actions_history.append(action_sample)
+            self.policy.log_probs_history.append(log_prob)
+            self.policy.means_history.append(mean)
         return action_sample, mean
     
     def get_policy_mean(self, state):
@@ -330,7 +353,7 @@ class ALGORITHM:
         return mean
 
 
-    def finish_episode(self, pre_training=False):
+    def finish_episode(self, pre_training=False, model_performance=None):
         R = 0
         policy_loss = []
         returns = []
@@ -364,9 +387,10 @@ class ALGORITHM:
             param_group['lr'] *= lr_decay
         return optimizer
 
-    def set_reward(self, reward):
+    def set_reward(self, reward, imaginary_state=False):
         self.policy.rewards.append(reward)
-        self.policy.rewards_history.append(reward)
+        if not imaginary_state:
+            self.policy.rewards_history.append(reward)
     
     def set_deterministic_policy_reward(self, reward):
         self.policy.deterministic_policy_rewards_history.append(reward)
@@ -399,6 +423,7 @@ class ALGORITHM:
         fig.canvas.flush_events()
 
     def update_graphs(self, label_state_dict=None):
+        plt.ion()
         if len(self.policy.losses_history) > 0:
             self.update_graph(self.live_plots["loss"]["fig"], self.live_plots["loss"]["ax"], self.live_plots["loss"]["line1"], (self.current_epoch)*self.batch_size, self.policy.losses_history[-1].item())
         if len(self.policy.episode_rewards_history) > 0:
@@ -409,13 +434,14 @@ class ALGORITHM:
             self.update_graph(self.live_plots["performance"]["fig"], self.live_plots["performance"]["ax_115"], self.live_plots["performance"]["line_115"], (self.current_epoch)*self.batch_size, sum([label_performance["115"] for label_performance in lp]))
         if len(self.policy.means_history) > 0:
             for i in range(self.action_dim):
-                if label_state_dict is None:
+                if self.label_state_dict is None:
                     self.update_graph(self.live_plots["theta"]["fig"][i], self.live_plots["theta"]["ax"][i], self.live_plots["theta"]["lines"][i], (self.current_epoch)*self.batch_size, self.policy.means_history[-1][i].item())
                 else:
-                    for label in label_state_dict:
-                        state = label_state_dict[label]
+                    for label in self.label_state_dict:
+                        state = self.label_state_dict[label]
                         mean, log_var = self.policy(state)
                         self.update_graph(self.live_plots["theta"]["fig"][i], self.live_plots["theta"]["ax"][i], self.live_plots["theta"]["lines"][i][label], (self.current_epoch)*self.batch_size, mean[i].item())
+        plt.ioff()
     
     def execute_action(self, action, target=None, std=None):
         error = False
@@ -474,7 +500,10 @@ class ALGORITHM:
         del self.policy.means_history[:]
         del self.policy.losses_history[:]
         self.current_epoch = 0
-        self.optimizer = optim.Adam(self.policy.parameters(), lr=self.lr)
+        if "adam" == self.optimizer_type.lower():
+            self.optimizer = optim.Adam(self.policy.parameters(), lr=self.lr)
+        elif "sgd" == self.optimizer_type:
+            self.optimizer = torch.optim.SGD(self.policy.parameters(), lr=self.lr, momentum=0, dampening=0, weight_decay=0, nesterov=False)
 
     def close(self):
         plt.close("all")
