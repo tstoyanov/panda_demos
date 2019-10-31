@@ -17,6 +17,7 @@ from torch.distributions.multivariate_normal import MultivariateNormal
 
 from datetime import datetime
 import ast
+import copy
 
 import rospkg
 rospack = rospkg.RosPack()
@@ -76,6 +77,7 @@ parser.add_argument('--load-checkpoint', default=False, help='name of the file c
 parser.add_argument('--load-file', default=False, help='name of the file containing the state dictionary of the trained policy model')
 parser.add_argument('--measure-performance', nargs='?', const=True, default=False, help='whether or not to test the performance of the policy')
 parser.add_argument('--collect-state-data', nargs='+', default=False, help='list of the labels of the stones')
+parser.add_argument('--plot-history', nargs='+', default=False, help='whether to plot the policy history or not')
 # parser.add_argument('--stones-labels', nargs='+', default=None, type=str, help='list of the labels of the stones')
 
 parser.add_argument('--trajectory-folder', default="latest", help='folder where to look for the trajectory to execute')
@@ -98,11 +100,14 @@ if args.save_file != False:
 else:
     save_path = args.save_dir+args.decoder_sd[0:args.decoder_sd.rfind("/")]+"/latest/"+datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
 checkpoint_save_dir = os.path.dirname(save_path)+"/checkpoint/"
+policy_save_dir = os.path.dirname(save_path)+"/policy/"
 pre_train_save_path = os.path.dirname(save_path)+"/pre_trained_policy.pt"
 if not os.path.exists(os.path.dirname(save_path)):
 	os.makedirs(save_path)
 if not os.path.exists(checkpoint_save_dir):
 	os.makedirs(checkpoint_save_dir)
+if not os.path.exists(policy_save_dir):
+	os.makedirs(policy_save_dir)
 
 items = []
 
@@ -2179,6 +2184,7 @@ else:
     initial_stds = a200_b001_20000e_latent_space_stds
     initial_actions = a200_b001_20000_shuffled_initial_means
 
+curr_lr_factor = 1
 best_det_reward = None
 normal_center = None
 curved_center = None
@@ -2571,6 +2577,17 @@ def test_policy(image_reader=None, algorithm=None, decoder_model=None, state=Non
 
 def main(args):
     try:
+        x_dist = [round(elem, 4) for elem in (torch.FloatTensor(range(0, 41))-20)/20]
+        y_dist = [round(elem, 4) for elem in (torch.FloatTensor(range(0, 41))-20)/20]
+        policy_function_list = []
+        policy_function = {
+            "x": [],
+            "y": []
+        }
+        for dim_index, _ in enumerate(latent_space_data["mean"]):
+            policy_function["dim_"+str(dim_index+1)] = []
+
+        global curr_lr_factor
         global normal_center
         global curved_center
         global observed_labels
@@ -2608,8 +2625,15 @@ def main(args):
         else:
 			print("Loading pre trained network...")
 			algorithm.load_pre_trained_net(pre_train_save_path)
+        algorithm.label_state_dict = label_state_dict
         ret = [0, 0]
         reward = None
+
+        if args.plot_history != False:
+            if args.plot_history == True:
+                algorithm.plot_history()
+            else:
+                algorithm.plot_history(int(args.plot_history[0]), int(args.plot_history[1]))
 
         if args.measure_performance != False:
             measure_performance(image_reader=image_reader, trajectory_dict=trajectory_dict, algorithm=algorithm, decoder_model=decoder_model, safety_check_module=safety_check_module)
@@ -2618,7 +2642,12 @@ def main(args):
         epoch = 0
         performance = None
         last_performance = {}
+        algorithm.lr_scheduler(1)
         while safe_throws < args.safe_throws:
+            del policy_function["x"][:]
+            del policy_function["y"][:]
+            for dim_index, _ in enumerate(latent_space_data["mean"]):
+                del policy_function["dim_"+str(dim_index+1)][:]
         # for epoch in range(args.epochs):
             # t = 0
             # while t < args.batch_size:
@@ -2792,15 +2821,38 @@ def main(args):
 			# 	for item in performance:
 			# 		last_performance[item["label"]] = item["50"] + item["115"]
             latest_det_reward, latest_det_mean, performance = test_policy(image_reader, algorithm, decoder_model, state, trajectory_dict)
+            
+            # scale the sampling std with respect to the policy performance
+            total_sum_perf = 0
+            total_max_perf = 0
+            total = 0
             for item in performance:
-				start_std = torch.tensor(latent_space_data["std"])
-				sum_perf = item["50"]+item["115"]
-				max_perf = (len(item)-2)*item["tot"]
-				if item["tot"] != 0:
-					state_data[item["label"]]["sample_std"] = (start_std-(((start_std-0.01)*sum_perf)/max_perf))*math.pow(0.9, epoch+1)
-				else:
-					state_data[item["label"]]["sample_std"] = start_std
-				state_data[item["label"]]["sample_std"][0] /= 6
+                start_std = torch.tensor(latent_space_data["std"])
+                sum_perf = item["50"]+item["115"]
+                total_sum_perf += sum_perf
+                max_perf = (len(item)-2)*item["tot"]
+                total_max_perf += max_perf
+                total += item["tot"]
+                if item["tot"] != 0:
+                    # performance   min ->  max
+                    # sampling std  max ->  0.01 
+                    state_data[item["label"]]["sample_std"] = (start_std-(((start_std-0.01)*sum_perf)/float(max_perf)))*math.pow(0.9, epoch+1)
+                else:
+                    state_data[item["label"]]["sample_std"] = start_std
+                
+                state_data[item["label"]]["sample_std"][0] /= 6
+            
+            if total != 0:
+                # performance       min ->  max
+                # target_lr_factor  1   ->  0.0001
+                target_lr_factor = (1-(((0.9999)*total_sum_perf)/float(total_max_perf)))
+            else:
+                target_lr_factor = 1
+            if target_lr_factor != curr_lr_factor:
+                correction = target_lr_factor / curr_lr_factor
+                algorithm.lr_scheduler(correction)
+                curr_lr_factor = target_lr_factor
+
             # if last_performance:
 			# 	for item in performance:
 			# 		if (item["50"]+item["115"]) > last_performance[item["label"]]:
@@ -2822,7 +2874,20 @@ def main(args):
             checkpoint_save_path = checkpoint_save_dir+datetime.now().strftime("%Y-%m-%d_%H:%M:%S")+"_r"+str(round(latest_det_reward, 3))+".tar"
             # checkpoint_save_path = args.save_dir+"checkpoint/"+datetime.now().strftime("%Y-%m-%d_%H:%M:%S")+"_r"+str(round(latest_det_reward, 3))+".tar"
             algorithm.save_checkpoint(checkpoint_save_path)
-            print("Policy model saved...")
+            print("Policy model saved.")
+
+            print("Saving policy function data...")
+            for state_x in x_dist:
+                for state_y in y_dist:
+                    policy_function["x"].append(state_x)
+                    policy_function["y"].append(state_y)
+                    policy_ret = algorithm.policy(torch.tensor([state_x, state_y]))
+                    for dim_index, _ in enumerate(policy_ret[0]):
+                        policy_function["dim_"+str(dim_index+1)].append(round(policy_ret[0][dim_index], 4))
+            policy_function_list.append(copy.deepcopy(policy_function))
+            with open(policy_save_dir + "policy_function.txt", "w") as f:
+                json.dump(policy_function_list, f)
+            print("Policy function data saved.")
 
             if epoch % args.log_interval == 0:
                 print('Episode {}\tEpisode avg reward: {:.2f}'.format(

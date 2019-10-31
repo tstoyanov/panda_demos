@@ -135,6 +135,8 @@ class ALGORITHM:
         else:
             self.lr = lr
             self.optimizer = optim.Adam(self.policy.parameters(), lr=self.lr)
+        self.scheduler_lambda = lambda correction: correction
+        self.scheduler = torch.optim.lr_scheduler.LambdaLR(self.optimizer, self.scheduler_lambda, last_epoch=-1)
         self.eps = np.finfo(np.float32).eps.item()
         self.stones_positions = {
             "distance": [],
@@ -179,10 +181,10 @@ class ALGORITHM:
             # self.live_plots["theta"]["ax"].axhline(y=0, color="k")
 
 
-            self.live_plots["loss"]["ax"].legend()
-            self.live_plots["reward"]["ax"].legend()
+            self.live_plots["loss"]["ax"].legend(loc="upper left")
+            self.live_plots["reward"]["ax"].legend(loc="upper left")
             for ax in self.live_plots["theta"]["ax"]:
-                ax.legend()
+                ax.legend(loc="upper left")
             plt.ioff()
     
     def save_model_state_dict(self, save_path):
@@ -211,6 +213,9 @@ class ALGORITHM:
             self.optimizer = optim.Adam(self.policy.parameters(), lr=self.lr)
         elif "sgd" == self.optimizer_type:
             self.optimizer = torch.optim.SGD(self.policy.parameters(), lr=self.lr, momentum=0.5, dampening=0, weight_decay=0, nesterov=False)
+        else:
+            self.optimizer = optim.Adam(self.policy.parameters(), lr=self.lr)
+        self.scheduler = torch.optim.lr_scheduler.LambdaLR(self.optimizer, self.scheduler_lambda, last_epoch=-1)
         return loaded_model
     
     def save_checkpoint(self, save_path):
@@ -313,7 +318,10 @@ class ALGORITHM:
                     self.optimizer = optim.Adam(self.policy.parameters(), lr=self.lr)
                 elif "sgd" == self.optimizer_type:
                     self.optimizer = torch.optim.SGD(self.policy.parameters(), lr=self.lr, momentum=0, dampening=0, weight_decay=0, nesterov=False)
+                else:
+                    self.optimizer = optim.Adam(self.policy.parameters(), lr=self.lr)
                 self.optimizer.load_state_dict(checkpoint["algorithm"]['optimizer_state_dict'])
+                self.scheduler = torch.optim.lr_scheduler.LambdaLR(self.optimizer, self.scheduler_lambda, last_epoch=-1)
 
 
         self.policy.train()
@@ -377,6 +385,9 @@ class ALGORITHM:
         del self.policy.saved_log_probs[:]
         self.current_epoch += 1
         return policy_loss
+    
+    def lr_scheduler(self, correction):
+        self.scheduler.step(correction)
 
     def exp_lr_scheduler(self, optimizer, epoch, lr_decay=0.1, lr_decay_epoch=2):
         """Decay learning rate by a factor of lr_decay every lr_decay_epoch epochs"""
@@ -443,6 +454,29 @@ class ALGORITHM:
                         self.update_graph(self.live_plots["theta"]["fig"][i], self.live_plots["theta"]["ax"][i], self.live_plots["theta"]["lines"][i][label], (self.current_epoch)*self.batch_size, mean[i].item())
         plt.ioff()
     
+    def plot_history(self, start_index=0, end_index=-1):
+        plt.ioff()
+        if len(self.policy.losses_history) > 0:
+            for epoch, loss in enumerate(self.policy.losses_history[start_index:end_index]):
+                self.update_graph(self.live_plots["loss"]["fig"], self.live_plots["loss"]["ax"], self.live_plots["loss"]["line1"], epoch, loss.item())
+        if len(self.policy.episode_rewards_history) > 0:
+            for epoch, reward in enumerate(self.policy.episode_rewards_history[start_index:end_index]):
+                self.update_graph(self.live_plots["reward"]["fig"], self.live_plots["reward"]["ax"], self.live_plots["reward"]["line1"], epoch, reward)
+        if len(self.policy.deterministic_policy_performance_history) > 0:
+            for epoch, performance in enumerate(self.policy.deterministic_policy_performance_history[start_index:end_index]):
+                lp = [last_performance for last_performance in performance]
+                self.update_graph(self.live_plots["performance"]["fig"], self.live_plots["performance"]["ax_50"], self.live_plots["performance"]["line_50"], epoch, sum([label_performance["50"] for label_performance in lp]))
+                self.update_graph(self.live_plots["performance"]["fig"], self.live_plots["performance"]["ax_115"], self.live_plots["performance"]["line_115"], epoch, sum([label_performance["115"] for label_performance in lp]))
+        if len(self.policy.deterministic_policy_means_history) > 0:
+            for epoch, policy_mean in enumerate(self.policy.deterministic_policy_means_history[start_index:end_index]):
+                for i in range(self.action_dim):
+                    if self.label_state_dict is None:
+                        self.update_graph(self.live_plots["theta"]["fig"][i], self.live_plots["theta"]["ax"][i], self.live_plots["theta"]["lines"][i], epoch, policy_mean[i].item())
+                    else:
+                        for label_index, label in enumerate(self.label_state_dict):
+                            self.update_graph(self.live_plots["theta"]["fig"][i], self.live_plots["theta"]["ax"][i], self.live_plots["theta"]["lines"][i][label], epoch, policy_mean[label_index][i].item())
+        plt.ioff()
+    
     def execute_action(self, action, target=None, std=None):
         error = False
         # if all(action < 0.2) and all(action > -0.2):
@@ -504,6 +538,9 @@ class ALGORITHM:
             self.optimizer = optim.Adam(self.policy.parameters(), lr=self.lr)
         elif "sgd" == self.optimizer_type:
             self.optimizer = torch.optim.SGD(self.policy.parameters(), lr=self.lr, momentum=0, dampening=0, weight_decay=0, nesterov=False)
+        else:
+            self.optimizer = optim.Adam(self.policy.parameters(), lr=self.lr)            
+        self.scheduler = torch.optim.lr_scheduler.LambdaLR(self.optimizer, self.scheduler_lambda, last_epoch=-1)
 
     def close(self):
         plt.close("all")
