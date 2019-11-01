@@ -27,7 +27,7 @@ epoch = -1
 dim = "dim_3"
 
 
-with open("/home/aass/workspace_shuffle/src/panda_demos/trajectory_generator/saved_models/policy_network/a200_b1e-1_80000e_smoother_batch/latest/policy/policy_function_1e.txt", 'r') as f:
+with open("/home/aass/workspace_shuffle/src/panda_demos/trajectory_generator/saved_models/policy_network/a200_b1e-1_80000e_smoother_batch/latest/policy/policy_function.txt", 'r') as f:
     data = f.read()               
 policy_function = json.loads(data)
 policy_function = ast.literal_eval(json.dumps(policy_function))

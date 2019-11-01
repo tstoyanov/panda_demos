@@ -454,7 +454,7 @@ class ALGORITHM:
                         self.update_graph(self.live_plots["theta"]["fig"][i], self.live_plots["theta"]["ax"][i], self.live_plots["theta"]["lines"][i][label], (self.current_epoch)*self.batch_size, mean[i].item())
         plt.ioff()
     
-    def plot_history(self, start_index=0, end_index=-1):
+    def plot_history(self, start_index=None, end_index=None):
         plt.ioff()
         if len(self.policy.losses_history) > 0:
             for epoch, loss in enumerate(self.policy.losses_history[start_index:end_index]):

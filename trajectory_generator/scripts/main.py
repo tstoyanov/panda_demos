@@ -2632,8 +2632,10 @@ def main(args):
         if args.plot_history != False:
             if args.plot_history == True:
                 algorithm.plot_history()
-            else:
-                algorithm.plot_history(int(args.plot_history[0]), int(args.plot_history[1]))
+            elif len(args.plot_history) == 1:
+                algorithm.plot_history(start_index=int(args.plot_history[0]))
+            elif len(args.plot_history) == 2:
+                algorithm.plot_history(start_index=int(args.plot_history[0]), end_index=int(args.plot_history[1]))
 
         if args.measure_performance != False:
             measure_performance(image_reader=image_reader, trajectory_dict=trajectory_dict, algorithm=algorithm, decoder_model=decoder_model, safety_check_module=safety_check_module)
