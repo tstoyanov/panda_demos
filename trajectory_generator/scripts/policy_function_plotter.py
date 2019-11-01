@@ -1,6 +1,7 @@
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits import mplot3d
-from matplotlib import cm                                                                    
+from matplotlib import cm
+import matplotlib.colors as mcol                                                            
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -25,9 +26,10 @@ def my_z_function(x_value, y_value):
 
 epoch = -1
 dim = "dim_3"
+y_target = 0
 
 
-with open("/home/aass/workspace_shuffle/src/panda_demos/trajectory_generator/saved_models/policy_network/a200_b1e-1_80000e_smoother_batch/latest/policy/policy_function.txt", 'r') as f:
+with open("/home/aass/workspace_shuffle/src/panda_demos/trajectory_generator/saved_models/policy_network/a200_b1e-1_80000e_smoother_batch/10_perfect_add_30/policy/policy_function.txt", 'r') as f:
     data = f.read()               
 policy_function = json.loads(data)
 policy_function = ast.literal_eval(json.dumps(policy_function))
@@ -67,9 +69,33 @@ ax_3d.set_zlabel(dim)
 ax_3d.set_title(dim);
 
 
+steps = len(policy_function)
+initial_color = (0, 0, 1)
+final_color = (1, 0, 0)
+new_color_delta = tuple((item_final - item_initial) / steps for item_initial, item_final in zip(initial_color, final_color))
+new_color = initial_color
+
+
+# # Make a user-defined colormap.
+# cm1 = mcol.LinearSegmentedColormap.from_list("MyCmapName",["b","r"])
+
+# # Make a normalizer that will map the time values from
+# # [start_time,end_time+1] -> [0,1].
+# cnorm = mcol.Normalize(vmin=0,vmax=steps)
+
+# # Turn these into an object that can be used to map time values to colors and
+# # can be passed to plt.colorbar().
+# # cpick = cm.ScalarMappable(norm=cnorm,cmap=cm1)
+# cpick = cm.ScalarMappable(norm=cnorm,cmap=plt.get_cmap("jet"))
+# cpick.set_array([])
+
+# fig_2d_stack = plt.figure(dim+"_"+str(epoch)+"e_stack")    
+# fig_2d_stack.suptitle(dim+" - y={}".format(y_target))
+# ax_2d_stack = plt.subplot(1, 1, 1)
+
 for epoch, policy in enumerate(policy_function):
     fig_2d = plt.figure(dim+"_"+str(epoch)+"e")    
-    fig_2d.suptitle(dim+" for epoch: "+str(epoch))
+    fig_2d.suptitle(dim+" - y={}\nepoch: {}".format(y_target, epoch))
     ax_2d = plt.subplot(1, 1, 1)
     x_values = policy_function[epoch]["x"][-data_len::]
     y_values = policy_function[epoch]["y"][-data_len::]
@@ -77,10 +103,20 @@ for epoch, policy in enumerate(policy_function):
     x = []
     z = []
     for index, y_value in enumerate(y_values):
-        if y_value == 0:
+        if y_value == y_target:
             x.append(x_values[index])
             z.append(z_values[index])
-    sns.scatterplot(x, z, ax=ax_2d)
+    g = sns.scatterplot(x, z, ax=ax_2d, color="red")
+    # new_color = cpick.to_rgba(epoch)
+    # g_stack = sns.lineplot(x, z, ax=ax_2d_stack, color=new_color, lw=3.0)
+    # g_stack = sns.scatterplot(x, z, ax=ax_2d_stack, color=new_color, kwargs="linewidth=2.0")
+    # new_color = tuple(current_item + delta_item for current_item, delta_item in zip(new_color, new_color_delta))
+    plt.xlabel("x_state")
+    plt.xlabel(dim)
+
+    # fig_2d_stack.subplots_adjust(right=0.8)
+    # cbar_ax = fig_2d_stack.add_axes([0.85, 0.11, 0.02, 0.775])
+    # fig_2d_stack.colorbar(cpick, cax=cbar_ax, label="initial policy                                                                                                                                                final policy", ticks=[])
 
 
 plt.show()
