@@ -42,7 +42,7 @@ import torch.multiprocessing
 torch.multiprocessing.set_sharing_strategy('file_system')
 
 
-parser = argparse.ArgumentParser(description='VAE Example')
+parser = argparse.ArgumentParser(description='Trajectory VAE')
 parser.add_argument('--batch-size', type=int, default=128, metavar='N',
                     help='input batch size for training (default: 128)')
 parser.add_argument('--epochs', type=int, default=10, metavar='N',
@@ -1382,21 +1382,25 @@ if __name__ == "__main__":
             for i in range(latent_space_dimension):
                 pairplot_vars.append("latent-space-"+str(i+1))
             print("Generating pairplots...")
-            # pairplot_vars = []
-            # pairplot_vars.append("latent-space-1")
-            # pairplot_vars.append("latent-space-3")
+            pairplot_vars = []
+            pairplot_vars.append("latent-space-1")
+            pairplot_vars.append("latent-space-3")
 
             # g_vel = sns.pairplot(dataset_data_to_plot, height=3, diag_kind="hist", hue="vel", palette=sns.color_palette("bright", dataset_data_to_plot['vel'].nunique()), vars=pairplot_vars, plot_kws=dict(alpha=0.5), diag_kws=dict(alpha=0.5))
             # g_rel_angle = sns.pairplot(dataset_data_to_plot, height=3, diag_kind="hist", hue="rel_angle", palette=sns.color_palette("bright", dataset_data_to_plot['rel_angle'].nunique()), vars=pairplot_vars, plot_kws=dict(alpha=0.5), diag_kws=dict(alpha=0.5))
             # fig = plt.figure("pairplot_vel")
             # pairplot_ax = fig.add_subplot(1, 1, 1)
-            g_vel = sns.pairplot(dataset_data_to_plot, diag_kind="hist", hue="vel", palette=sns.color_palette("hls", dataset_data_to_plot['vel'].nunique()), vars=pairplot_vars, plot_kws=dict(alpha=0.5), diag_kws=dict(alpha=0.5))
+            # g_vel = sns.pairplot(dataset_data_to_plot, diag_kind="hist", hue="vel", palette=sns.color_palette("hls", dataset_data_to_plot['vel'].nunique()), vars=pairplot_vars, plot_kws=dict(alpha=0.5), diag_kws=dict(alpha=0.5))
+            g_vel = sns.pairplot(dataset_data_to_plot[::8], diag_kind="hist", hue="vel", palette=sns.color_palette("hls", dataset_data_to_plot['vel'].nunique()), vars=pairplot_vars, plot_kws=dict(alpha=0.5), diag_kws=dict(alpha=0.5))
             # fig = plt.figure("pairplot_rel_angle")
             # pairplot_ax = fig.add_subplot(1, 1, 1)
-            g_rel_angle = sns.pairplot(dataset_data_to_plot, diag_kind="hist", hue="rel_angle", palette=sns.color_palette("hls", dataset_data_to_plot['rel_angle'].nunique()), vars=pairplot_vars, plot_kws=dict(alpha=0.5), diag_kws=dict(alpha=0.5))
+            # g_rel_angle = sns.pairplot(dataset_data_to_plot, diag_kind="hist", hue="rel_angle", palette=sns.color_palette("hls", dataset_data_to_plot['rel_angle'].nunique()), vars=pairplot_vars, plot_kws=dict(alpha=0.5), diag_kws=dict(alpha=0.5))
+            g_rel_angle = sns.pairplot(dataset_data_to_plot[::8], height=3, diag_kind="hist", hue="rel_angle", palette=sns.color_palette("hls", dataset_data_to_plot['rel_angle'].nunique()), vars=pairplot_vars, plot_kws=dict(alpha=0.5), diag_kws=dict(alpha=0.5))
             # fig = plt.figure("pairplot_is_safe")
             # pairplot_ax = fig.add_subplot(1, 1, 1)
-            g_is_safe = sns.pairplot(dataset_data_to_plot, diag_kind="hist", hue="is_safe", palette=sns.color_palette("hls", dataset_data_to_plot['is_safe'].nunique()), vars=pairplot_vars, plot_kws=dict(alpha=0.5), diag_kws=dict(alpha=0.5))
+            # g_is_safe = sns.pairplot(dataset_data_to_plot, diag_kind="hist", hue="is_safe", palette=sns.color_palette("hls", dataset_data_to_plot['is_safe'].nunique()), vars=pairplot_vars, plot_kws=dict(alpha=0.5), diag_kws=dict(alpha=0.5))
+            g_is_safe = sns.pairplot(dataset_data_to_plot[::8], height=3, diag_kind="hist", hue="is_safe", palette=sns.color_palette("hls", dataset_data_to_plot['is_safe'].nunique()), vars=pairplot_vars, plot_kws=dict(alpha=0.5), diag_kws=dict(alpha=0.5))
+            True
             # # g_vel = sns.pairplot(dataset_data_to_plot.sample(frac=0.1), hue="vel", palette="hls", vars=pairplot_vars, plot_kws=dict(alpha=0.5), diag_kws=dict(alpha=0.5))
             # # g_vel = sns.pairplot(dataset_data_to_plot[:1000], hue="vel", palette=sns.color_palette("hls", dataset_data_to_plot['m'].nunique()), vars=pairplot_vars)
 

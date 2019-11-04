@@ -355,6 +355,12 @@ class ALGORITHM:
             self.policy.log_probs_history.append(log_prob)
             self.policy.means_history.append(mean)
         return action_sample, mean
+
+    def remove_action(self):
+        self.policy.saved_log_probs.pop()
+        self.policy.actions_history.pop()
+        self.policy.log_probs_history.pop()
+        self.policy.means_history.pop()
     
     def get_policy_mean(self, state):
         mean, log_var = self.policy(state)

@@ -25,11 +25,12 @@ def my_z_function(x_value, y_value):
             return val[2]
 
 epoch = -1
-dim = "dim_3"
-y_target = 0
+dim = "dim_1"
+y_target = None
+x_target = 0.8
 
 
-with open("/home/aass/workspace_shuffle/src/panda_demos/trajectory_generator/saved_models/policy_network/a200_b1e-1_80000e_smoother_batch/10_perfect_add_30/policy/policy_function.txt", 'r') as f:
+with open("/home/aass/workspace_shuffle/src/panda_demos/trajectory_generator/saved_models/policy_network/a200_b1e-1_80000e_smoother_batch/curved_centered/policy/policy_function.txt", 'r') as f:
     data = f.read()               
 policy_function = json.loads(data)
 policy_function = ast.literal_eval(json.dumps(policy_function))
@@ -70,10 +71,10 @@ ax_3d.set_title(dim);
 
 
 steps = len(policy_function)
-initial_color = (0, 0, 1)
-final_color = (1, 0, 0)
-new_color_delta = tuple((item_final - item_initial) / steps for item_initial, item_final in zip(initial_color, final_color))
-new_color = initial_color
+# initial_color = (0, 0, 1)
+# final_color = (1, 0, 0)
+# new_color_delta = tuple((item_final - item_initial) / steps for item_initial, item_final in zip(initial_color, final_color))
+# new_color = initial_color
 
 
 # # Make a user-defined colormap.
@@ -95,24 +96,33 @@ new_color = initial_color
 
 for epoch, policy in enumerate(policy_function):
     fig_2d = plt.figure(dim+"_"+str(epoch)+"e")    
-    fig_2d.suptitle(dim+" - y={}\nepoch: {}".format(y_target, epoch))
     ax_2d = plt.subplot(1, 1, 1)
     x_values = policy_function[epoch]["x"][-data_len::]
     y_values = policy_function[epoch]["y"][-data_len::]
     z_values = policy_function[epoch][dim][::]
     x = []
     z = []
-    for index, y_value in enumerate(y_values):
-        if y_value == y_target:
-            x.append(x_values[index])
-            z.append(z_values[index])
-    g = sns.scatterplot(x, z, ax=ax_2d, color="red")
+    if x_target is None:
+        fig_2d.suptitle(dim+" - y={}\nepoch: {}".format(y_target, epoch))
+        for index, y_value in enumerate(y_values):
+            if y_value == y_target:
+                x.append(x_values[index])
+                z.append(z_values[index])
+        g = sns.scatterplot(x, z, ax=ax_2d, color="red")
+        plt.xlabel("x_state")
+    elif y_target is None:
+        fig_2d.suptitle(dim+" - x={}\nepoch: {}".format(x_target, epoch))
+        for index, x_value in enumerate(x_values):
+            if x_value == x_target:
+                x.append(y_values[index])
+                z.append(z_values[index])
+        g = sns.scatterplot(x, z, ax=ax_2d, color="red")
+        plt.xlabel("y_state")
     # new_color = cpick.to_rgba(epoch)
     # g_stack = sns.lineplot(x, z, ax=ax_2d_stack, color=new_color, lw=3.0)
-    # g_stack = sns.scatterplot(x, z, ax=ax_2d_stack, color=new_color, kwargs="linewidth=2.0")
+    # # g_stack = sns.scatterplot(x, z, ax=ax_2d_stack, color=new_color, kwargs="linewidth=2.0")
     # new_color = tuple(current_item + delta_item for current_item, delta_item in zip(new_color, new_color_delta))
-    plt.xlabel("x_state")
-    plt.xlabel(dim)
+    plt.ylabel(dim)
 
     # fig_2d_stack.subplots_adjust(right=0.8)
     # cbar_ax = fig_2d_stack.add_axes([0.85, 0.11, 0.02, 0.775])

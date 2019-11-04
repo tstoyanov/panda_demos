@@ -2314,80 +2314,80 @@ def get_state(dim=args.state_dim, image_reader=None, trajectory_dict=None, decod
     if "DUMMY" == args.encoder_sd.upper():
         return torch.ones(dim)
     elif "SLIDING_STATE" == args.encoder_sd.upper():
-		if test_policy:
-			ret = []
-			for obs_label in observed_labels:
-				x_t = torch.FloatTensor(state_data[obs_label]["x"])
-				y_t = torch.FloatTensor(state_data[obs_label]["y"])
-				x_mean = x_t.mean()
-				x_std = x_t.std()
-				y_mean = y_t.mean()
-				y_std = y_t.std()
-				y_std = y_t.std()
-				mean_vector = torch.tensor([x_mean, y_mean])
-				cov_matrix = torch.diag(torch.tensor([(x_std/3)**2, (y_std/3)**2]))
-				dist = MultivariateNormal(mean_vector, cov_matrix)
-				state = dist.sample()
-				ret.append({
-					"state": state,
-					"label": obs_label
-				})
-			return ret
-		elif pre_train:
-			ret = []
-			for label in args.train_labels:
-				x_t = torch.FloatTensor(state_data[label]["x"])
-				y_t = torch.FloatTensor(state_data[label]["y"])
-				x_mean = x_t.mean()
-				x_std = x_t.std()
-				y_mean = y_t.mean()
-				y_std = y_t.std()
-				y_std = y_t.std()
-				mean_vector = torch.tensor([x_mean, y_mean])
-				cov_matrix = torch.diag(torch.tensor([(x_std/2)**2, (y_std/2)**2]))
-				dist = MultivariateNormal(mean_vector, cov_matrix)
-				states = dist.sample((10,))
-				ret.extend(states)
-			return ret
-		else:
-			labels = [label for label in state_data]
-			done = False
-			while not done:
-				print("The available labels are:")
-				for label in labels:
-					print ("\t{}".format(label))
-				print ("\tsense (sense a new stone)")
-				command = raw_input("Select a label or leave blank to use the next label: '{}'\n> ".format(args.train_labels[label_index]))
-				if command == "" or command == "sense" or command in labels:
-					done = True
-					if command != "":
-						last_label = command
-					else:
-						last_label = args.train_labels[label_index]
-						label_index = (label_index+1)%len(args.train_labels)
-				else:
-					print("The inserted label: '{}' was not recognized.".format(command))
-			if last_label in labels:
-				if last_label == "curved":
-					image_reader.board.set_center(curved_center)
-				else:
-					image_reader.board.set_center(normal_center)
-				x_t = torch.FloatTensor(state_data[last_label]["x"])
-				y_t = torch.FloatTensor(state_data[last_label]["y"])
-				x_mean = x_t.mean()
-				x_std = x_t.std()
-				y_mean = y_t.mean()
-				y_std = y_t.std()
-				mean_vector = torch.tensor([x_mean, y_mean])
-				cov_matrix = torch.diag(torch.tensor([x_std**2, y_std**2]))
-				dist = MultivariateNormal(mean_vector, cov_matrix)
-				state = dist.sample()
-				imaginary_states = dist.sample((imaginary_samples,))
-				return state, last_label, imaginary_states
-			else:
-				print("Sensing a new stone")
-				image_reader.board.set_center(normal_center)
-				decoded_trajectory = torch.tensor(state_trajectory)
+        if test_policy:
+            ret = []
+            for obs_label in observed_labels:
+                x_t = torch.FloatTensor(state_data[obs_label]["x"])
+                y_t = torch.FloatTensor(state_data[obs_label]["y"])
+                x_mean = x_t.mean()
+                x_std = x_t.std()
+                y_mean = y_t.mean()
+                y_std = y_t.std()
+                y_std = y_t.std()
+                mean_vector = torch.tensor([x_mean, y_mean])
+                cov_matrix = torch.diag(torch.tensor([(x_std/3)**2, (y_std/3)**2]))
+                dist = MultivariateNormal(mean_vector, cov_matrix)
+                state = dist.sample()
+                ret.append({
+                    "state": state,
+                    "label": obs_label
+                })
+            return ret
+        elif pre_train:
+            ret = []
+            for label in args.train_labels:
+                x_t = torch.FloatTensor(state_data[label]["x"])
+                y_t = torch.FloatTensor(state_data[label]["y"])
+                x_mean = x_t.mean()
+                x_std = x_t.std()
+                y_mean = y_t.mean()
+                y_std = y_t.std()
+                y_std = y_t.std()
+                mean_vector = torch.tensor([x_mean, y_mean])
+                cov_matrix = torch.diag(torch.tensor([(x_std/2)**2, (y_std/2)**2]))
+                dist = MultivariateNormal(mean_vector, cov_matrix)
+                states = dist.sample((10,))
+                ret.extend(states)
+            return ret
+        else:
+            labels = [label for label in state_data]
+            done = False
+            while not done:
+                print("The available labels are:")
+                for label in labels:
+                    print ("\t{}".format(label))
+                print ("\tsense (sense a new stone)")
+                command = raw_input("Select a label or leave blank to use the next label: '{}'\n> ".format(args.train_labels[label_index]))
+                if command == "" or command == "sense" or command in labels:
+                    done = True
+                    if command != "":
+                        last_label = command
+                    else:
+                        last_label = args.train_labels[label_index]
+                        label_index = (label_index+1)%len(args.train_labels)
+                else:
+                    print("The inserted label: '{}' was not recognized.".format(command))
+            if last_label in labels:
+                if last_label == "curved":
+                    image_reader.board.set_center(curved_center)
+                else:
+                    image_reader.board.set_center(normal_center)
+                x_t = torch.FloatTensor(state_data[last_label]["x"])
+                y_t = torch.FloatTensor(state_data[last_label]["y"])
+                x_mean = x_t.mean()
+                x_std = x_t.std()
+                y_mean = y_t.mean()
+                y_std = y_t.std()
+                mean_vector = torch.tensor([x_mean, y_mean])
+                cov_matrix = torch.diag(torch.tensor([x_std**2, y_std**2]))
+                dist = MultivariateNormal(mean_vector, cov_matrix)
+                state = dist.sample()
+                imaginary_states = dist.sample((imaginary_samples,))
+                return state, last_label, imaginary_states
+            else:
+                print("Sensing a new stone")
+                image_reader.board.set_center(normal_center)
+                decoded_trajectory = torch.tensor(state_trajectory)
                 trajectory_dict["joint_trajectory"] = decoded_trajectory.view(100, -1).tolist()
                 safety_res = safety_check_module.check(decoded_trajectory.tolist(), args.execution_time)
                 if safety_res.is_safe:
@@ -2436,11 +2436,11 @@ def collect_state_data(encoded_trajectory=None, decoded_trajectory=None, labels=
     trajectory_dict["joint_trajectory"] = decoded_trajectory.view(100, -1).tolist()
     safety_res = safety_check_module.check(decoded_trajectory.tolist(), args.execution_time)
     if safety_res.is_safe:
-    	state_data = {}
+        state_data = {}
         output_folder = package_path + "/sensing_data/slide_sensing/" + output_folder
         # os.makedirs(output_folder, exist_ok=True)
         if not os.path.exists(output_folder):
-    		os.makedirs(output_folder)
+            os.makedirs(output_folder)
         for label in labels:
             print("Collecting state data for stone labeled: {}".format(label))
             state_data[label] = {
@@ -2457,11 +2457,11 @@ def collect_state_data(encoded_trajectory=None, decoded_trajectory=None, labels=
                 state_data[label]["x"].append(stone_x)
                 state_data[label]["y"].append(stone_y)
                 if repetition % 2 == 0:
-					with open(output_folder+"/state_data_odd.txt", "w") as f:
-						json.dump(state_data, f)
+                    with open(output_folder+"/state_data_odd.txt", "w") as f:
+                        json.dump(state_data, f)
                 else:
-					with open(output_folder+"/state_data_even.txt", "w") as f:
-						json.dump(state_data, f)
+                    with open(output_folder+"/state_data_even.txt", "w") as f:
+                        json.dump(state_data, f)
 
             # with open(output_folder+"/state_data.txt", "w") as f:
             #             json.dump(state_data, f)
@@ -2560,7 +2560,7 @@ def test_policy(image_reader=None, algorithm=None, decoder_model=None, state=Non
         else:
             print("Testing label: {}".format(label))
             print("Unsafe tesing trajectory")
-            test_reward = -1
+            test_reward = 0
         performance_list.append(performance)
         mean_list.append(mean)
     test_reward /= (max(args.performance_repetition, args.test_repetition) * len(state_label_list))
@@ -2591,6 +2591,7 @@ def main(args):
             "joint_names": joint_names,
             "realease_frame": args.release_frame
         }
+        is_safe = False
         end = False
         plot_joints = False
         image_reader = image_reader_module.image_converter()
@@ -2601,7 +2602,7 @@ def main(args):
         algorithm = algorithm_module.ALGORITHM(args.state_dim, args.action_dim, args.learning_rate, plot=True, batch_size=args.batch_size, label_state_dict=label_state_dict, optimizer_type=args.optimizer)
         items.append(algorithm)
         if args.collect_state_data != False:
-			collect_state_data(encoded_trajectory=None, decoded_trajectory=state_trajectory, labels=args.collect_state_data, repetitions=args.state_repetition, output_folder=args.state_folder, image_reader=image_reader, trajectory_dict=trajectory_dict, decoder_model=decoder_model)
+            collect_state_data(encoded_trajectory=None, decoded_trajectory=state_trajectory, labels=args.collect_state_data, repetitions=args.state_repetition, output_folder=args.state_folder, image_reader=image_reader, trajectory_dict=trajectory_dict, decoder_model=decoder_model)
         if args.load_file != False:
             algorithm.load_model_state_dict(args.load_dir+args.load_file)
         elif args.load_checkpoint != False:
@@ -2612,13 +2613,13 @@ def main(args):
             algorithm.pre_train(args.pre_train_epochs, args.pre_train_batch_size, args.pre_train_log_interval, target=torch.tensor(initial_means), std=torch.tensor(initial_stds)/10, starting_states=states_list)
             print ("Pre train over")
             if args.pre_train == "save":
-				print("Saving pre trained model...")
-				algorithm.save_pre_trained_net(pre_train_save_path)
-				print("Pre trained model saved.")
+                print("Saving pre trained model...")
+                algorithm.save_pre_trained_net(pre_train_save_path)
+                print("Pre trained model saved.")
             algorithm.plot = True
         else:
-			print("Loading pre trained network...")
-			algorithm.load_pre_trained_net(pre_train_save_path)
+            print("Loading pre trained network...")
+            algorithm.load_pre_trained_net(pre_train_save_path)
         algorithm.label_state_dict = label_state_dict
         ret = [0, 0]
         reward = None
@@ -2650,81 +2651,86 @@ def main(args):
             # while t < args.batch_size:
             episode_reward = 0
             for t in range(args.batch_size):
-                print ("t = {}".format(t))
-                state, label, imaginary_states = get_state(algorithm.policy.in_dim, image_reader=image_reader, trajectory_dict=trajectory_dict, decoder_model=decoder_model, imaginary_samples=args.imaginary_samples)
-                if "sense" != label:
-                    observed_labels.add(label)
-                print("Observed labels: {}".format(observed_labels))
-                print("Current label: {}".format(label))
-                print("Current state: {}".format(state))
-                command = True
-                while "" != command:
-                    command = raw_input("Enter command (leave blank to execute action): ")
-                    if "set_action" == command:
-                        while True:
-                            try:
-                                a = raw_input("Input the action in the form of a list ('q' to quit): ")
-                                if "q" == a:
-                                    break
-                                action = torch.tensor(ast.literal_eval(a))
-                                mean = torch.tensor(ast.literal_eval(a))
-                                break
-                            except:
-                                print ("The action must be a python list\nEg: [1, 2, 3, 4, 5]")
-                        if "q" != a:
-                            break
-                    if "test_policy" == command:
-                        test_policy(image_reader, algorithm, decoder_model, state, trajectory_dict)
-                    if "print_latent_space" == command:
-                        try:
-                            print(latent_space_data)
-                        except:
-                            print("Cannot print variable 'latent_space_data'.")
-                    if "end" == command:
-                        safe_throws = args.safe_throws
-                        end = True
-                        break
-
-                if end:
-					break
-                if "set_action" != command:
+                is_safe = False
+                while not is_safe:
+                    print ("t = {}".format(t))
+                    state, label, imaginary_states = get_state(algorithm.policy.in_dim, image_reader=image_reader, trajectory_dict=trajectory_dict, decoder_model=decoder_model, imaginary_samples=args.imaginary_samples)
                     if "sense" != label:
-                        cov_mat = torch.diag((state_data[label]["sample_std"]))
-                    else:
-                        cov_mat = torch.diag(torch.tensor([0.001]*len(latent_space_data["mean"])))
-                    # cov_mat = torch.diag((torch.tensor(initial_stds))*math.pow(0.5, epoch))
-                    print("cov_mat: ")
-                    print(cov_mat)
-                    if epoch == 0:
-						action, mean = algorithm.select_action(state, cov_mat=cov_mat, target_action=torch.tensor(initial_actions[t]))
-                    else:
-						action, mean = algorithm.select_action(state, cov_mat=cov_mat)
-                # action, mean = algorithm.select_action(state, cov_mat=cov_mat)
-                if epoch % args.log_interval == 0 and t == 0 and algorithm.plot:
-					algorithm.update_graphs(label_state_dict=label_state_dict)
-                # action = get_dummy_action(algorithm.policy.out_dim)
-                if "sense" == label:
-                    action = mean
-                trajectory = decoder_model.decode(action)
+                        observed_labels.add(label)
+                    print("Observed labels: {}".format(observed_labels))
+                    print("Current label: {}".format(label))
+                    print("Current state: {}".format(state))
+                    command = True
+                    while "" != command:
+                        command = raw_input("Enter command (leave blank to execute action): ")
+                        if "set_action" == command:
+                            while True:
+                                try:
+                                    a = raw_input("Input the action in the form of a list ('q' to quit): ")
+                                    if "q" == a:
+                                        break
+                                    action = torch.tensor(ast.literal_eval(a))
+                                    mean = torch.tensor(ast.literal_eval(a))
+                                    break
+                                except:
+                                    print ("The action must be a python list\nEg: [1, 2, 3, 4, 5]")
+                            if "q" != a:
+                                break
+                        if "test_policy" == command:
+                            test_policy(image_reader, algorithm, decoder_model, state, trajectory_dict)
+                        if "print_latent_space" == command:
+                            try:
+                                print(latent_space_data)
+                            except:
+                                print("Cannot print variable 'latent_space_data'.")
+                        if "end" == command:
+                            safe_throws = args.safe_throws
+                            end = True
+                            break
 
-                # trajectory = decoder_model.decode(torch.tensor(mc_13_means))
+                    if end:
+                        break
+                    if "set_action" != command:
+                        if "sense" != label:
+                            cov_mat = torch.diag((state_data[label]["sample_std"]))
+                        else:
+                            cov_mat = torch.diag(torch.tensor([0.001]*len(latent_space_data["mean"])))
+                        # cov_mat = torch.diag((torch.tensor(initial_stds))*math.pow(0.5, epoch))
+                        print("cov_mat: ")
+                        print(cov_mat)
+                        if epoch == 0:
+                            action, mean = algorithm.select_action(state, cov_mat=cov_mat, target_action=torch.tensor(initial_actions[t]))
+                        else:
+                            action, mean = algorithm.select_action(state, cov_mat=cov_mat)
+                    # action, mean = algorithm.select_action(state, cov_mat=cov_mat)
+                    if epoch % args.log_interval == 0 and t == 0 and algorithm.plot:
+                        algorithm.update_graphs(label_state_dict=label_state_dict)
+                    # action = get_dummy_action(algorithm.policy.out_dim)
+                    if "sense" == label:
+                        action = mean
+                    trajectory = decoder_model.decode(action)
 
-                smooth_trajectory = smoothen_trajectory(trajectory)
+                    # trajectory = decoder_model.decode(torch.tensor(mc_13_means))
 
-                smooth_safety_res = safety_check_module.check(smooth_trajectory.tolist(), args.execution_time)
-                safety_res = safety_check_module.check(trajectory.tolist(), args.execution_time)
-                
-                print("Distribution mean:")
-                print(mean)
-                print("Action to execute:")
-                print(action)
-                for dim_index, dim in enumerate(action):
-					m = latent_space_data["mean"][dim_index]
-					std = latent_space_data["std"][dim_index]
-					if dim.item() <= (m-(3*std)) or dim.item() >= (m+(3*std)):
-						safety_res.unsafe_pts += 1
-                if safety_res.unsafe_pts > 0:
-					safety_res.is_safe = False
+                    smooth_trajectory = smoothen_trajectory(trajectory)
+
+                    smooth_safety_res = safety_check_module.check(smooth_trajectory.tolist(), args.execution_time)
+                    safety_res = safety_check_module.check(trajectory.tolist(), args.execution_time)
+                    
+                    print("Distribution mean:")
+                    print(mean)
+                    print("Action to execute:")
+                    print(action)
+                    for dim_index, dim in enumerate(action):
+                        m = latent_space_data["mean"][dim_index]
+                        std = latent_space_data["std"][dim_index]
+                        if dim.item() <= (m-(3*std)) or dim.item() >= (m+(3*std)):
+                            safety_res.unsafe_pts += 1
+                    if safety_res.unsafe_pts > 0:
+                        safety_res.is_safe = False
+                    is_safe = safety_res.is_safe
+                    if not is_safe:
+                        algorithm.remove_action()
                 if safety_res.is_safe:
                     ret[0] += 1
                     trajectory_dict["joint_trajectory"] = smooth_trajectory.view(100, -1).tolist()
@@ -2790,7 +2796,8 @@ def main(args):
                     reward = float(cumulative_reward)/args.action_repetition
                 else:
                     ret[1] += 1
-                    reward = -safety_res.unsafe_pts
+                    # reward = -safety_res.unsafe_pts
+                    reward = 0
                     algorithm.set_stone_position("unsafe", "unsafe")
                 print (ret)
                 print ("unsafe_pts = " + str(safety_res.unsafe_pts))
@@ -2801,8 +2808,8 @@ def main(args):
 
 				# imaginary executions
                 for imaginary_state in imaginary_states:
-					action, mean = algorithm.select_action(imaginary_state, cov_mat=cov_mat, target_action=action, imaginary_state=True)
-					algorithm.set_reward(reward, imaginary_state=True)
+                    action, mean = algorithm.select_action(imaginary_state, cov_mat=cov_mat, target_action=action, imaginary_state=True)
+                    algorithm.set_reward(reward, imaginary_state=True)
 			
             episode_reward /= int(args.batch_size)
             algorithm.set_episode_reward(episode_reward)
@@ -2810,8 +2817,8 @@ def main(args):
 
             raw_input("Press enter to test the policy")
             # if performance is not None:
-			# 	for item in performance:
-			# 		last_performance[item["label"]] = item["50"] + item["115"]
+            # 	for item in performance:
+            # 		last_performance[item["label"]] = item["50"] + item["115"]
             latest_det_reward, latest_det_mean, performance = test_policy(image_reader, algorithm, decoder_model, state, trajectory_dict)
             
             # scale the sampling std with respect to the policy performance
@@ -2832,7 +2839,7 @@ def main(args):
                 else:
                     state_data[item["label"]]["sample_std"] = start_std
                 
-                state_data[item["label"]]["sample_std"][0] /= 6
+                # state_data[item["label"]]["sample_std"][0] /= 3
             
             if total != 0:
                 # performance       min ->  max
