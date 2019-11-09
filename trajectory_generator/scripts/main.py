@@ -2651,86 +2651,86 @@ def main(args):
             # while t < args.batch_size:
             episode_reward = 0
             for t in range(args.batch_size):
-                is_safe = False
-                while not is_safe:
-                    print ("t = {}".format(t))
-                    state, label, imaginary_states = get_state(algorithm.policy.in_dim, image_reader=image_reader, trajectory_dict=trajectory_dict, decoder_model=decoder_model, imaginary_samples=args.imaginary_samples)
-                    if "sense" != label:
-                        observed_labels.add(label)
-                    print("Observed labels: {}".format(observed_labels))
-                    print("Current label: {}".format(label))
-                    print("Current state: {}".format(state))
-                    command = True
-                    while "" != command:
-                        command = raw_input("Enter command (leave blank to execute action): ")
-                        if "set_action" == command:
-                            while True:
-                                try:
-                                    a = raw_input("Input the action in the form of a list ('q' to quit): ")
-                                    if "q" == a:
-                                        break
-                                    action = torch.tensor(ast.literal_eval(a))
-                                    mean = torch.tensor(ast.literal_eval(a))
-                                    break
-                                except:
-                                    print ("The action must be a python list\nEg: [1, 2, 3, 4, 5]")
-                            if "q" != a:
-                                break
-                        if "test_policy" == command:
-                            test_policy(image_reader, algorithm, decoder_model, state, trajectory_dict)
-                        if "print_latent_space" == command:
+                # is_safe = False
+                # while not is_safe:
+                print ("t = {}".format(t))
+                state, label, imaginary_states = get_state(algorithm.policy.in_dim, image_reader=image_reader, trajectory_dict=trajectory_dict, decoder_model=decoder_model, imaginary_samples=args.imaginary_samples)
+                if "sense" != label:
+                    observed_labels.add(label)
+                print("Observed labels: {}".format(observed_labels))
+                print("Current label: {}".format(label))
+                print("Current state: {}".format(state))
+                command = True
+                while "" != command:
+                    command = raw_input("Enter command (leave blank to execute action): ")
+                    if "set_action" == command:
+                        while True:
                             try:
-                                print(latent_space_data)
+                                a = raw_input("Input the action in the form of a list ('q' to quit): ")
+                                if "q" == a:
+                                    break
+                                action = torch.tensor(ast.literal_eval(a))
+                                mean = torch.tensor(ast.literal_eval(a))
+                                break
                             except:
-                                print("Cannot print variable 'latent_space_data'.")
-                        if "end" == command:
-                            safe_throws = args.safe_throws
-                            end = True
+                                print ("The action must be a python list\nEg: [1, 2, 3, 4, 5]")
+                        if "q" != a:
                             break
-
-                    if end:
+                    if "test_policy" == command:
+                        test_policy(image_reader, algorithm, decoder_model, state, trajectory_dict)
+                    if "print_latent_space" == command:
+                        try:
+                            print(latent_space_data)
+                        except:
+                            print("Cannot print variable 'latent_space_data'.")
+                    if "end" == command:
+                        safe_throws = args.safe_throws
+                        end = True
                         break
-                    if "set_action" != command:
-                        if "sense" != label:
-                            cov_mat = torch.diag((state_data[label]["sample_std"]))
-                        else:
-                            cov_mat = torch.diag(torch.tensor([0.001]*len(latent_space_data["mean"])))
-                        # cov_mat = torch.diag((torch.tensor(initial_stds))*math.pow(0.5, epoch))
-                        print("cov_mat: ")
-                        print(cov_mat)
-                        if epoch == 0:
-                            action, mean = algorithm.select_action(state, cov_mat=cov_mat, target_action=torch.tensor(initial_actions[t]))
-                        else:
-                            action, mean = algorithm.select_action(state, cov_mat=cov_mat)
-                    # action, mean = algorithm.select_action(state, cov_mat=cov_mat)
-                    if epoch % args.log_interval == 0 and t == 0 and algorithm.plot:
-                        algorithm.update_graphs(label_state_dict=label_state_dict)
-                    # action = get_dummy_action(algorithm.policy.out_dim)
-                    if "sense" == label:
-                        action = mean
-                    trajectory = decoder_model.decode(action)
 
-                    # trajectory = decoder_model.decode(torch.tensor(mc_13_means))
+                if end:
+                    break
+                if "set_action" != command:
+                    if "sense" != label:
+                        cov_mat = torch.diag((state_data[label]["sample_std"]))
+                    else:
+                        cov_mat = torch.diag(torch.tensor([0.001]*len(latent_space_data["mean"])))
+                    # cov_mat = torch.diag((torch.tensor(initial_stds))*math.pow(0.5, epoch))
+                    print("cov_mat: ")
+                    print(cov_mat)
+                    if epoch == 0:
+                        action, mean = algorithm.select_action(state, cov_mat=cov_mat, target_action=torch.tensor(initial_actions[t]))
+                    else:
+                        action, mean = algorithm.select_action(state, cov_mat=cov_mat)
+                # action, mean = algorithm.select_action(state, cov_mat=cov_mat)
+                if epoch % args.log_interval == 0 and t == 0 and algorithm.plot:
+                    algorithm.update_graphs(label_state_dict=label_state_dict)
+                # action = get_dummy_action(algorithm.policy.out_dim)
+                if "sense" == label:
+                    action = mean
+                trajectory = decoder_model.decode(action)
 
-                    smooth_trajectory = smoothen_trajectory(trajectory)
+                # trajectory = decoder_model.decode(torch.tensor(mc_13_means))
 
-                    smooth_safety_res = safety_check_module.check(smooth_trajectory.tolist(), args.execution_time)
-                    safety_res = safety_check_module.check(trajectory.tolist(), args.execution_time)
-                    
-                    print("Distribution mean:")
-                    print(mean)
-                    print("Action to execute:")
-                    print(action)
-                    for dim_index, dim in enumerate(action):
-                        m = latent_space_data["mean"][dim_index]
-                        std = latent_space_data["std"][dim_index]
-                        if dim.item() <= (m-(3*std)) or dim.item() >= (m+(3*std)):
-                            safety_res.unsafe_pts += 1
-                    if safety_res.unsafe_pts > 0:
-                        safety_res.is_safe = False
-                    is_safe = safety_res.is_safe
-                    if not is_safe:
-                        algorithm.remove_action()
+                smooth_trajectory = smoothen_trajectory(trajectory)
+
+                smooth_safety_res = safety_check_module.check(smooth_trajectory.tolist(), args.execution_time)
+                safety_res = safety_check_module.check(trajectory.tolist(), args.execution_time)
+                
+                print("Distribution mean:")
+                print(mean)
+                print("Action to execute:")
+                print(action)
+                for dim_index, dim in enumerate(action):
+                    m = latent_space_data["mean"][dim_index]
+                    std = latent_space_data["std"][dim_index]
+                    if dim.item() <= (m-(3*std)) or dim.item() >= (m+(3*std)):
+                        safety_res.unsafe_pts += 1
+                if safety_res.unsafe_pts > 0:
+                    safety_res.is_safe = False
+                # is_safe = safety_res.is_safe
+                # if not is_safe:
+                #     algorithm.remove_action()
                 if safety_res.is_safe:
                     ret[0] += 1
                     trajectory_dict["joint_trajectory"] = smooth_trajectory.view(100, -1).tolist()
