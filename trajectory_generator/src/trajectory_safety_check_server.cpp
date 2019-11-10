@@ -154,8 +154,8 @@ int main(int argc, char **argv)
     double y_upper_limit;
     if (!node_handle.getParam("/trajectory_safety_check_server/y_upper_limit", y_upper_limit) && !node_handle.getParam("/panda/trajectory_safety_check_server/y_upper_limit", y_upper_limit))
     {
-        y_upper_limit = -0.185;
-        ROS_ERROR("%s: Could not parse 'y_upper_limit' parameter. Using default value '-0.185' instead", node_name.c_str());
+        y_upper_limit = -0.15;
+        ROS_ERROR("%s: Could not parse 'y_upper_limit' parameter. Using default value '-0.15' instead", node_name.c_str());
     }
     else
     {
