@@ -2298,10 +2298,10 @@ def smoothen_trajectory(trajectory=None):
     for i in range(joints_number):
         smooth_trajectory.append(trajectory[i])
     for i, point in enumerate(trajectory[joints_number:], joints_number):
-        if i % joints_number == 0:
-            alpha = 0.99 - min((((0.99-0.6) / (50.0*joints_number)) * (i - joints_number)), 0.39)
-        smooth_trajectory.append(alpha*smooth_trajectory[i-joints_number]+(1-alpha)*point)
-        # smooth_trajectory.append(0.6*smooth_trajectory[i-joints_number]+0.4*point)
+        # if i % joints_number == 0:
+        #     alpha = 0.99 - min((((0.99-0.6) / (50.0*joints_number)) * (i - joints_number)), 0.39)
+        # smooth_trajectory.append(alpha*smooth_trajectory[i-joints_number]+(1-alpha)*point)
+        smooth_trajectory.append(0.6*smooth_trajectory[i-joints_number]+0.4*point)
     smooth_trajectory = torch.tensor(smooth_trajectory)
     return smooth_trajectory
 
@@ -2325,6 +2325,7 @@ def get_state(dim=args.state_dim, image_reader=None, trajectory_dict=None, decod
                 y_std = y_t.std()
                 y_std = y_t.std()
                 mean_vector = torch.tensor([x_mean, y_mean])
+                # cov_matrix = torch.diag(torch.tensor([0.001]*args.action_dim))
                 cov_matrix = torch.diag(torch.tensor([(x_std/3)**2, (y_std/3)**2]))
                 dist = MultivariateNormal(mean_vector, cov_matrix)
                 state = dist.sample()
@@ -2692,6 +2693,7 @@ def main(args):
                     break
                 if "set_action" != command:
                     if "sense" != label:
+                        # cov_mat = torch.diag(torch.tensor([0.001]*len(latent_space_data["mean"])))
                         cov_mat = torch.diag((state_data[label]["sample_std"]))
                     else:
                         cov_mat = torch.diag(torch.tensor([0.001]*len(latent_space_data["mean"])))
