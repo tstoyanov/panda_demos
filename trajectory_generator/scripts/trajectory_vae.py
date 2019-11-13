@@ -374,7 +374,7 @@ def new_joints_plot (last_data, last_recon_data, title, fig, color):
     for joint_index, _ in enumerate(last_data[0]):
         # 3 4 6
         joints_to_plot = [0, 1, 2, 3, 4, 5]
-        # joints_to_plot = [0, 3, 5]
+        # joints_to_plot = [0, 1, 3, 5]
         if joint_index in joints_to_plot:
             new_index += 1
             # ax = fig.add_subplot(4, 2, joint_index+1)
@@ -1391,15 +1391,15 @@ if __name__ == "__main__":
             # fig = plt.figure("pairplot_vel")
             # pairplot_ax = fig.add_subplot(1, 1, 1)
             # g_vel = sns.pairplot(dataset_data_to_plot, diag_kind="hist", hue="vel", palette=sns.color_palette("hls", dataset_data_to_plot['vel'].nunique()), vars=pairplot_vars, plot_kws=dict(alpha=0.5), diag_kws=dict(alpha=0.5))
-            g_vel = sns.pairplot(dataset_data_to_plot[::8], diag_kind="hist", hue="vel", palette=sns.color_palette("hls", dataset_data_to_plot['vel'].nunique()), vars=pairplot_vars, plot_kws=dict(alpha=0.5), diag_kws=dict(alpha=0.5))
+                # g_vel = sns.pairplot(dataset_data_to_plot[::8], diag_kind="hist", hue="vel", palette=sns.color_palette("hls", dataset_data_to_plot['vel'].nunique()), vars=pairplot_vars, plot_kws=dict(alpha=0.5), diag_kws=dict(alpha=0.5))
             # fig = plt.figure("pairplot_rel_angle")
             # pairplot_ax = fig.add_subplot(1, 1, 1)
             # g_rel_angle = sns.pairplot(dataset_data_to_plot, diag_kind="hist", hue="rel_angle", palette=sns.color_palette("hls", dataset_data_to_plot['rel_angle'].nunique()), vars=pairplot_vars, plot_kws=dict(alpha=0.5), diag_kws=dict(alpha=0.5))
-            g_rel_angle = sns.pairplot(dataset_data_to_plot[::8], height=3, diag_kind="hist", hue="rel_angle", palette=sns.color_palette("hls", dataset_data_to_plot['rel_angle'].nunique()), vars=pairplot_vars, plot_kws=dict(alpha=0.5), diag_kws=dict(alpha=0.5))
+            g_rel_angle = sns.pairplot(dataset_data_to_plot[::], height=3, diag_kind="hist", hue="rel_angle", palette=sns.color_palette("hls", dataset_data_to_plot['rel_angle'].nunique()), vars=pairplot_vars, plot_kws=dict(alpha=0.5), diag_kws=dict(alpha=0.5))
             # fig = plt.figure("pairplot_is_safe")
             # pairplot_ax = fig.add_subplot(1, 1, 1)
             # g_is_safe = sns.pairplot(dataset_data_to_plot, diag_kind="hist", hue="is_safe", palette=sns.color_palette("hls", dataset_data_to_plot['is_safe'].nunique()), vars=pairplot_vars, plot_kws=dict(alpha=0.5), diag_kws=dict(alpha=0.5))
-            g_is_safe = sns.pairplot(dataset_data_to_plot[::8], height=3, diag_kind="hist", hue="is_safe", palette=sns.color_palette("hls", dataset_data_to_plot['is_safe'].nunique()), vars=pairplot_vars, plot_kws=dict(alpha=0.5), diag_kws=dict(alpha=0.5))
+                # g_is_safe = sns.pairplot(dataset_data_to_plot[::8], height=3, diag_kind="hist", hue="is_safe", palette=sns.color_palette("hls", dataset_data_to_plot['is_safe'].nunique()), vars=pairplot_vars, plot_kws=dict(alpha=0.5), diag_kws=dict(alpha=0.5))
             True
             # # g_vel = sns.pairplot(dataset_data_to_plot.sample(frac=0.1), hue="vel", palette="hls", vars=pairplot_vars, plot_kws=dict(alpha=0.5), diag_kws=dict(alpha=0.5))
             # # g_vel = sns.pairplot(dataset_data_to_plot[:1000], hue="vel", palette=sns.color_palette("hls", dataset_data_to_plot['m'].nunique()), vars=pairplot_vars)
