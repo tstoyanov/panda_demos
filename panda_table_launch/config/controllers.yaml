@@ -47,6 +47,28 @@ hiqp_joint_effort_controller:
   visualization_publish_rate: 25 #Hz
   load_primitives_from_tf: true
   marker_prefix: ""
+  model_based: false
+  joints:
+    - panda_joint1
+    - panda_joint2
+    - panda_joint3
+    - panda_joint4
+    - panda_joint5
+    - panda_joint6
+    - panda_joint7
+  task_monitoring:
+    active: 1
+    publish_rate: 150.0
+
+# HiQP Effort Controller ----------------------------------------
+hiqp_model_joint_effort_controller:
+  type: hiqp_ros/HiQPJointEffortController
+  visualization_publish_rate: 25 #Hz
+  load_primitives_from_tf: true
+  marker_prefix: ""
+  model_based: true
+  chain_root: "panda_link0"
+  chain_tip: "panda_hand"
   joints:
     - panda_joint1
     - panda_joint2

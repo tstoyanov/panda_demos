@@ -19,7 +19,7 @@
 #include <hiqp/robot_state.h>
 #include <hiqp/task_definition.h>
 
-#include <rl_task_plugins/Act.h>
+//#include <rl_task_plugins/Act.h>
 #include <ros/ros.h>
 
 namespace hiqp {
