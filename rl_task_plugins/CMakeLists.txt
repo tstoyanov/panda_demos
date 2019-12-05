@@ -57,7 +57,7 @@ add_library(${PROJECT_NAME}_tdef
 	#src/tdyn_random.cpp
         src/tdyn_async_policy.cpp
         src/tdef_rl_pick.cpp)
-        )
+
 add_dependencies(${PROJECT_NAME}_tdef ${PROJECT_NAME}_generate_messages_cpp)
 add_dependencies(${PROJECT_NAME}_tdef ${catkin_EXPORTED_TARGETS})
 target_link_libraries(${PROJECT_NAME}_tdef ${catkin_LIBRARIES} ${GUROBI_LIBS} ${Boost_LIBRARIES})
