@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 11)
 
 set(GUROBI_INCLUDE_DIR "$ENV{GUROBI_HOME}/include")
 set(GUROBI_LIB_DIR "$ENV{GUROBI_HOME}/lib")
-set(GUROBI_LIBS gurobi_c++ gurobi81)
+set(GUROBI_LIBS gurobi_c++ gurobi90)
 
 
 add_definitions(-Wno-missing-braces)
