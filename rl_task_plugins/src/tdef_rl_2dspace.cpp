@@ -19,7 +19,7 @@ namespace hiqp {
       if (size != 8 ) {
         printHiqpWarning("'" + getTaskName() +
                          "': TDefRL2DSpace expects 7 parameters ");
-	return -1;
+	    return -1;
       }
 
       e_ = Eigen::VectorXd::Zero(n_controls);
@@ -43,7 +43,7 @@ namespace hiqp {
       if(KDL::dot(normal1_,normal2_) > 1e-5) {
         printHiqpWarning("'" + getTaskName() +
                          "': Task not added, TDefRL2DSpace expects orthogonal normal vectors ");
-	return -2;
+	    return -2;
       }
 
       //normal1_.normalize();
@@ -65,8 +65,8 @@ namespace hiqp {
       return 0;
     }
 
-    int TDefRL2DSpace::update(RobotStatePtr robot_state) {
-
+    int TDefRL2DSpace::update(RobotStatePtr robot_state)
+    {
         int retval = 0;
 
         retval = fk_solver_pos_->JntToCart(robot_state->kdl_jnt_array_vel_.q, pose_a_,

@@ -6,7 +6,8 @@ set(CMAKE_CXX_STANDARD 11)
 
 set(GUROBI_INCLUDE_DIR "$ENV{GUROBI_HOME}/include")
 set(GUROBI_LIB_DIR "$ENV{GUROBI_HOME}/lib")
-set(GUROBI_LIBS gurobi_c++ gurobi90)
+set(GUROBI_LIBS gurobi_c++ gurobi81)
+
 
 add_definitions(-Wno-missing-braces)
 
@@ -55,6 +56,7 @@ add_library(${PROJECT_NAME}_tdef
         src/tdef_rl_2dspace.cpp
 	#src/tdyn_random.cpp
         src/tdyn_async_policy.cpp
+        src/tdef_rl_pick.cpp)
         )
 add_dependencies(${PROJECT_NAME}_tdef ${PROJECT_NAME}_generate_messages_cpp)
 add_dependencies(${PROJECT_NAME}_tdef ${catkin_EXPORTED_TARGETS})

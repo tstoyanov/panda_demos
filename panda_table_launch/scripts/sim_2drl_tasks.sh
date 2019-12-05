@@ -12,8 +12,8 @@ rosservice call /hiqp_joint_effort_controller/remove_tasks \
 - 'ee_obst2'
 - 'ee_obst3'
 - 'ee_rl'
-" 
-rosservice call /hiqp_joint_effort_controller/remove_all_primitives "{}" 
+"
+rosservice call /hiqp_joint_effort_controller/remove_all_primitives "{}"
 
 ####################### GEOMETRIC PRIMITIVES #######################
 rosservice call /hiqp_joint_effort_controller/set_primitives \
@@ -24,67 +24,78 @@ rosservice call /hiqp_joint_effort_controller/set_primitives \
   visible: true
   color: [0.0, 0.0, 1.0, 1.0]
   parameters: [0.0, 0.0, 0.0]
+
 - name: 'ee_z_axis'  
   type: 'line'
   frame_id: 'tool'
   visible: false
   color: [0.0, 1.0, 1.0, 1.0]
   parameters: [0.0, 0.0, 1.0, 0.0, 0.0, 0.0]
+
 - name: 'table_plane'
   type: 'plane'
   frame_id: 'world'
   visible: true
   color: [1.0, 0.0, 1.0, 1.0]   
   parameters: [0.0, 0.0, 1.0, 0.77]
+
 - name: 'table_z_axis'  
   type: 'line'
   frame_id: 'world'
   visible: false
   color: [0.0, 1.0, 1.0, 1.0]
   parameters: [0.0, 0.0, 1.0, 0.0, -0.2, 0.7]
+
 - name: back_plane
   type: plane 
   frame_id: world
   visible: false
   color: [0.2, 0.5, 0.2, 0.21]
   parameters: [0.0, 1.0, 0.0, -0.3]
+
 - name: front_plane
   type: plane 
   frame_id: world
   visible: false
   color: [0.2, 0.5, 0.2, 0.21]
   parameters: [0.0, 1.0, 0.0, 0.2]
+
 - name: left_plane
   type: plane 
   frame_id: world
   visible: false
   color: [0.2, 0.5, 0.2, 0.21]
   parameters: [1.0, 0.0, 0.0, 0.1]
+
 - name: right_plane
   type: plane 
   frame_id: world
   visible: false
   color: [0.2, 0.5, 0.2, 0.21]
   parameters: [1.0, 0.0, 0.0, -0.4]
+
 - name: 'obst1'  
   type: 'cylinder'
   frame_id: 'world'
   visible: true
   color: [1.0, 0.0, 0.0, 1.0]
   parameters: [0,0,1, -0.1, 0.1, 0.77, 0.02, 0.05]
+
 - name: 'obst2'  
   type: 'cylinder'
   frame_id: 'world'
   visible: true
   color: [1.0, 0.0, 0.0, 1.0]
   parameters: [0,0,1, -0.25, 0.0, 0.77, 0.03, 0.05]
+
 - name: 'obst3'  
   type: 'cylinder'
   frame_id: 'world'
   visible: true
   color: [1.0, 0.0, 0.0, 1.0]
   parameters: [0,0,1, -0.15, -0.13, 0.77, 0.035, 0.05]
-- name: 'goal'  
+
+- name: 'goal'
   type: 'sphere'
   frame_id: 'world'
   visible: true
@@ -93,7 +104,6 @@ rosservice call /hiqp_joint_effort_controller/set_primitives \
 "
 
 ####################### TASKS #######################
-
 rosservice call /hiqp_joint_effort_controller/set_tasks \
 "tasks:
 - name: 'full_pose'
@@ -102,7 +112,7 @@ rosservice call /hiqp_joint_effort_controller/set_tasks \
   active: 1
   monitored: 0
   def_params: ['TDefFullPose', '0.0', '-1.17', '0.003', '-2.89', '-0.0', '1.82', '0.84']
-  dyn_params: ['TDynPD', '16.0', '10.0'] 
+  dyn_params: ['TDynPD', '16.0', '10.0']
 - name: 'ee_plane_project'
   priority: 1
   visible: 1
