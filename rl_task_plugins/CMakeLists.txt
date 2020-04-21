@@ -52,11 +52,13 @@ include_directories(
 link_directories(${GUROBI_LIB_DIR})
 
 add_library(${PROJECT_NAME}_tdef 
-	#src/tdef_rl_full_pose.cpp
+	    #src/tdef_rl_full_pose.cpp
         src/tdef_rl_2dspace.cpp
-	#src/tdyn_random.cpp
+	    #src/tdyn_random.cpp
         src/tdyn_async_policy.cpp
-        src/tdef_rl_pick.cpp)
+        src/tdef_rl_pick.cpp
+        #src/tdyn_pick_policy.cpp
+)
 
 add_dependencies(${PROJECT_NAME}_tdef ${PROJECT_NAME}_generate_messages_cpp)
 add_dependencies(${PROJECT_NAME}_tdef ${catkin_EXPORTED_TARGETS})

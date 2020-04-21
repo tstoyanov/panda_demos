@@ -11,6 +11,11 @@
     A point to two planes projection for playing around in a 2D search space
     </description>
   </class>
+  <class type="hiqp::tasks::TDefRLPick" base_class_type="hiqp::TaskDefinition">
+    <description>
+      A manipulation task that picks an object in 3D workspace
+    </description>
+  </class>
 
   <!-- task dynamics plugins -->
   <class type="hiqp::tasks::TDynRandom" base_class_type="hiqp::TaskDynamics">
@@ -22,6 +27,12 @@
   <class type="hiqp::tasks::TDynAsyncPolicy" base_class_type="hiqp::TaskDynamics">
     <description>
     A plugin for task dynamics that lets us set policy actions from outside.
+    </description>
+  </class>
+
+  <class type="hiqp::tasks::TDynPickPolicy" base_class_type="hiqp::TaskDynamics">
+    <description>
+      A plugin for task dynamics that lets us set policy actions from outside.
     </description>
   </class>
 

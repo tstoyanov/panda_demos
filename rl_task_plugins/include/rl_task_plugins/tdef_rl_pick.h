@@ -35,16 +35,16 @@ namespace tasks {
 * to other tasks!
 *  \author Quantao Yang */
 
-class TDefPickRL : public TaskDefinition {
+class TDefRLPick : public TaskDefinition {
 public:
 
-    inline TDefPickRL() {} //this empty constructor needed because pluginlib complains
+    inline TDefRLPick() {} //this empty constructor needed because pluginlib complains
 
-    inline TDefPickRL(std::shared_ptr<GeometricPrimitiveMap> geom_prim_map,
-                std::shared_ptr<Visualizer> visualizer)
+    inline TDefRLPick(std::shared_ptr<GeometricPrimitiveMap> geom_prim_map,
+                      std::shared_ptr<Visualizer> visualizer)
         : TaskDefinition(geom_prim_map, visualizer) {}
 
-    ~TDefPickRL() noexcept {}
+    ~TDefRLPick() noexcept {}
 
     int init(const std::vector<std::string>& parameters,
              RobotStatePtr robot_state);
@@ -54,21 +54,20 @@ public:
     int monitor();
 
 private:
-    TDefPickRL(const TDefPickRL& other) = delete;
-    TDefPickRL(TDefPickRL&& other) = delete;
-    TDefPickRL& operator=(const TDefPickRL& other) = delete;
-    TDefPickRL& operator=(TDefPickRL&& other) noexcept = delete;
-
+    TDefRLPick(const TDefRLPick& other) = delete;
+    TDefRLPick(TDefRLPick&& other) = delete;
+    TDefRLPick& operator=(const TDefRLPick& other) = delete;
+    TDefRLPick& operator=(TDefRLPick&& other) noexcept = delete;
 
     std::shared_ptr<GeometricPoint> target_point_;
-    KDL::Vector normal1_, normal2_;
+    KDL::Vector normal1_, normal2_, normal3_;
 
     Eigen::VectorXd qdot_,qddot_;
 
     //internal solver objects
     KDL::Frame pose_a_;        ///pose of the target_point_ frame
     KDL::Jacobian jacobian_a_; ///< tree jacobian w.r.t. the center of the frame
-    ///TDefGeometricProjection::pose_a_
+                                ///TDefGeometricProjection::pose_a_
     KDL::Jacobian jacobian_dot_a_;
 
     std::shared_ptr<KDL::TreeFkSolverPos_recursive> fk_solver_pos_;
