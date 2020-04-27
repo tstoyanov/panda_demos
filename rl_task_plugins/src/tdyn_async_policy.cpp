@@ -97,6 +97,9 @@ namespace hiqp
             printHiqpWarning("TDynAsyncPolicy: mismatch between dimensions of eddot_star and dynamics provided in message");
             std::cerr<<" eddot_star "<<e_ddot_star_.size() <<" provided "
                      <<act_msg->e_ddot_star.size()<<std::endl;
+            for (int j = 0; j < act_msg->e_ddot_star.size(); ++j) {
+                std::cout << "act_msg->e_ddot_star:" << act_msg->e_ddot_star[j] << std::endl;
+            }
             update_lock_.unlock();
             return;
         }

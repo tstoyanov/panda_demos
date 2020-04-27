@@ -5,8 +5,6 @@ from rl_task_plugins.msg import StateMsg
 
 import argparse
 import matplotlib.pyplot as plt
-from matplotlib.pyplot import cm
-import gym
 import numpy as np
 import torch
 import time
@@ -15,31 +13,19 @@ import pickle
 import matplotlib.colors as colors
 import matplotlib.cm as cmx
 from torch.autograd import Variable
+from tensorboardX import SummaryWriter
 
 #import files...
 from naf import NAF
 from ounoise import OUNoise
 from replay_memory import Transition, ReplayMemory
-from environment import Env
-
-subdata = []
-
-
-def callback(data):
-    global subdata
-    subdata = data.e
-
-
-rospy.init_node('DRL_traffic', anonymous=True)
+from environment import ManipulateEnv
 
 
 def sim_reset_start():
-    subprocess.call("~/catkin_workspace/src/panda_demos/panda_table_launch/scripts/sim_reset_episode.sh", shell=True)
-    subprocess.call("~/catkin_workspace/src/panda_demos/panda_table_launch/scripts/sim_2drl_tasks.sh", shell=True)
+    subprocess.call("~/Workspaces/catkin_ws/src/panda_demos/panda_table_launch/scripts/sim_reset_episode.sh", shell=True)
+    subprocess.call("~/Workspaces/catkin_ws/src/panda_demos/panda_table_launch/scripts/sim_picking_task.sh", shell=True)
 
-
-def sim_reset():
-    subprocess.call("~/catkin_workspace/src/panda_demos/panda_table_launch/scripts/sim_reset_episode_fast.sh", shell=True)
 
 def sate_Q_plot(agent, ep):
     Qstates = []
@@ -79,7 +65,6 @@ def sate_Q_plot(agent, ep):
 
 
 def main():
-    global subdata
     t_start = time.time()
 
     parser = argparse.ArgumentParser(description='PyTorch X-job')
@@ -123,33 +108,32 @@ def main():
 
     args = parser.parse_args()
 
-    #env = gym.make(args.env_name)
-
-    env = Env()
+    env = ManipulateEnv()
+    
+    writer = SummaryWriter('runs/')
 
     #env.seed(args.seed)
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
+
     # -- initialize agent, Q and Q' --
     agent = NAF(args.gamma, args.tau, args.hidden_size,
                 env.observation_space.shape[0], env.action_space)
 
     # -- declare memory buffer and random process N
     memory = ReplayMemory(args.replay_size)
-    memory_g = ReplayMemory(args.replay_size)
     ounoise = OUNoise(env.action_space.shape[0]) if args.ou_noise else None
 
     # -- load existing model --
     if args.load_agent:
         agent.load_model(args.env_name, args.batch_size, '.pth')
         print("agent: naf_{}_{}_{}, is loaded").format(args.env_name, args.batch_size, '.pth')
+
     # -- load experience buffer --
     if args.load_exp:
         with open('/home/aass/catkin_workspace/src/panda_demos/exp_replay.pk1', 'rb') as input:
             memory.memory = pickle.load(input)
             memory.position = len(memory)
-
-    #sate_Q_plot(agent, 50)
 
     rewards = []
     total_numsteps = 0
@@ -160,20 +144,15 @@ def main():
     steps_to_goal = []
     avg_steps_to_goal = []
     state_plot = []
+    updates = 0
+    
+    #sim_reset_start()
 
-
-    sim_reset_start()
-
-    pub = rospy.Publisher('/ee_rl/act', DesiredErrorDynamicsMsg, queue_size=10)
-    rospy.Subscriber("/ee_rl/state", StateMsg, callback)
-    rate = rospy.Rate(9)
-    rate.sleep()
-
+    env.init_ros()
 
     for i_episode in range(args.num_episodes+1):
         # -- reset environment for every episode --
-        sim_reset()
-        state = torch.Tensor(subdata).unsqueeze(0)
+        state = env.reset()
 
         # -- initialize noise (random process N) --
         if args.ou_noise:
@@ -183,16 +162,13 @@ def main():
 
         episode_reward = 0
 
-
         while True:
+            env.render()
             # -- action selection, observation and store transition --
             action = agent.select_action(state, ounoise) if args.train_model else agent.select_action(state)
-            a = action.numpy()[0] * 50
-            act_pub = [a[0], a[1]]
-            pub.publish(act_pub)
-            next_state = torch.Tensor(subdata).unsqueeze(0)
-            reward, done, _ = env.calc_shaped_reward(next_state)
-
+            
+            next_state, reward, done, info = env.step(action)
+            
             total_numsteps += 1
             episode_reward += reward
 
@@ -200,47 +176,38 @@ def main():
             mask = torch.Tensor([not done])
             reward = torch.Tensor([reward])
 
-
-
             memory.push(state, action, mask, next_state, reward)
-            # if done:
-            #     for i in range(total_numsteps % args.num_steps):
-            #         a = i+1
-            #         memory_g.memory.append(memory.memory[-a])
-            #         memory_g.position += 1
 
             state = next_state
-
-            #-- training --
-            # if len(memory_g) > args.batch_size / 2 and len(memory) > args.batch_size/2 and args.train_model:
-            #     for _ in range(10):
-            #         transitions_b = memory.sample(args.batch_size/2)
-            #         transitions_g = memory_g.sample(args.batch_size/2)
-            #         for i in range(transitions_g):
-            #             transitions_b.append(transitions_g[i])
-            #         batch = Transition(*zip(*transitions_b))
-            #         agent.update_parameters(batch)
 
             if len(memory) > args.batch_size and args.train_model:
                 for _ in range(10):
                     transitions = memory.sample(args.batch_size)
                     batch = Transition(*zip(*transitions))
-                    agent.update_parameters(batch)
-
+                    value_loss, policy_loss = agent.update_parameters(batch)
+                    
+                    writer.add_scalar('loss/value', value_loss, updates)
+                    writer.add_scalar('loss/policy', policy_loss, updates)
+                    
+                    updates += 1
             else:
                 time.sleep(0.1)
-            rate.sleep()
+                
+            env.rate.sleep()
 
             if done or total_numsteps % args.num_steps == 0:
                 break
 
-        pub.publish([0, 0])
+        writer.add_scalar('reward/train', episode_reward, i_episode)
+        
+        env.pub.publish([0, 0, 0])
         rewards.append(episode_reward)
-
+  
+'''      
         # -- plot Q value --
-        if i_episode % 10 == 0:
+        if i_episode % 100 == 0:
 
-            sate_Q_plot(agent, i_episode)
+            #sate_Q_plot(agent, i_episode)
             # -- saves model --
             if args.save_agent:
                 agent.save_model(args.env_name, args.batch_size, i_episode, '.pth')
@@ -276,7 +243,7 @@ def main():
                 while True:
                     action = agent.select_action(state)
                     a = action.numpy()[0] * 50
-                    act_pub = [a[0], a[1]]
+                    act_pub = [a[0], a[1], a[2]]
                     pub.publish(act_pub)
                     next_state = torch.Tensor(subdata).unsqueeze(0)
                     reward, done, obs_hit = env.calc_shaped_reward(next_state)
@@ -302,18 +269,18 @@ def main():
                 if i_episode % 10 == 0:
                     agent.plot_path(state_visited, action_taken, i_episode)
 
-
             upper_reward.append((np.max(greedy_reward[-greedy_range:])))
             lower_reward.append((np.min(greedy_reward[-greedy_range:])))
             avg_greedy_reward.append((np.mean(greedy_reward[-greedy_range:])))
             avg_steps_to_goal.append((np.mean(steps_to_goal[-greedy_range:])))
 
-
             print("Episode: {}, total numsteps: {}, avg_greedy_reward: {}, average reward: {}".format(
                i_episode, total_numsteps, avg_greedy_reward[-1], np.mean(rewards[-greedy_episode:])))
 
 
+'''
 
+'''
     #-- saves model --
     if args.save_agent:
         agent.save_model(args.env_name, args.batch_size, i_episode, '.pth')
@@ -350,7 +317,7 @@ def main():
     fname2 = 'plot2_obs_{}_{}_{}'.format(args.env_name, args.batch_size, '.png')
     plt.savefig(fname2)
     plt.close()
-
+'''
 
 if __name__ == '__main__':
     main()

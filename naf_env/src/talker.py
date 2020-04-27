@@ -9,7 +9,7 @@ def talker():
 	rospy.init_node('talker', anonymous=True)
 	rate = rospy.Rate(1)
 	test = DesiredErrorDynamicsMsg()
-	test.e_ddot_star = [1.1, 2.3]
+	test.e_ddot_star = [1.1, 2.3, 0.0]
 	while not rospy.is_shutdown():
 		#test.e_ddot_star[0] += 0.1
 		#test.e_ddot_star[1] += 0.1

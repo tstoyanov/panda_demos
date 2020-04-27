@@ -173,6 +173,8 @@ namespace hiqp {
             return 0;
         }
 
+        int TDefRLPick::monitor() { return 0; }
+
     }  // namespace tasks
 
 }  // namespace hiqp

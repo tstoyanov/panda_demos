@@ -141,8 +141,9 @@ class NAF:
 
         soft_update(self.target_model, self.model, self.tau)
 
+        return loss.item(), 0
 
-    def save_model(self, env_name, batch_size, episode,  suffix="", model_path=None):
+    def save_model(self, env_name, batch_size, episode, suffix="", model_path=None):
         if not os.path.exists('models/'):
             os.makedirs('models/')
 

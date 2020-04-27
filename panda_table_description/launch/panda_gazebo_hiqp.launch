@@ -9,7 +9,7 @@
     <arg name="debug" default="false"/>
     <arg name="load_gripper" default="true"/>
     <arg name="robot_namespace" default="panda"/>
-    <arg name="controllers" default="joint_state_controller franka_gripper hiqp_joint_effort_controller"/>
+    <arg name="controllers" default="joint_state_controller hiqp_joint_effort_controller"/>
     <arg name="rviz" default="true"/>
     
     <rosparam command="load" file="$(find panda_table_launch)/config/controllers.yaml" />
