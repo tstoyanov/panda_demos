@@ -1,14 +1,9 @@
 #!/usr/bin/env python
-import rospy
-from rl_task_plugins.msg import DesiredErrorDynamicsMsg
-from rl_task_plugins.msg import StateMsg
-
 import argparse
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import time
-import subprocess
 import pickle
 import matplotlib.colors as colors
 import matplotlib.cm as cmx
@@ -20,11 +15,6 @@ from naf import NAF
 from ounoise import OUNoise
 from replay_memory import Transition, ReplayMemory
 from environment import ManipulateEnv
-
-
-def sim_reset_start():
-    subprocess.call("~/Workspaces/catkin_ws/src/panda_demos/panda_table_launch/scripts/sim_reset_episode.sh", shell=True)
-    subprocess.call("~/Workspaces/catkin_ws/src/panda_demos/panda_table_launch/scripts/sim_picking_task.sh", shell=True)
 
 
 def sate_Q_plot(agent, ep):
@@ -91,6 +81,8 @@ def main():
                         help='number of episodes (default: 1000)')
     parser.add_argument('--hidden_size', type=int, default=128, metavar='N',
                         help='hidden size (default: 128)')
+    parser.add_argument('--updates_per_step', type=int, default=5, metavar='N',
+                    help='model updates per simulator step (default: 5)')
     parser.add_argument('--replay_size', type=int, default=1000000, metavar='N',
                         help='size of replay buffer (default: 1000000)')
     parser.add_argument('--save_agent', type=bool, default=True,
@@ -146,8 +138,6 @@ def main():
     state_plot = []
     updates = 0
     
-    #sim_reset_start()
-
     env.init_ros()
 
     for i_episode in range(args.num_episodes+1):
@@ -161,14 +151,12 @@ def main():
             ounoise.reset()
 
         episode_reward = 0
-
         while True:
-            env.render()
             # -- action selection, observation and store transition --
             action = agent.select_action(state, ounoise) if args.train_model else agent.select_action(state)
             
             next_state, reward, done, info = env.step(action)
-            
+            env.render()
             total_numsteps += 1
             episode_reward += reward
 
@@ -176,12 +164,13 @@ def main():
             mask = torch.Tensor([not done])
             reward = torch.Tensor([reward])
 
+            print('reward:', reward)
             memory.push(state, action, mask, next_state, reward)
 
             state = next_state
 
             if len(memory) > args.batch_size and args.train_model:
-                for _ in range(10):
+                for _ in range(args.updates_per_step):
                     transitions = memory.sample(args.batch_size)
                     batch = Transition(*zip(*transitions))
                     value_loss, policy_loss = agent.update_parameters(batch)
@@ -200,7 +189,7 @@ def main():
 
         writer.add_scalar('reward/train', episode_reward, i_episode)
         
-        env.pub.publish([0, 0, 0])
+        #env.pub.publish([0, 0, 0])
         rewards.append(episode_reward)
   
 '''      

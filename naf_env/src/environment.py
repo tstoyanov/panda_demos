@@ -20,7 +20,6 @@ class ManipulateEnv(gym.Env):
         self.action_space = spaces.Box(low=np.array([-300, -300, -300]), high=np.array([300, 300, 300]), dtype=np.float32)
         self.observation_space = spaces.Box(low=np.array([-300, -300, -300]), high=np.array([300, 300, 300]), dtype=np.float32)
                   
-        
     def init_ros(self):
         subprocess.call("~/Workspaces/catkin_ws/src/panda_demos/panda_table_launch/scripts/sim_reset_episode.sh", shell=True)
         subprocess.call("~/Workspaces/catkin_ws/src/panda_demos/panda_table_launch/scripts/sim_picking_task.sh", shell=True)
@@ -30,11 +29,9 @@ class ManipulateEnv(gym.Env):
         self.pub = rospy.Publisher('/ee_rl/act', DesiredErrorDynamicsMsg, queue_size=10)
         self.rate = rospy.Rate(9)
         self.rate.sleep()
-
-        
+     
     def _next_observation(self, data):
         self.observation = torch.Tensor(data.e).unsqueeze(0) 
-    
     
     def step(self, action):
         # Execute one time step within the environment
@@ -44,22 +41,18 @@ class ManipulateEnv(gym.Env):
         
         reward, done, obs_hit = self.calc_shaped_reward()
         return self.observation, reward, done, obs_hit
-    
-    
+      
     def reset(self):
         # Reset the state of the environment to an initial state
         subprocess.call("~/Workspaces/catkin_ws/src/panda_demos/panda_table_launch/scripts/sim_reset_episode_fast.sh", shell=True)
         
         return self.observation  # reward, done, info can't be included
-        
-    
+         
     def render(self, mode='human'):
         pass
 
-
     def close (self):
         pass
-
 
     def calc_dist(self):
         distx = self.goal[0] - self.observation[0][0]
@@ -67,7 +60,6 @@ class ManipulateEnv(gym.Env):
         distz = self.goal[2] - self.observation[0][2]
         dist = math.sqrt(distx ** 2 + disty ** 2 + distz ** 2)
         return dist
-
 
     def calc_shaped_reward(self):
         reward = 0
@@ -84,7 +76,6 @@ class ManipulateEnv(gym.Env):
             reward += -10*dist
 
         return reward, done, obs_hit
-
         
     def calc_non_shaped_reward(self):
         reward = 0
