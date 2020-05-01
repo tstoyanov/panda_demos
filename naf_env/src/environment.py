@@ -31,11 +31,16 @@ class ManipulateEnv(gym.Env):
         self.rate.sleep()
      
     def _next_observation(self, data):
-        self.observation = torch.Tensor(data.e).unsqueeze(0) 
+        delta_x = self.goal[0] - data.e[0]
+        delta_y = self.goal[1] - data.e[1]
+        delta_z = self.goal[2] - data.e[2]
+        #self.observation = torch.Tensor(data.e).unsqueeze(0)
+        self.observation = torch.Tensor([[delta_x, delta_y, delta_z]])
+        #print('observation:', self.observation)
     
     def step(self, action):
         # Execute one time step within the environment
-        a = action.numpy()[0] * 50
+        a = action.numpy()[0] * 100
         act_pub = [a[0], a[1], a[2]]
         self.pub.publish(act_pub)
         
@@ -55,10 +60,7 @@ class ManipulateEnv(gym.Env):
         pass
 
     def calc_dist(self):
-        distx = self.goal[0] - self.observation[0][0]
-        disty = self.goal[1] - self.observation[0][1]
-        distz = self.goal[2] - self.observation[0][2]
-        dist = math.sqrt(distx ** 2 + disty ** 2 + distz ** 2)
+        dist = math.sqrt(self.observation[0][0] ** 2 + self.observation[0][1] ** 2 + self.observation[0][2] ** 2)
         return dist
 
     def calc_shaped_reward(self):
