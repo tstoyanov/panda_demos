@@ -81,8 +81,8 @@ def main():
                         help='number of episodes (default: 1000)')
     parser.add_argument('--hidden_size', type=int, default=128, metavar='N',
                         help='hidden size (default: 128)')
-    parser.add_argument('--updates_per_step', type=int, default=5, metavar='N',
-                    help='model updates per simulator step (default: 5)')
+    parser.add_argument('--updates_per_step', type=int, default=50, metavar='N',
+                    help='model updates per simulator step (default: 50)')
     parser.add_argument('--replay_size', type=int, default=1000000, metavar='N',
                         help='size of replay buffer (default: 1000000)')
     parser.add_argument('--save_agent', type=bool, default=True,
