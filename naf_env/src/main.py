@@ -55,10 +55,8 @@ def sate_Q_plot(agent, ep):
 
 
 def main():
-    t_start = time.time()
-
     parser = argparse.ArgumentParser(description='PyTorch X-job')
-    parser.add_argument('--env_name', default="OurEnv-v0",
+    parser.add_argument('--env_name', default="ManipulateEnv-v0",
                         help='name of the environment')
     parser.add_argument('--gamma', type=float, default=0.99, metavar='G',
                         help='discount factor for reward (default: 0.99)')
@@ -104,9 +102,9 @@ def main():
     
     writer = SummaryWriter('runs/')
 
-    #env.seed(args.seed)
-    torch.manual_seed(args.seed)
-    np.random.seed(args.seed)
+    env.seed(args.seed)
+    #torch.manual_seed(args.seed)
+    #np.random.seed(args.seed)
 
     # -- initialize agent, Q and Q' --
     agent = NAF(args.gamma, args.tau, args.hidden_size,
@@ -139,6 +137,8 @@ def main():
     updates = 0
     
     env.init_ros()
+
+    t_start = time.time()
 
     for i_episode in range(args.num_episodes+1):
         # -- reset environment for every episode --
@@ -195,15 +195,12 @@ def main():
 '''      
         # -- plot Q value --
         if i_episode % 100 == 0:
-
             #sate_Q_plot(agent, i_episode)
             # -- saves model --
             if args.save_agent:
                 agent.save_model(args.env_name, args.batch_size, i_episode, '.pth')
                 with open('exp_replay.pk1', 'wb') as output:
                     pickle.dump(memory.memory, output, pickle.HIGHEST_PROTOCOL)
-                #with open('exp_replay_g.pk1', 'wb') as output:
-                    #pickle.dump(memory_g.memory, output, pickle.HIGHEST_PROTOCOL)
 
         if args.train_model:
             greedy_episode = max(args.num_episodes/100, 5)
@@ -265,26 +262,22 @@ def main():
 
             print("Episode: {}, total numsteps: {}, avg_greedy_reward: {}, average reward: {}".format(
                i_episode, total_numsteps, avg_greedy_reward[-1], np.mean(rewards[-greedy_episode:])))
-
-
 '''
 
-'''
     #-- saves model --
     if args.save_agent:
         agent.save_model(args.env_name, args.batch_size, i_episode, '.pth')
         with open('exp_replay.pk1', 'wb') as output:
             pickle.dump(memory.memory, output, pickle.HIGHEST_PROTOCOL)
-        #with open('exp_replay_g.pk1', 'wb') as output:
-        #    pickle.dump(memory_g.memory, output, pickle.HIGHEST_PROTOCOL)
 
     print('Training ended after {} minutes'.format((time.time() - t_start)/60))
-    print('Time per ep : {} s').format((time.time() - t_start) / args.num_episodes)
+    print('Time per episode : {} s').format((time.time() - t_start) / args.num_episodes)
     print('Mean greedy reward: {}'.format(np.mean(greedy_reward)))
     print('Mean reward: {}'.format(np.mean(rewards)))
     print('Max reward: {}'.format(np.max(rewards)))
     print('Min reward: {}'.format(np.min(rewards)))
 
+'''
     # -- plot learning curve --
     pos_greedy = []
     for pos in range(0, len(lower_reward)):

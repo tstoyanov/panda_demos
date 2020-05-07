@@ -7,6 +7,7 @@ import torch
 import gym
 from gym import spaces
 import numpy as np
+from gym.utils import seeding
 
 
 class ManipulateEnv(gym.Env):
@@ -19,7 +20,8 @@ class ManipulateEnv(gym.Env):
         
         self.action_space = spaces.Box(low=np.array([-300, -300, -300]), high=np.array([300, 300, 300]), dtype=np.float32)
         self.observation_space = spaces.Box(low=np.array([-300, -300, -300]), high=np.array([300, 300, 300]), dtype=np.float32)
-                  
+        #self.seed()          
+        
     def init_ros(self):
         subprocess.call("~/Workspaces/catkin_ws/src/panda_demos/panda_table_launch/scripts/sim_reset_episode.sh", shell=True)
         subprocess.call("~/Workspaces/catkin_ws/src/panda_demos/panda_table_launch/scripts/sim_picking_task.sh", shell=True)
@@ -37,7 +39,13 @@ class ManipulateEnv(gym.Env):
         #self.observation = torch.Tensor(data.e).unsqueeze(0)
         self.observation = torch.Tensor([[delta_x, delta_y, delta_z]])
         #print('observation:', self.observation)
-    
+
+'''    
+    def seed(self, seed=None):
+        self.np_random, seed = seeding.np_random(seed)
+        return [seed]
+'''
+   
     def step(self, action):
         # Execute one time step within the environment
         a = action.numpy()[0] * 100
