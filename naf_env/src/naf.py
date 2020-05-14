@@ -152,9 +152,9 @@ class NAF:
         print('Saving model to {}'.format(model_path))
         torch.save(self.model.state_dict(), model_path)
 
-    def load_model(self, env_name, batch_size, suffix="", model_path=None):
+    def load_model(self, env_name, batch_size, episode, suffix="", model_path=None):
         if model_path is None:
-            model_path = "models/naf_{}_{}_{}".format(env_name, batch_size, suffix)
+            model_path = "models/naf_{}_{}_{}_{}".format(env_name, batch_size, episode, suffix)
         print('Loading model from {}'.format(model_path))
         self.model.load_state_dict(torch.load(model_path))
 
