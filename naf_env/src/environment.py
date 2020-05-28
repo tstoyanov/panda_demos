@@ -1,8 +1,14 @@
 import rospy
 from rl_task_plugins.msg import DesiredErrorDynamicsMsg
 from rl_task_plugins.msg import StateMsg
+from hiqp_msgs.srv import RemovePrimitives
+from hiqp_msgs.srv import RemovePrimitivesRequest
+from hiqp_msgs.srv import SetPrimitives
+from hiqp_msgs.srv import SetPrimitivesRequest
+from hiqp_msgs.msg import Primitive
 import subprocess
 import math
+import random
 import torch
 import gym
 from gym import spaces
@@ -15,15 +21,16 @@ class ManipulateEnv(gym.Env):
     def __init__(self):
         super(ManipulateEnv, self).__init__()
 
-        self.goal = [-0.3, -0.1, 0.79]
+        self.goal = [-0.2, -0.0, 0.79]
+        self.reset_rand_goal = True
         
         self.action_space = spaces.Box(low=np.array([-300, -300, -300]), high=np.array([300, 300, 300]), dtype=np.float32)
         self.observation_space = spaces.Box(low=np.array([-300, -300, -300]), high=np.array([300, 300, 300]), dtype=np.float32)
         
     def init_ros(self):
-        subprocess.call("~/Workspaces/catkin_ws/src/panda_demos/panda_table_launch/scripts/sim_reset_episode.sh", shell=True)
+        #subprocess.call("~/Workspaces/catkin_ws/src/panda_demos/panda_table_launch/scripts/sim_reset_episode.sh", shell=True)
         subprocess.call("~/Workspaces/catkin_ws/src/panda_demos/panda_table_launch/scripts/sim_picking_task.sh", shell=True)
-    
+                
         rospy.init_node('DRL_node', anonymous=True)
         rospy.Subscriber("/ee_rl/state", StateMsg, self._next_observation)
         self.pub = rospy.Publisher('/ee_rl/act', DesiredErrorDynamicsMsg, queue_size=10)
@@ -35,7 +42,8 @@ class ManipulateEnv(gym.Env):
         delta_y = self.goal[1] - data.e[1]
         delta_z = self.goal[2] - data.e[2]
         self.observation = torch.Tensor([[delta_x, delta_y, delta_z]])
-   
+
+
     def step(self, action):
         # Execute one time step within the environment
         a = action.numpy()[0] * 100
@@ -44,18 +52,48 @@ class ManipulateEnv(gym.Env):
         
         reward, done, obs_hit = self.calc_shaped_reward()
         return self.observation, reward, done, obs_hit
-      
+    
+    def reset_goal(self):
+        self.rand_goal = [random.uniform(-0.3, 0.3) for _ in range(2)]
+        self.rand_goal.append(0.79)
+        
+        rospy.wait_for_service('/hiqp_joint_effort_controller/remove_primitives')
+        rospy.wait_for_service('/hiqp_joint_effort_controller/set_primitives')
+        try:
+            # remove primitives
+            remove_primitive = rospy.ServiceProxy('/hiqp_joint_effort_controller/remove_primitives', RemovePrimitives)
+            remove_primitive_req = RemovePrimitivesRequest()
+            remove_primitive_req.names = ['goal', 'goal_point']
+            remove_primitive(remove_primitive_req)
+            
+            # set primitives
+            set_primitive = rospy.ServiceProxy('/hiqp_joint_effort_controller/set_primitives', SetPrimitives)
+            
+            set_primitive_req = SetPrimitivesRequest()
+            set_primitive_req.primitives = [Primitive(name='goal', type='box', frame_id='world', visible=True, color=[0.0, 1.0, 0.0, 1.0], 
+                                            parameters=[self.rand_goal[0], self.rand_goal[1], self.rand_goal[2], 0.04, 0.04, 0.04]),
+                                Primitive(name='goal_point', type='point', frame_id='world', visible=True, color=[0.0, 0.0, 1.0, 1.0], 
+                                            parameters=[self.rand_goal[0], self.rand_goal[1], self.rand_goal[2]])]
+            set_primitive(set_primitive_req)
+            
+            self.goal = self.rand_goal
+        except rospy.ServiceException as e:
+            print("Service call failed: %s"%e)
+            
     def reset(self):
         # Reset the state of the environment to an initial state
         subprocess.call("~/Workspaces/catkin_ws/src/panda_demos/panda_table_launch/scripts/sim_reset_episode_fast.sh", shell=True)
         
+        if self.reset_rand_goal:
+            self.reset_goal()
+
         return self.observation  # reward, done, info can't be included
          
     def render(self, mode='human'):
         pass
 
     def close (self):
-        pass
+        subprocess.call("~/Workspaces/catkin_ws/src/panda_demos/panda_table_launch/scripts/sim_reset_episode_fast.sh", shell=True)
 
     def calc_dist(self):
         dist = math.sqrt(self.observation[0][0] ** 2 + self.observation[0][1] ** 2 + self.observation[0][2] ** 2)

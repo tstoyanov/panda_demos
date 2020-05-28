@@ -97,8 +97,11 @@ def main():
 
     for i_episode in range(args.num_episodes+1):
         # -- reset environment for every episode --
+        #if i_episode % 10 == 0:
+        #    env.init_ros()
+        print('++++++++i_episode+++++++:', i_episode)
         state = env.reset()
-
+        
         # -- initialize noise (random process N) --
         if args.ou_noise:
             ounoise.scale = (args.noise_scale - args.final_noise_scale) * max(
@@ -140,6 +143,7 @@ def main():
             env.rate.sleep()
 
             if done or total_numsteps % args.num_steps == 0:
+                print('total_numsteps', total_numsteps)
                 break
 
         writer.add_scalar('reward/train', episode_reward, i_episode)
@@ -148,7 +152,7 @@ def main():
     
     
         greedy_numsteps = 0
-        if i_episode % 10 == 0:
+        if i_episode != 0 and i_episode % 10 == 0:
             state = env.reset()
             
             episode_reward = 0
@@ -158,7 +162,9 @@ def main():
                 next_state, reward, done, info = env.step(action)
                 episode_reward += reward
                 greedy_numsteps += 1
-                        
+                                    
+                #print('i_episode:', i_episode, 'test reward:', reward)
+
                 state = next_state
                 
                 env.rate.sleep()
@@ -170,7 +176,9 @@ def main():
         
             rewards.append(episode_reward)
             print("Episode: {}, total numsteps: {}, reward: {}, average reward: {}".format(i_episode, total_numsteps, rewards[-1], np.mean(rewards[-10:])))
-            
+    
+    # -- close environment --
+    env.close()
 
     #-- saves model --
     if args.save_agent:
