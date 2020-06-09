@@ -9,3 +9,4 @@ sleep 3
 #rosservice call /hiqp_joint_effort_controller/activate_task "name: 'ee_obst3'"
 rosservice call /hiqp_joint_effort_controller/activate_task "name: 'ee_rl'"
 
+

@@ -54,8 +54,9 @@ class ManipulateEnv(gym.Env):
         return self.observation, reward, done, obs_hit
     
     def reset_goal(self):
-        self.rand_goal = [random.uniform(-0.3, 0.3) for _ in range(2)]
-        self.rand_goal.append(0.79)
+        rand_x = random.uniform(-0.2, 0.0)
+        rand_y = random.uniform(-0.2, 0.0)
+        self.rand_goal = [rand_x, rand_y, 0.79]
         
         rospy.wait_for_service('/hiqp_joint_effort_controller/remove_primitives')
         rospy.wait_for_service('/hiqp_joint_effort_controller/set_primitives')
