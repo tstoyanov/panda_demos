@@ -121,7 +121,7 @@ rosservice call /hiqp_joint_effort_controller/set_primitives \
 rosservice call /hiqp_joint_effort_controller/set_tasks \
 "tasks:
 - name: 'full_pose'
-  priority: 4
+  priority: 5
   visible: 1
   active: 1
   monitored: 0
@@ -148,15 +148,8 @@ rosservice call /hiqp_joint_effort_controller/set_tasks \
   monitored: 1
   def_params: ['TDefGeomProj', 'point', 'plane', 'elbow_point > table_plane']
   dyn_params: ['TDynPD', '100.0', '21.0']
-- name: 'ee_wrist_project'
-  priority: 1
-  visible: 1
-  active: 1
-  monitored: 1
-  def_params: ['TDefGeomProj', 'point', 'point', 'wrist_point > ee_point']
-  dyn_params: ['TDynPD', '100.0', '21.0']
 - name: 'ee_cage_front'
-  priority: 1
+  priority: 2
   visible: 1
   active: 1
   monitored: 1
