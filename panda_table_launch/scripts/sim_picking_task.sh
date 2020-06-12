@@ -121,7 +121,7 @@ rosservice call /hiqp_joint_effort_controller/set_primitives \
 rosservice call /hiqp_joint_effort_controller/set_tasks \
 "tasks:
 - name: 'full_pose'
-  priority: 5
+  priority: 4
   visible: 1
   active: 1
   monitored: 0
@@ -183,13 +183,6 @@ rosservice call /hiqp_joint_effort_controller/set_tasks \
   monitored: 1
   def_params: ['TDefGeomAlign', 'line', 'line', 'ee_z_axis = table_z_axis']
   dyn_params: ['TDynPD', '16.0', '50.0']
-- name: 'approach_align_x'
-  priority: 3
-  visible: 1
-  active: 1
-  monitored: 1
-  def_params: ['TDefGeomAlign', 'line', 'line', 'ee_x_axis = world_x_axis']
-  dyn_params: ['TDynPD', '16.0', '50.0']
 - name: 'ee_rl'
   priority: 4
   visible: 1
@@ -199,6 +192,13 @@ rosservice call /hiqp_joint_effort_controller/set_tasks \
   dyn_params: ['TDynAsyncPolicy', '1000.0', 'ee_rl/act', 'ee_rl/state']
 "
 
+#- name: 'approach_align_x'
+#  priority: 4
+#  visible: 1
+#  active: 1
+#  monitored: 1
+#  def_params: ['TDefGeomAlign', 'line', 'line', 'ee_x_axis = world_x_axis']
+#  dyn_params: ['TDynPD', '16.0', '50.0']
 
 #- name: 'ee_point_project'
 #  priority: 3
