@@ -4,7 +4,7 @@
     <!-- arguments -->
     <arg name="paused" default="false"/>
     <arg name="use_sim_time" default="true"/>
-    <arg name="gui" default="false"/>
+    <arg name="gui" default="true"/>
     <arg name="headless" default="false"/>
     <arg name="debug" default="false"/>
     <arg name="start_moveit" default="false"/>
@@ -25,7 +25,7 @@
     <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-param robot_description -urdf -model panda -J panda_joint1 0.0 -J panda_joint2 -1.1 -J panda_joint3 0.0 -J panda_joint4 -2.0 -J panda_joint5 0.0 -J panda_joint6 1.8 -J panda_joint7 0.8"/>
 
     <!-- Load joint controller configurations from YAML file to parameter server -->
-    <rosparam file="$(find franka_control)/config/panda_gazebo_control.yaml" command="load"/>
+    <rosparam file="$(find panda_table_description)/config/panda_gazebo_control.yaml" command="load"/>
 
     <!-- load the controllers -->
     <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="joint_state_controller position_joint_trajectory_controller franka_gripper" />

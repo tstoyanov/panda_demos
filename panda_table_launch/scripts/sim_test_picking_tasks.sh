@@ -1,4 +1,4 @@
-rosservice call /gazebo/pause_physics "{}"
+
 rosservice call /hiqp_joint_effort_controller/remove_tasks \
 "names:
 - 'full_pose'
@@ -12,18 +12,6 @@ rosservice call /hiqp_joint_effort_controller/remove_tasks \
 "
 rosservice call /hiqp_joint_effort_controller/remove_all_primitives "{}"
 
-rosservice call /hiqp_joint_effort_controller/set_tasks \
-"tasks:
-- name: 'full_pose'
-  priority: 5
-  visible: 1
-  active: 1
-  monitored: 0
-  def_params: ['TDefFullPose', '0.0', '-1.17', '0.003', '-2.89', '-0.0', '1.82', '0.84']
-  dyn_params: ['TDynPD', '16.0', '10.0']"
-
-rosservice call /gazebo/unpause_physics "{}"
-sleep 3
 
 ####################### GEOMETRIC PRIMITIVES #######################
 rosservice call /hiqp_joint_effort_controller/set_primitives \
@@ -112,65 +100,64 @@ rosservice call /hiqp_joint_effort_controller/set_tasks \
   active: 1
   monitored: 0
   def_params: ['TDefFullPose', '0.0', '-1.17', '0.003', '-2.89', '-0.0', '1.82', '0.84']
-  dyn_params: ['TDynPD', '16.0', '10.0']
+  dyn_params: ['TDynPD', '0.5', '1.5']
 - name: 'approach_align_z'
   priority: 3
   visible: 1
   active: 1
   monitored: 1
   def_params: ['TDefGeomAlign', 'line', 'line', 'ee_z_axis = table_z_axis']
-  dyn_params: ['TDynPD', '16.0', '50.0']
+  dyn_params: ['TDynPD', '0.5', '1.5']
 - name: 'approach_align_x'
   priority: 3
   visible: 1
   active: 1
   monitored: 1
   def_params: ['TDefGeomAlign', 'line', 'line', 'ee_x_axis = world_x_axis']
-  dyn_params: ['TDynPD', '16.0', '50.0']
+  dyn_params: ['TDynPD', '0.5', '1.5']
 - name: 'ee_plane_project'
   priority: 1
   visible: 1
   active: 1
   monitored: 1
   def_params: ['TDefGeomProj', 'point', 'plane', 'ee_point > table_plane']
-  dyn_params: ['TDynPD', '100.0', '21.0']
+  dyn_params: ['TDynPD', '1.0', '2.0']
 - name: 'ee_cage_front'
   priority: 2
   visible: 1
   active: 1
   monitored: 1
   def_params: ['TDefGeomProj', 'point', 'plane', 'ee_point < front_plane']
-  dyn_params: ['TDynPD', '100.0', '21.0']
+  dyn_params: ['TDynPD', '1.0', '2.0']
 - name: 'ee_cage_back'
   priority: 2
   visible: 1
   active: 1
   monitored: 1
   def_params: ['TDefGeomProj', 'point', 'plane', 'ee_point > back_plane']
-  dyn_params: ['TDynPD', '100.0', '21.0']
+  dyn_params: ['TDynPD', '1.0', '2.0']
 - name: 'ee_cage_left'
   priority: 2
   visible: 1
   active: 1
   monitored: 1
   def_params: ['TDefGeomProj', 'point', 'plane', 'ee_point < left_plane']
-  dyn_params: ['TDynPD', '100.0', '21.0']
+  dyn_params: ['TDynPD', '1.0', '2.0']
 - name: 'ee_cage_right'
   priority: 2
   visible: 1
   active: 1
   monitored: 1
   def_params: ['TDefGeomProj', 'point', 'plane', 'ee_point > right_plane']
-  dyn_params: ['TDynPD', '100.0', '21.0']
+  dyn_params: ['TDynPD', '1.0', '2.0']
 - name: 'ee_point_project'
   priority: 3
   visible: 1
   active: 1
   monitored: 1
   def_params: ['TDefGeomProj', 'point', 'point', 'ee_point = goal_point']
-  dyn_params: ['TDynPD', '16.0', '50.0']
+  dyn_params: ['TDynPD', '0.5', '1.5']
 "
-
 
 
 
