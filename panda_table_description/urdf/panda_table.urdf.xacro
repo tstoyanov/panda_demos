@@ -54,6 +54,11 @@
   <link name="world" />
 
   <link name="table">
+     <inertial>
+       <mass value="200.0"/>
+       <inertia ixx="10.0" ixy="0" ixz="0" iyy="10.0" iyz="0" izz="10.0" />
+       <origin/>
+     </inertial>
     <visual>
       <geometry>
 	<box size="1.0 1.11 0.7" />
@@ -83,13 +88,13 @@
      </visual>
    </link>
 
-   <!--
     <link name="column1">
      <visual>
        <geometry>
      <box size="0.1 0.1 0.515" />
        </geometry>
        <origin rpy="0 0 0" xyz="0.0 0.0 0.2575" />
+       <material name="orange"/>
      </visual>
      <collision>
        <geometry>
@@ -104,6 +109,7 @@
      <box size="0.1 0.1 0.515" />
        </geometry>
        <origin rpy="0 0 0" xyz="0.0 0.0 0.2575" />
+       <material name="orange"/>
      </visual>
      <collision>
        <geometry>
@@ -112,22 +118,6 @@
        <origin rpy="0 0 0" xyz="0.0 0.0 0.2575" />
      </collision>
     </link>
-
-    <link name="work_piece">
-     <visual>
-       <geometry>
-     <mesh filename="package://panda_table_description/meshes/work_piece.stl" scale="0.001 0.001 0.001"/>
-       </geometry>
-       <origin rpy="0 1.5707 0" xyz="0.0 0.0 0.0" />
-     </visual>
-     <collision>
-       <geometry>
-     <mesh filename="package://panda_table_description/meshes/work_piece.stl" scale="0.001 0.001 0.001"/>
-       </geometry>
-       <origin rpy="0 1.5707 0" xyz="0.0 0.0 0.0" />
-     </collision>
-    </link>
-    -->
 
   <joint name="world_joint" type="fixed">
     <parent link="world" />
@@ -141,7 +131,6 @@
     <origin xyz="0.0 0.425 0.7" rpy="0.0 0.0 1.5707" />
   </joint>
 
-  <!--
   <joint name="table_column1" type="fixed">
     <parent link="table" />
     <child link = "column1" />
@@ -152,6 +141,7 @@
     <child link = "column2" />
     <origin xyz="-0.45 -0.505 0.7" rpy="0.0 0.0 0.0" />
   </joint>
+  <!--
   <joint name="table_wp" type="fixed">
     <parent link="table" />
     <child link = "work_piece" />

@@ -42,9 +42,10 @@ namespace hiqp
               const Eigen::VectorXd& e_final, 
               const Eigen::VectorXd& e_dot_final) {
 
+      ROS_INFO("Creating object TDynPolicy");
       int size = parameters.size();
-      if (size != 4) {
-        printHiqpWarning("TDynAsyncPolicy requires 4 parameters, got " 
+      if (size != 5) {
+        printHiqpWarning("TDynAsyncPolicy requires 5 parameters, got " 
           + std::to_string(size) + "! Initialization failed!");
 
         return -1;
@@ -54,26 +55,89 @@ namespace hiqp
       damping_ = std::stod(parameters.at(1));
       action_topic_ = parameters.at(2);
       state_topic_ = parameters.at(3);
-
-      act_sub_ = nh_.subscribe(action_topic_, 1, &TDynAsyncPolicy::handleActMessage, this);
-      state_pub_ = nh_.advertise<rl_task_plugins::StateMsg>(state_topic_, 1);
+      logdir_base_ = parameters.at(4);
 
       e_ddot_star_.resize(e_initial.rows());
       desired_dynamics_ = Eigen::VectorXd::Zero(e_initial.rows());
 
       last_publish_ = ros::Time::now();
       initialized_ = true;
+      
       update_lock_.unlock();
+      
+      //subscribers and publishers will be requesting locks themselves, let's make it easier on them
+      act_sub_ = nh_.subscribe(action_topic_, 1, &TDynAsyncPolicy::handleActMessage, this);
+      state_pub_ = nh_.advertise<rl_task_plugins::StateMsg>(state_topic_, 1);
+
 
       return 0;
     }
 
     int TDynAsyncPolicy::update(const RobotStatePtr robot_state, 
-                const std::shared_ptr< TaskDefinition > def) {
+                const TaskDefinitionPtr def) {
 
       update_lock_.lock();
+      if (!initialized_) {
+         ROS_ERROR("TDynAsyncPolicy not initialized!");
+         update_lock_.unlock();
+	 return -1;
+      }
+
       Eigen::VectorXd qdot=robot_state->kdl_jnt_array_vel_.qdot.data;
+      Eigen::VectorXd q=robot_state->kdl_jnt_array_vel_.q.data;
+
+      int tasks_dim=0;
+      for(auto task_status_it=robot_state->task_status_map_.begin(); 
+		      task_status_it!=robot_state->task_status_map_.end(); task_status_it++) {
+	  //inequality tasks take one row, equality tasks take two rows
+	  for(int i=0; i<task_status_it->task_signs_.size(); i++) {
+		tasks_dim += (task_status_it->task_signs_[i]!=0) ? 1 : 2;
+	  }
+      }
+
+      //constraint Jacobian
+      Eigen::MatrixXd J_upper = Eigen::MatrixXd(tasks_dim, qdot.rows());
+      //constraint right-hand side
+      Eigen::VectorXd rhs = Eigen::VectorXd(tasks_dim);
+      
+      int nt = 0;
+      for(auto task_status_it=robot_state->task_status_map_.begin(); 
+		      task_status_it!=robot_state->task_status_map_.end(); task_status_it++) {
+	  for(int i=0; i<task_status_it->task_signs_.size(); i++) {
+	      int task_sign=task_status_it->task_signs_[i];
+	      if(task_sign!=0) {
+	         J_upper.row(nt+i) = task_sign*task_status_it->J_.row(i);
+		 rhs(nt+i) = task_sign*(task_status_it->dde_star_(i)-task_status_it->dJ_.row(i).dot(qdot));
+	         nt++;
+	      } else {
+	         J_upper.row(nt+i) = task_status_it->J_.row(i);
+		 rhs(nt+i) = (task_status_it->dde_star_(i)-task_status_it->dJ_.row(i).dot(qdot));
+	         J_upper.row(nt+i+1) = (-1)*task_status_it->J_.row(i);
+		 rhs(nt+i+1) = (-1)*(task_status_it->dde_star_(i)-task_status_it->dJ_.row(i).dot(qdot));
+	      }		      
+	  }	
+      }
+      
       e_ddot_star_= desired_dynamics_ - damping_*def->getTaskDerivative();
+
+      //std::cerr << "J = "<<J_upper<<std::endl;
+      //std::cerr << "rhs = "<<rhs.transpose()<<std::endl;
+
+      std::ofstream J_up_stream, rhs_stream, J_stream, desired_stream;
+      J_up_stream.open(logdir_base_+"J_upper.dat", std::ios::out|std::ios::app);
+      J_stream.open(logdir_base_+"J_lower.dat", std::ios::out|std::ios::app);
+      rhs_stream.open(logdir_base_+"rhs.dat", std::ios::out|std::ios::app);
+      desired_stream.open(logdir_base_+"desired.dat", std::ios::out|std::ios::app);
+      
+      J_up_stream<<J_upper<<std::endl;
+      J_stream<<def->getJacobian()<<std::endl;
+      rhs_stream<<rhs.transpose()<<std::endl;
+      desired_stream<<e_ddot_star_-def->getJacobianDerivative()*q<<std::endl; 
+
+      J_up_stream.close();
+      J_stream.close();
+      rhs_stream.close();
+      desired_stream.close();
 
       publishStateMessage(def->getTaskValue());
       update_lock_.unlock();
@@ -89,10 +153,12 @@ namespace hiqp
             &act_msg) {
 
         update_lock_.lock();
-        if(!initialized_) {
-            update_lock_.unlock();
-            return;
-        }
+	if (!initialized_) {
+          ROS_ERROR("TDynAsyncPolicy not initialized!");
+	  update_lock_.unlock();
+	  return;
+	}
+
         if(act_msg->e_ddot_star.size() != e_ddot_star_.rows()) {
             printHiqpWarning("TDynAsyncPolicy: mismatch between dimensions of eddot_star and dynamics provided in message");
             std::cerr<<" eddot_star "<<e_ddot_star_.size() <<" provided "

@@ -7,7 +7,7 @@
     <arg name="gui" default="true"/>
     <arg name="headless" default="false"/>
     <arg name="debug" default="false"/>
-    <arg name="start_moveit" default="false"/>
+    <arg name="start_moveit" default="true"/>
     <arg name="load_gripper" default="true"/>
     
     <!-- load robot description from xacro file -->

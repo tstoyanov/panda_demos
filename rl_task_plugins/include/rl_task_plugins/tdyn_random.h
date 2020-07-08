@@ -64,7 +64,7 @@ namespace hiqp
               const Eigen::VectorXd& e_dot_final);
 
       int update(const RobotStatePtr robot_state, 
-                const std::shared_ptr< TaskDefinition > def);
+                const TaskDefinitionPtr def);
 
       int monitor();
 

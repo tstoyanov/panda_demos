@@ -47,12 +47,12 @@ namespace hiqp
     class TDynAsyncPolicy : public TaskDynamics {
     public:
 
-      inline TDynAsyncPolicy() : TaskDynamics() {}
+      inline TDynAsyncPolicy() : TaskDynamics() { ROS_INFO("creating object TDynPolicy"); initialized_=false;}
       
       TDynAsyncPolicy(std::shared_ptr<GeometricPrimitiveMap> geom_prim_map,
        std::shared_ptr<Visualizer> visualizer);
 
-      ~TDynAsyncPolicy() noexcept {}
+      ~TDynAsyncPolicy() noexcept { ROS_INFO("Destroying object TDynPolicy"); nh_.shutdown(); initialized_=false; }
 
       int init(const std::vector<std::string>& parameters, 
               RobotStatePtr robot_state, 
@@ -62,7 +62,7 @@ namespace hiqp
               const Eigen::VectorXd& e_dot_final);
 
       int update(const RobotStatePtr robot_state, 
-                const std::shared_ptr< TaskDefinition > def);
+                const  TaskDefinitionPtr def);
 
       int monitor();
 
@@ -74,6 +74,7 @@ namespace hiqp
 
       std::string action_topic_;
       std::string state_topic_;
+      std::string logdir_base_;
       float damping_{1.0};
       unsigned int publish_rate_{10}; 
       ros::Time last_publish_;
