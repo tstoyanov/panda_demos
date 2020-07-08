@@ -7,6 +7,7 @@ import time
 import pickle
 import matplotlib.colors as colors
 import matplotlib.cm as cmx
+import gym
 from torch.autograd import Variable
 from tensorboardX import SummaryWriter
 
@@ -20,7 +21,7 @@ from environment import ManipulateEnv
 
 def main():
     parser = argparse.ArgumentParser(description='PyTorch X-job')
-    parser.add_argument('--env_name', default="ManipulateEnv-v0",
+    parser.add_argument('--env_name', default="Pendulum-v0",
                         help='name of the environment')
     parser.add_argument('--gamma', type=float, default=0.99, metavar='G',
                         help='discount factor for reward (default: 0.99)')
@@ -35,15 +36,15 @@ def main():
                         help='number of episodes with noise (default: 100)')
     parser.add_argument('--seed', type=int, default=4, metavar='N',
                         help='random seed (default: 4)')
-    parser.add_argument('--batch_size', type=int, default=512, metavar='N',
+    parser.add_argument('--batch_size', type=int, default=200, metavar='N',
                         help='batch size (default: 512)')
-    parser.add_argument('--num_steps', type=int, default=300, metavar='N',
+    parser.add_argument('--num_steps', type=int, default=100, metavar='N',
                         help='max episode length (default: 300)')
     parser.add_argument('--num_episodes', type=int, default=5000, metavar='N',
                         help='number of episodes (default: 5000)')
     parser.add_argument('--hidden_size', type=int, default=128, metavar='N',
                         help='hidden size (default: 128)')
-    parser.add_argument('--updates_per_step', type=int, default=50, metavar='N',
+    parser.add_argument('--updates_per_step', type=int, default=5, metavar='N',
                     help='model updates per simulator step (default: 50)')
     parser.add_argument('--replay_size', type=int, default=1000000, metavar='N',
                         help='size of replay buffer (default: 1000000)')
@@ -61,10 +62,10 @@ def main():
     args = parser.parse_args()
 
     env = ManipulateEnv()
-    
+    #env = gym.make(args.env_name)
     writer = SummaryWriter('runs/')
 
-    #env.seed(args.seed)
+    env.seed(args.seed)
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
 
@@ -91,13 +92,15 @@ def main():
     total_numsteps = 0
     updates = 0
     
-    env.init_ros()
+    #env.init_ros()
+    #env.reset()
 
     t_start = time.time()
 
     for i_episode in range(args.num_episodes+1):
         # -- reset environment for every episode --
-        state = env.reset()
+        #state = env.reset()
+        state = torch.Tensor([env.reset()])
 
         # -- initialize noise (random process N) --
         if args.ou_noise:
@@ -111,46 +114,56 @@ def main():
             action = agent.select_action(state, ounoise) if args.train_model else agent.select_action(state)
             
             next_state, reward, done, info = env.step(action)
-            env.render()
+
+            #env.render()
             total_numsteps += 1
             episode_reward += reward
 
             action = torch.Tensor(action)
             mask = torch.Tensor([not done])
             reward = torch.Tensor([reward])
+            next_state = torch.Tensor([next_state])
 
             #print('reward:', reward)
             memory.push(state, action, mask, next_state, reward)
 
             state = next_state
 
-            if len(memory) > args.batch_size and args.train_model:
-                for _ in range(args.updates_per_step):
-                    transitions = memory.sample(args.batch_size)
-                    batch = Transition(*zip(*transitions))
-                    value_loss, policy_loss = agent.update_parameters(batch)
-                    
-                    writer.add_scalar('loss/value', value_loss, updates)
-                    writer.add_scalar('loss/policy', policy_loss, updates)
-                    
-                    updates += 1
-            else:
-                time.sleep(0.1)
-                
-            env.rate.sleep()
+            #else:
+            #    time.sleep(0.005)
+
+            #env.render()
+            #time.sleep(0.005)
+            #env.rate.sleep()
 
             if done or total_numsteps % args.num_steps == 0:
                 break
 
+        if len(memory) >= args.batch_size and args.train_model:
+            env.reset()
+            print("Training model")
+
+            for _ in range(args.updates_per_step*args.num_steps):
+                transitions = memory.sample(args.batch_size)
+                batch = Transition(*zip(*transitions))
+                value_loss, policy_loss = agent.update_parameters(batch)
+
+                writer.add_scalar('loss/value', value_loss, updates)
+                writer.add_scalar('loss/policy', policy_loss, updates)
+
+                updates += 1
         writer.add_scalar('reward/train', episode_reward, i_episode)
-        
+        print("Train Episode: {}, total numsteps: {}, reward: {}".format(i_episode, total_numsteps,
+                                                                                       episode_reward))
+
         rewards.append(episode_reward)
     
     
         greedy_numsteps = 0
         if i_episode % 10 == 0:
-            state = env.reset()
-            
+            #state = env.reset()
+            state = torch.Tensor([env.reset()])
+
             episode_reward = 0
             while True:
                 action = agent.select_action(state)
@@ -159,9 +172,12 @@ def main():
                 episode_reward += reward
                 greedy_numsteps += 1
                         
-                state = next_state
-                
-                env.rate.sleep()
+                #state = next_state
+                state = torch.Tensor([next_state])
+
+                #env.render()
+                #time.sleep(0.01)
+                #   env.rate.sleep()
 
                 if done or greedy_numsteps % args.num_steps == 0:
                     break
