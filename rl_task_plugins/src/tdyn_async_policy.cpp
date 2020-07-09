@@ -132,7 +132,7 @@ namespace hiqp
       J_up_stream<<J_upper<<std::endl;
       J_stream<<def->getJacobian()<<std::endl;
       rhs_stream<<rhs.transpose()<<std::endl;
-      desired_stream<<e_ddot_star_-def->getJacobianDerivative()*q<<std::endl; 
+      desired_stream<<(e_ddot_star_-def->getJacobianDerivative()*q).transpose()<<std::endl; 
 
       J_up_stream.close();
       J_stream.close();
