@@ -89,6 +89,7 @@ namespace hiqp
       int tasks_dim=0;
       for(auto task_status_it=robot_state->task_status_map_.begin(); 
 		      task_status_it!=robot_state->task_status_map_.end(); task_status_it++) {
+	  if(task_status_it->priority_ >= def->getPriority()) continue;
 	  //inequality tasks take one row, equality tasks take two rows
 	  for(int i=0; i<task_status_it->task_signs_.size(); i++) {
 		tasks_dim += (task_status_it->task_signs_[i]!=0) ? 1 : 2;
@@ -100,9 +101,12 @@ namespace hiqp
       //constraint right-hand side
       Eigen::VectorXd rhs = Eigen::VectorXd(tasks_dim);
       
+      Eigen::MatrixXd J_lower = def->getJacobian();
+      
       int nt = 0;
       for(auto task_status_it=robot_state->task_status_map_.begin(); 
 		      task_status_it!=robot_state->task_status_map_.end(); task_status_it++) {
+	  if(task_status_it->priority_ >= def->getPriority()) continue;
 	  for(int i=0; i<task_status_it->task_signs_.size(); i++) {
 	      int task_sign=task_status_it->task_signs_[i];
 	      if(task_sign!=0) {
@@ -120,9 +124,9 @@ namespace hiqp
       
       e_ddot_star_= desired_dynamics_ - damping_*def->getTaskDerivative();
 
+#if 0
       //std::cerr << "J = "<<J_upper<<std::endl;
       //std::cerr << "rhs = "<<rhs.transpose()<<std::endl;
-
       std::ofstream J_up_stream, rhs_stream, J_stream, desired_stream;
       J_up_stream.open(logdir_base_+"J_upper.dat", std::ios::out|std::ios::app);
       J_stream.open(logdir_base_+"J_lower.dat", std::ios::out|std::ios::app);
@@ -130,7 +134,7 @@ namespace hiqp
       desired_stream.open(logdir_base_+"desired.dat", std::ios::out|std::ios::app);
       
       J_up_stream<<J_upper<<std::endl;
-      J_stream<<def->getJacobian()<<std::endl;
+      J_stream<<J_lower<<std::endl;
       rhs_stream<<rhs.transpose()<<std::endl;
       desired_stream<<(e_ddot_star_-def->getJacobianDerivative()*q).transpose()<<std::endl; 
 
@@ -138,8 +142,35 @@ namespace hiqp
       J_stream.close();
       rhs_stream.close();
       desired_stream.close();
+#endif
 
-      publishStateMessage(def->getTaskValue());
+      //publishStateMessage(def->getTaskValue());
+      Eigen::VectorXd error = def->getTaskValue();
+      Eigen::VectorXd error_derivative = def->getTaskDerivative();
+      Eigen::VectorXd rhs_fixed_term = (-def->getJacobianDerivative()*q);
+
+      //we will do this directly here, too much to carry around right now
+      ros::Time now = ros::Time::now();
+      ros::Duration d = now - last_publish_;
+      if(d.toSec() >= 1.0 / publish_rate_ ) {
+        rl_task_plugins::StateMsg msg;
+	msg.n_joints = q.rows();
+	msg.n_constraints_upper = tasks_dim;
+	msg.n_constraints_lower = error.rows();
+	
+	//followed by shameless deep copy
+	msg.e = std::vector<double>(error.data(),error.data()+error.size());
+	msg.de = std::vector<double>(error_derivative.data(), error_derivative.data()+error_derivative.size());
+	msg.q = std::vector<double>(q.data(), q.data()+q.size());
+	msg.dq = std::vector<double>(qdot.data(), qdot.data()+qdot.size());
+	msg.J_upper = std::vector<double>(J_upper.data(), J_upper.data()+J_upper.size());
+	msg.J_lower = std::vector<double>(J_lower.data(), J_lower.data()+J_lower.size());
+	msg.b_upper = std::vector<double>(rhs.data(), rhs.data()+rhs.size());
+	msg.rhs_fixed_term = std::vector<double>(rhs_fixed_term.data(),rhs_fixed_term.data()+rhs_fixed_term.size());
+
+        state_pub_.publish(msg);
+        last_publish_ = now;
+      }
       update_lock_.unlock();
 
       return 0;
