@@ -1,13 +1,9 @@
 #!/usr/bin/env python
 import argparse
-import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import time
 import pickle
-import matplotlib.colors as colors
-import matplotlib.cm as cmx
-from torch.autograd import Variable
 from tensorboardX import SummaryWriter
 
 #import files...
@@ -15,6 +11,7 @@ from naf import NAF
 from ounoise import OUNoise
 from replay_memory import Transition, ReplayMemory
 from environment import ManipulateEnv
+
 
 
 
@@ -27,11 +24,11 @@ def main():
     parser.add_argument('--tau', type=float, default=0.001,
                         help='discount factor for model (default: 0.001)')
     parser.add_argument('--ou_noise', type=bool, default=True)
-    parser.add_argument('--noise_scale', type=float, default=0.4, metavar='G',
+    parser.add_argument('--noise_scale', type=float, default=0.3, metavar='G',
                         help='initial noise scale (default: 0.3)')
-    parser.add_argument('--final_noise_scale', type=float, default=0.3, metavar='G',
+    parser.add_argument('--final_noise_scale', type=float, default=0.4, metavar='G',
                         help='final noise scale (default: 0.4)')
-    parser.add_argument('--exploration_end', type=int, default=33, metavar='N',
+    parser.add_argument('--exploration_end', type=int, default=100, metavar='N',
                         help='number of episodes with noise (default: 100)')
     parser.add_argument('--seed', type=int, default=4, metavar='N',
                         help='random seed (default: 4)')
@@ -43,8 +40,8 @@ def main():
                         help='number of episodes (default: 5000)')
     parser.add_argument('--hidden_size', type=int, default=128, metavar='N',
                         help='hidden size (default: 128)')
-    parser.add_argument('--updates_per_step', type=int, default=50, metavar='N',
-                    help='model updates per simulator step (default: 50)')
+    parser.add_argument('--updates_per_step', type=int, default=5, metavar='N',
+                    help='model updates per simulator step (default: 5)')
     parser.add_argument('--replay_size', type=int, default=1000000, metavar='N',
                         help='size of replay buffer (default: 1000000)')
     parser.add_argument('--save_agent', type=bool, default=True,
@@ -92,7 +89,7 @@ def main():
     updates = 0
     
     env.init_ros()
-
+    
     t_start = time.time()
 
     for i_episode in range(args.num_episodes+1):
@@ -101,6 +98,7 @@ def main():
         #    env.init_ros()
         print('++++++++i_episode+++++++:', i_episode)
         state = env.reset()
+
         
         # -- initialize noise (random process N) --
         if args.ou_noise:
@@ -108,6 +106,10 @@ def main():
                 0, args.exploration_end - i_episode / args.exploration_end + args.final_noise_scale)
             ounoise.reset()
 
+
+        state_visited = []
+        action_taken = []
+            
         episode_reward = 0
         while True:
             # -- action selection, observation and store transition --
@@ -122,11 +124,15 @@ def main():
             mask = torch.Tensor([not done])
             reward = torch.Tensor([reward])
 
-            #print('reward:', reward)
             memory.push(state, action, mask, next_state, reward)
 
+            if i_episode % 10 != 0:
+                state_visited.append(state)
+                action_taken.append(action)
+                
             state = next_state
 
+            #t_update = time.time()
             if len(memory) > args.batch_size and args.train_model:
                 for _ in range(args.updates_per_step):
                     transitions = memory.sample(args.batch_size)
@@ -136,16 +142,22 @@ def main():
                     writer.add_scalar('loss/value', value_loss, updates)
                     writer.add_scalar('loss/policy', policy_loss, updates)
                     
-                    updates += 1
-            else:
-                time.sleep(0.1)
+                    updates += 1     
+            #print('Update ended after {} s'.format(time.time() - t_update))
                 
             env.rate.sleep()
 
             if done or total_numsteps % args.num_steps == 0:
-                print('total_numsteps', total_numsteps)
+                #print('total_numsteps', total_numsteps)
                 break
 
+
+        # plot q value and action
+        if i_episode % 10 != 0:
+            env.Q_plot(agent, i_episode)
+            agent.plot_path(state_visited, action_taken, i_episode)       
+            #agent.save_path(state_visited, action_taken, i_episode)
+            
         writer.add_scalar('reward/train', episode_reward, i_episode)
         
         rewards.append(episode_reward)
@@ -153,8 +165,12 @@ def main():
     
         greedy_numsteps = 0
         if i_episode != 0 and i_episode % 10 == 0:
+        #if i_episode % 10 == 0:
             state = env.reset()
             
+            state_visited = []
+            action_taken = []
+                
             episode_reward = 0
             while True:
                 action = agent.select_action(state)
@@ -163,8 +179,9 @@ def main():
                 episode_reward += reward
                 greedy_numsteps += 1
                                     
-                #print('i_episode:', i_episode, 'test reward:', reward)
-
+                state_visited.append(state)
+                action_taken.append(action)
+                    
                 state = next_state
                 
                 env.rate.sleep()
@@ -172,6 +189,13 @@ def main():
                 if done or greedy_numsteps % args.num_steps == 0:
                     break
                 
+            # plot q value
+            env.Q_plot(agent, i_episode)
+            
+            # plot action
+            agent.plot_path(state_visited, action_taken, i_episode)
+            #agent.save_path(state_visited, action_taken, i_episode)
+            
             writer.add_scalar('reward/test', episode_reward, i_episode)
         
             rewards.append(episode_reward)
@@ -186,7 +210,7 @@ def main():
         with open('exp_replay.pk1', 'wb') as output:
             pickle.dump(memory.memory, output, pickle.HIGHEST_PROTOCOL)
 
-    print('Training ended after {} minutes'.format((time.time() - t_start)/60))
+    print('Training ended after {} minutes'.format((time.time() - t_start)/60.0))
     print('Time per episode: {} s'.format((time.time() - t_start) / args.num_episodes))
     print('Mean reward: {}'.format(np.mean(rewards)))
     print('Max reward: {}'.format(np.max(rewards)))

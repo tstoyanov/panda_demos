@@ -1,5 +1,4 @@
 import os
-import sys
 import torch
 import torch.nn as nn
 from torch.optim import Adam
@@ -8,7 +7,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 import matplotlib.cm as cmx
-
+from mpl_toolkits.mplot3d import Axes3D
+        
 #@profile
 def MSELoss(input, target):
     return torch.sum((input - target)**2) / input.data.nelement()
@@ -116,7 +116,6 @@ class NAF:
 
     #@profile
     def update_parameters(self, batch):
-
         state_batch = Variable(torch.cat(batch.state))
         action_batch = Variable(torch.cat(batch.action))
         reward_batch = Variable(torch.cat(batch.reward))
@@ -158,25 +157,67 @@ class NAF:
         print('Loading model from {}'.format(model_path))
         self.model.load_state_dict(torch.load(model_path))
 
-    def plot_path(self, state, action, ep):
+    def plot_path(self, state, action, episode):
         self.model.eval()
         _, Q, _ = self.model((Variable(torch.cat(state)), Variable(torch.cat(action))))
         self.model.train()
-        sx, sy = torch.cat(state).numpy().T
-        ax, ay = torch.cat(action).numpy().T
+        sx, sy, sz = torch.cat(state).numpy().T
+        ax, ay, az = torch.cat(action).numpy().T
 
         qCat = []
         for j in range(len(Q.data.numpy())):
             qCat.append(Q.data.numpy()[j][0])
+        
+        # 3D plot
+        fig = plt.figure()
+        ax3d = fig.gca(projection='3d')
+        ax3d.scatter3D(sx, sy, sz)
+        ax3d.scatter3D(sx[-1], sy[-1], sz[-1], color='r')
+        ax3d.set_xlabel('delta_x', fontsize=10, labelpad=20)
+        ax3d.set_ylabel('delta_y', fontsize=10, labelpad=20)
+        ax3d.set_zlabel('delta_z', fontsize=10, labelpad=20)
+        #plt.xticks(np.arange(-0.3, 0.3, 0.1))
+        #plt.yticks(np.arange(-0.3, 0.3, 0.1))
+        plt.title("Trajectory")
 
+        # plot arrow
+        #ax3d.quiver(sx, sy, sz, ax/100.0, ay/100.0, az/100.0)
         cmap = plt.cm.viridis
         cNorm = colors.Normalize(vmin=np.min(qCat), vmax=np.max(qCat))
         scalarMap = cmx.ScalarMappable(norm=cNorm, cmap=cmap)
-        plt.scatter(sx, sy)
         for i in range(len(sx)):
             colorVal = scalarMap.to_rgba(qCat[i])
-            plt.arrow(sx[i], sy[i], ax[i]/150, ay[i]/150, fc=colorVal, ec=colorVal, head_width=0.004, head_length=0.008)
+            if i == len(sx)-1:
+                colorVal = (1.0, 0.0, 0.0, 1.0)
 
-        figname= 'path_{}_{}'.format(ep, '.png')
-        plt.savefig(figname)
+            ax3d.quiver(sx[i], sy[i], sz[i], ax[i]/100.0, ay[i]/100.0, az[i]/100.0, fc=colorVal, ec=colorVal)
+            
+        fig = 'path_{}_{}'.format(episode, '.png')
+        plt.savefig(fig, dpi=300)
         plt.close()
+
+    def save_path(self, state, action, episode):
+        sx, sy, sz = torch.cat(state).numpy().T
+        ax, ay, az = torch.cat(action).numpy().T
+
+        f=open('path.txt','a')
+        for i in range(sx.size):
+            f.write(str(sx[i])+' ')
+            f.write(str(sy[i])+' ')
+            f.write(str(sz[i])+' ')
+            f.write(str(ax[i])+' ')
+            f.write(str(ay[i])+' ')
+            f.write(str(az[i])+' ')
+        
+            f.write('\n')
+        
+        f.write('\n')       
+        f.close()
+
+        
+        
+        
+        
+        
+        
+        
