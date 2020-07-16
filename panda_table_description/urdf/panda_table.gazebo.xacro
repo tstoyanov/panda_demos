@@ -9,6 +9,7 @@
             <material>Gazebo/Grey</material>
             <mu1>0.2</mu1>
             <mu2>0.2</mu2>
+            <self_collide>true</self_collide>
         </gazebo>
 
         <!-- Link1 -->
@@ -16,6 +17,7 @@
             <material>Gazebo/White</material>
             <mu1>0.2</mu1>
             <mu2>0.2</mu2>
+            <self_collide>true</self_collide>
         </gazebo>
 
         <!-- Link2 -->
@@ -23,6 +25,7 @@
             <material>Gazebo/White</material>
             <mu1>0.2</mu1>
             <mu2>0.2</mu2>
+            <self_collide>true</self_collide>
         </gazebo>
 
         <!-- Link3 -->
@@ -30,6 +33,7 @@
             <material>Gazebo/White</material>
             <mu1>0.2</mu1>
             <mu2>0.2</mu2>
+            <self_collide>true</self_collide>
         </gazebo>
 
         <!-- Link4 -->
@@ -37,6 +41,7 @@
             <material>Gazebo/White</material>
             <mu1>0.2</mu1>
             <mu2>0.2</mu2>
+            <self_collide>true</self_collide>
         </gazebo>
 
         <!-- Link5 -->
@@ -44,6 +49,7 @@
             <material>Gazebo/White</material>
             <mu1>0.2</mu1>
             <mu2>0.2</mu2>
+            <self_collide>true</self_collide>
         </gazebo>
 
         <!-- Link6 -->
@@ -51,6 +57,7 @@
             <material>Gazebo/White</material>
             <mu1>0.2</mu1>
             <mu2>0.2</mu2>
+            <self_collide>true</self_collide>
         </gazebo>
 
         <!-- Link7 -->
@@ -123,7 +130,8 @@
             <mu1>0.2</mu1>
             <mu2>0.2</mu2>
 	    <self_collide>true</self_collide>
-        </gazebo>
+        <static>true</static>
+    </gazebo>
  	<gazebo reference="column1">
             <material>Gazebo/Grey</material>
             <mu1>0.2</mu1>
