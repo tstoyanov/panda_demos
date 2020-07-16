@@ -3,9 +3,10 @@ rosservice call /gazebo/pause_physics "{}"
 rosservice call /hiqp_joint_effort_controller/remove_tasks \
 "names:
 - 'full_pose'
-- 'approach_align_z'
-- 'approach_align_x'
 - 'ee_plane_project'
+- 'wrist_plane_project'
+- 'elbow_plane_project'
+- 'approach_align_z'
 - 'ee_cage_front'
 - 'ee_cage_back'
 - 'ee_cage_left'

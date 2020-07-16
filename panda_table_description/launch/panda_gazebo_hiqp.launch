@@ -27,9 +27,11 @@
 
     <param name="robot_description" command="$(find xacro)/xacro --inorder '$(find panda_table_description)/urdf/panda_table.urdf.xacro' load_gripper:=$(arg load_gripper)"/>
     <param name="box_description" command="$(find xacro)/xacro --inorder $(find panda_table_description)/urdf/box.urdf.xacro"/>
+    <param name="table_description" command="$(find xacro)/xacro --inorder $(find panda_table_description)/urdf/table.urdf.xacro"/>
 
     <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-param robot_description -urdf -model panda -J panda_joint1 0.0 -J panda_joint2 -1.1 -J panda_joint3 0.0 -J panda_joint4 -2.0 -J panda_joint5 0.0 -J panda_joint6 1.8 -J panda_joint7 0.8"/>
     <node name="spawn_object" pkg="gazebo_ros" type="spawn_model" args="-param box_description -urdf -model box"/>
+    <node name="spawn_table" pkg="gazebo_ros" type="spawn_model" args="-param table_description -urdf -model table"/>
 
     <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" output="screen"/>
 

@@ -75,7 +75,7 @@ namespace hiqp
       std::string action_topic_;
       std::string state_topic_;
       float damping_{1.0};
-      unsigned int publish_rate_{10}; 
+      unsigned int publish_rate_{100};
       ros::Time last_publish_;
       Eigen::VectorXd desired_dynamics_;
       ros::Subscriber act_sub_;

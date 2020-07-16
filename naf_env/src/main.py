@@ -88,10 +88,7 @@ def main():
     total_numsteps = 0
     updates = 0
     
-    env.init_ros()
-    
     t_start = time.time()
-
     for i_episode in range(args.num_episodes+1):
         # -- reset environment for every episode --
         #if i_episode % 10 == 0:
@@ -99,13 +96,11 @@ def main():
         print('++++++++i_episode+++++++:', i_episode)
         state = env.reset()
 
-        
         # -- initialize noise (random process N) --
         if args.ou_noise:
             ounoise.scale = (args.noise_scale - args.final_noise_scale) * max(
                 0, args.exploration_end - i_episode / args.exploration_end + args.final_noise_scale)
             ounoise.reset()
-
 
         state_visited = []
         action_taken = []
@@ -133,24 +128,25 @@ def main():
             state = next_state
 
             #t_update = time.time()
-            if len(memory) > args.batch_size and args.train_model:
-                for _ in range(args.updates_per_step):
-                    transitions = memory.sample(args.batch_size)
-                    batch = Transition(*zip(*transitions))
-                    value_loss, policy_loss = agent.update_parameters(batch)
-                    
-                    writer.add_scalar('loss/value', value_loss, updates)
-                    writer.add_scalar('loss/policy', policy_loss, updates)
-                    
-                    updates += 1     
+   
             #print('Update ended after {} s'.format(time.time() - t_update))
                 
-            env.rate.sleep()
-
             if done or total_numsteps % args.num_steps == 0:
                 #print('total_numsteps', total_numsteps)
                 break
-
+            
+        if len(memory) > args.batch_size and args.train_model:
+            #env.reset()
+            
+            for _ in range(args.updates_per_step*args.num_steps):
+                transitions = memory.sample(args.batch_size)
+                batch = Transition(*zip(*transitions))
+                value_loss, policy_loss = agent.update_parameters(batch)
+                
+                writer.add_scalar('loss/value', value_loss, updates)
+                writer.add_scalar('loss/policy', policy_loss, updates)
+                
+                updates += 1  
 
         # plot q value and action
         if i_episode % 10 != 0:
@@ -162,10 +158,8 @@ def main():
         
         rewards.append(episode_reward)
     
-    
         greedy_numsteps = 0
         if i_episode != 0 and i_episode % 10 == 0:
-        #if i_episode % 10 == 0:
             state = env.reset()
             
             state_visited = []
