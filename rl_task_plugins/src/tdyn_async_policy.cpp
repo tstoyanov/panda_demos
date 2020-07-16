@@ -44,8 +44,8 @@ namespace hiqp
 
       ROS_INFO("Creating object TDynPolicy");
       int size = parameters.size();
-      if (size != 5) {
-        printHiqpWarning("TDynAsyncPolicy requires 5 parameters, got " 
+      if (size != 4) {
+        printHiqpWarning("TDynAsyncPolicy requires 4 parameters, got " 
           + std::to_string(size) + "! Initialization failed!");
 
         return -1;
@@ -55,7 +55,7 @@ namespace hiqp
       damping_ = std::stod(parameters.at(1));
       action_topic_ = parameters.at(2);
       state_topic_ = parameters.at(3);
-      logdir_base_ = parameters.at(4);
+      //logdir_base_ = parameters.at(4);
 
       e_ddot_star_.resize(e_initial.rows());
       desired_dynamics_ = Eigen::VectorXd::Zero(e_initial.rows());
