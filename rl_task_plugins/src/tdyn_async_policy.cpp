@@ -55,7 +55,6 @@ namespace hiqp
       damping_ = std::stod(parameters.at(1));
       action_topic_ = parameters.at(2);
       state_topic_ = parameters.at(3);
-      //logdir_base_ = parameters.at(4);
 
       e_ddot_star_.resize(e_initial.rows());
       desired_dynamics_ = Eigen::VectorXd::Zero(e_initial.rows());
@@ -109,15 +108,19 @@ namespace hiqp
 	  if(task_status_it->priority_ >= def->getPriority()) continue;
 	  for(int i=0; i<task_status_it->task_signs_.size(); i++) {
 	      int task_sign=task_status_it->task_signs_[i];
+	      //std::cerr<<"i = "<<i<<" nt = "<<nt<<" s = "<<task_sign;  
 	      if(task_sign!=0) {
-	         J_upper.row(nt+i) = task_sign*task_status_it->J_.row(i);
-		 rhs(nt+i) = task_sign*(task_status_it->dde_star_(i)-task_status_it->dJ_.row(i).dot(qdot));
+	         J_upper.row(nt) = ((double) task_sign)*task_status_it->J_.row(i);
+		 rhs(nt) = ((double) task_sign)*(task_status_it->dde_star_(i)-task_status_it->dJ_.row(i).dot(qdot));
+		 //std::cerr<<" J="<<task_status_it->J_.row(i)<<" dde="<<task_status_it->dde_star_(i)<<" dJ="<<task_status_it->dJ_.row(i)<<" rhs="<<rhs(nt)<<std::endl;
 	         nt++;
 	      } else {
-	         J_upper.row(nt+i) = task_status_it->J_.row(i);
-		 rhs(nt+i) = (task_status_it->dde_star_(i)-task_status_it->dJ_.row(i).dot(qdot));
-	         J_upper.row(nt+i+1) = (-1)*task_status_it->J_.row(i);
-		 rhs(nt+i+1) = (-1)*(task_status_it->dde_star_(i)-task_status_it->dJ_.row(i).dot(qdot));
+		 //std::cerr<<" equality!!!\n";
+	         J_upper.row(nt) = task_status_it->J_.row(i);
+		 rhs(nt) = (task_status_it->dde_star_(i)-task_status_it->dJ_.row(i).dot(qdot));
+	         J_upper.row(nt+1) = (-1)*task_status_it->J_.row(i);
+		 rhs(nt+1) = (-1)*(task_status_it->dde_star_(i)-task_status_it->dJ_.row(i).dot(qdot));
+		 nt+=2;
 	      }		      
 	  }	
       }
@@ -125,6 +128,7 @@ namespace hiqp
       e_ddot_star_= desired_dynamics_ - damping_*def->getTaskDerivative();
 
 #if 0
+      logdir_base_ = "/home/tsv/hiqp_logs/";
       //std::cerr << "J = "<<J_upper<<std::endl;
       //std::cerr << "rhs = "<<rhs.transpose()<<std::endl;
       std::ofstream J_up_stream, rhs_stream, J_stream, desired_stream;
