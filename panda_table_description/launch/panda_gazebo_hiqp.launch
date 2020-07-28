@@ -4,7 +4,7 @@
     <!-- arguments -->
     <arg name="paused" default="false"/>
     <arg name="use_sim_time" default="true"/>
-    <arg name="gui" default="true"/>
+    <arg name="gui" default="false"/>
     <arg name="headless" default="false"/>
     <arg name="debug" default="false"/>
     <arg name="load_gripper" default="true"/>
@@ -31,15 +31,11 @@
     <param name="box_description" command="$(find xacro)/xacro --inorder $(find panda_table_description)/urdf/box.urdf.xacro"/>
     <node name="spawn_object" pkg="gazebo_ros" type="spawn_model" args="-param box_description -urdf -model box"/>
 
-    <!--
-    <param name="table_description" command="$(find xacro)/xacro -=-inorder $(find panda_table_description)/urdf/table.urdf.xacro"/>
-    <node name="spawn_table" pkg="gazebo_ros" type="spawn_model" args="-param table_description -urdf -model table"/>
-    -->
-
     <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" output="screen"/>
 
     <!-- load the controllers -->
     <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="$(arg controllers)"/>
+    <node name="controller_spawner_stopped" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="--stopped position_joint_trajectory_controller effort_controller" />
 
     <!-- load rviz -->
     <node name="rviz" pkg="rviz" type="rviz" if="$(arg rviz)" args="-d $(find panda_table_description)/launch/sim.rviz" />
