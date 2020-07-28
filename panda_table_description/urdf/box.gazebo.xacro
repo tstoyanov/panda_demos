@@ -7,8 +7,8 @@
 	<!-- Box -->
  	<gazebo reference="box">
             <material>Gazebo/Red</material>
-            <mu1>0.2</mu1>
-            <mu2>0.2</mu2>
+            <mu1>10000</mu1>
+            <mu2>10000</mu2>
 	    <self_collide>true</self_collide>
     </gazebo>
 

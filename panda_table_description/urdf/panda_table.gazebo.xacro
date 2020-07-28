@@ -124,7 +124,9 @@
 
 	</xacro:unless>
 
+
 	<!-- Table and columns -->
+        <!--
  	<gazebo reference="table">
             <material>Gazebo/Grey</material>
             <mu1>0.2</mu1>
@@ -155,9 +157,10 @@
             <mu2>0.2</mu2>
 	    <self_collide>true</self_collide>
         </gazebo>
-
+-->
     
 	<!-- Box -->
+        <!--
  	<gazebo reference="box">
             <material>Gazebo/Red</material>
             <mu1>0.2</mu1>
@@ -165,6 +168,7 @@
 	    <self_collide>true</self_collide>
         </gazebo>
 
+-->
 
     </xacro:macro>
 

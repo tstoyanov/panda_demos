@@ -15,8 +15,8 @@
     <link name="object_link">
         <inertial>
             <origin xyz="0 0 0" />
-            <mass value="1.0" />
-            <inertia ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001" />
+            <mass value="10.0" />
+            <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01" />
         </inertial>
         <visual>
             <origin xyz="0 0 0"/>
@@ -29,6 +29,14 @@
             <geometry>
                 <box size="0.04 0.04 0.04" />
             </geometry>
+            <surface>
+                <friction>
+                    <ode>
+                        <mu>10000.0</mu>
+                        <mu2>10000.0</mu2>
+                    </ode>
+                </friction>
+            </surface>
         </collision>
     </link>
 

@@ -40,13 +40,17 @@ namespace tasks {
 class TDefRL2DSpace : public TaskDefinition {
  public:
 
-  inline TDefRL2DSpace() {} //this empty constructor needed because pluginlib complains
+  inline TDefRL2DSpace() {ROS_INFO("creating object TDefRL");} //this empty constructor needed because pluginlib complains
 
   inline TDefRL2DSpace(std::shared_ptr<GeometricPrimitiveMap> geom_prim_map,
                std::shared_ptr<Visualizer> visualizer)
-      : TaskDefinition(geom_prim_map, visualizer) {}
+      : TaskDefinition(geom_prim_map, visualizer) {
+      ROS_INFO("creating object TDefRL");
+  }
 
-  ~TDefRL2DSpace() noexcept {}
+  ~TDefRL2DSpace() noexcept {
+      ROS_INFO("Destroying object TDefRL");
+  }
 
   int init(const std::vector<std::string>& parameters,
            RobotStatePtr robot_state);

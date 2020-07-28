@@ -3,12 +3,12 @@
 
   <!-- panda arm -->
   <xacro:include filename="$(find franka_description)/robots/panda_arm.xacro"/>
-  <xacro:include filename="$(find franka_description)/robots/hand.xacro"/> 
+  <xacro:include filename="$(find franka_description)/robots/hand.xacro"/>
 
   <!-- for simulation -->
   <xacro:include filename="$(find franka_description)/robots/panda.transmission.xacro"/>
   <xacro:include filename="$(find panda_table_description)/urdf/panda_table.gazebo.xacro"/>
-  <xacro:include filename="$(find panda_table_description)/urdf/table.urdf.xacro"/>
+  <!--xacro:include filename="$(find panda_table_description)/urdf/table.urdf.xacro"/-->
   <!-- end for simulation -->
 
   <xacro:panda_arm connected_to="mount_flange_link" xyz="0.0 0.0 0.0" rpy="0 0 ${pi}" />
@@ -26,7 +26,7 @@
        <origin xyz="0 0 -0.15" rpy="0 0 0" />
        <geometry>
          <cylinder radius="0.0085" length="0.3" />
-       </geometry>       
+       </geometry>
        <material name="orange"/>
      </visual>
      <collision name="tool_collision">
@@ -36,7 +36,7 @@
        </geometry>
      </collision>
    </link>
-  
+
      <joint name="tool_joint" type="fixed">
        <parent link="panda_link8" />
        <child link = "tool" />
@@ -50,53 +50,54 @@
   <xacro:panda_table_gazebo robot_name="$(arg robot_name)" load_gripper="$(arg load_gripper)" />
   <xacro:panda_transmission robot_name="$(arg robot_name)" load_gripper="$(arg load_gripper)" />
   <!-- end for simulation -->
-  <!--
-    <link name="world" />
 
-    <link name="table">
-      <visual>
-        <geometry>
-      <box size="1.0 1.11 0.7" />
-        </geometry>
-        <origin rpy="0 0 0" xyz="0 0 0.35" />
-      </visual>
-      <collision>
-        <geometry>
-      <box size="1.0 1.11 0.7" />
-        </geometry>
-        <origin rpy="0 0 0" xyz="0 0 0.35" />
-      </collision>
-     </link>
-  -->
+  <link name="world" />
 
-   <link name="mount_flange_link">
-     <inertial>
-       <mass value="0.01"/>
-       <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001" />
-       <origin/>
-     </inertial>
-     <visual>
-       <origin xyz="0 0 0" rpy="0 0 0" />
-       <geometry>
-         <box size="0.15 0.15 0.005" />
-       </geometry>
-       <material name="orange"/>
-     </visual>
-   </link>
+  <link name="table">
+    <inertial>
+      <mass value="200.0"/>
+      <inertia ixx="10.0" ixy="0" ixz="0" iyy="10.0" iyz="0" izz="10.0" />
+      <origin/>
+    </inertial>
+    <visual>
+      <geometry>
+        <box size="1.0 1.11 0.7" />
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0.35" />
+    </visual>
+    <collision>
+      <geometry>
+        <box size="1.0 1.11 0.7" />
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0.35" />
+    </collision>
+  </link>
 
-<!--
+  <link name="mount_flange_link">
+    <inertial>
+      <mass value="0.01"/>
+      <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001" />
+      <origin/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="0.15 0.15 0.005" />
+      </geometry>
+      <material name="orange"/>
+    </visual>
+  </link>
+
   <joint name="world_joint" type="fixed">
     <parent link="world" />
     <child link = "table" />
     <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0" />
   </joint>
--->
 
   <joint name="table_joint" type="fixed">
     <parent link="table" />
     <child link = "mount_flange_link" />
     <origin xyz="0.0 0.425 0.7" rpy="0.0 0.0 1.5707" />
   </joint>
-
 
 </robot>

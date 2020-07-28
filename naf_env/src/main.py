@@ -5,6 +5,10 @@ import torch
 import time
 import pickle
 from tensorboardX import SummaryWriter
+import gym
+
+from pathlib import Path
+import csv
 
 #import files...
 from naf import NAF
@@ -17,7 +21,7 @@ from environment import ManipulateEnv
 
 def main():
     parser = argparse.ArgumentParser(description='PyTorch X-job')
-    parser.add_argument('--env_name', default="ManipulateEnv-v0",
+    parser.add_argument('--env_name', default="PandaEnv",
                         help='name of the environment')
     parser.add_argument('--gamma', type=float, default=0.99, metavar='G',
                         help='discount factor for reward (default: 0.99)')
@@ -52,16 +56,40 @@ def main():
                         help='load model from file')
     parser.add_argument('--load_exp', type=bool, default=False,
                         help='load saved experience')
+    parser.add_argument('--logdir', default="",
+                        help='directory where to dump log files')
+    parser.add_argument('--action_scale', type=float, default=100.0, metavar='N',
+                        help='scale applied to the normalized actions (default: 10)')
+    parser.add_argument('--kd', type=float, default=1.0, metavar='N',
+                        help='derivative gain for ee_rl (default: 10)')
     parser.add_argument('--greedy_steps', type=int, default=10, metavar='N',
                         help='amount of times greedy goes (default: 10)')
 
     args = parser.parse_args()
 
-    env = ManipulateEnv()
+    if args.env_name == 'PandaEnv':
+        env = ManipulateEnv()
+        print(args.action_scale)
+        env.set_scale(args.action_scale)
+        env.set_kd(args.kd)
+    else:
+        env = gym.make(args.env_name)
     
     writer = SummaryWriter('runs/')
 
-    #env.seed(args.seed)
+    path = Path(args.logdir)
+    if not path.exists():
+        raise argparse.ArgumentTypeError("Parameter {} is not a valid path".format(path))
+
+    csv_train = open(args.logdir+'/kd{}_sd{}_as{}_us_{}_train.csv'.format(args.kd, args.seed,args.action_scale,args.updates_per_step), 'w',
+              newline='')
+    train_writer = csv.writer(csv_train, delimiter=' ')
+
+    csv_test = open(args.logdir+'/kd{}_sd{}_as{}_us_{}_test.csv'.format(args.kd, args.seed, args.action_scale, args.updates_per_step), 'w',
+                  newline='')
+    test_writer = csv.writer(csv_test, delimiter=' ')
+
+    env.seed(args.seed)
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
 
@@ -91,8 +119,6 @@ def main():
     t_start = time.time()
     for i_episode in range(args.num_episodes+1):
         # -- reset environment for every episode --
-        #if i_episode % 10 == 0:
-        #    env.init_ros()
         print('++++++++i_episode+++++++:', i_episode)
         state = env.reset()
 
@@ -102,16 +128,16 @@ def main():
                 0, args.exploration_end - i_episode / args.exploration_end + args.final_noise_scale)
             ounoise.reset()
 
-        state_visited = []
-        action_taken = []
-            
         episode_reward = 0
+        visits = []
         while True:
             # -- action selection, observation and store transition --
             action = agent.select_action(state, ounoise) if args.train_model else agent.select_action(state)
             
             next_state, reward, done, info = env.step(action)
-            env.render()
+            
+            visits = np.concatenate((visits,state.numpy(),args.action_scale*action,[reward]),axis=None)
+            #env.render()       
             total_numsteps += 1
             episode_reward += reward
 
@@ -120,10 +146,6 @@ def main():
             reward = torch.Tensor([reward])
 
             memory.push(state, action, mask, next_state, reward)
-
-            if i_episode % 10 != 0:
-                state_visited.append(state)
-                action_taken.append(action)
                 
             state = next_state
 
@@ -135,73 +157,64 @@ def main():
                 #print('total_numsteps', total_numsteps)
                 break
             
+        print("Train Episode: {}, total numsteps: {}, reward: {}".format(i_episode, total_numsteps,
+                                                                         episode_reward))    
+        train_writer.writerow(np.concatenate(([episode_reward],visits),axis=None))
+        rewards.append(episode_reward)
+        
+        #Training models
         if len(memory) > args.batch_size and args.train_model:
-            #env.reset()
-            
             for _ in range(args.updates_per_step*args.num_steps):
                 transitions = memory.sample(args.batch_size)
                 batch = Transition(*zip(*transitions))
                 value_loss, policy_loss = agent.update_parameters(batch)
                 
-                writer.add_scalar('loss/value', value_loss, updates)
-                writer.add_scalar('loss/policy', policy_loss, updates)
+                #writer.add_scalar('loss/value', value_loss, updates)
+                #writer.add_scalar('loss/policy', policy_loss, updates)
                 
                 updates += 1  
-
-        # plot q value and action
-        if i_episode % 10 != 0:
-            env.Q_plot(agent, i_episode)
-            agent.plot_path(state_visited, action_taken, i_episode)       
-            #agent.save_path(state_visited, action_taken, i_episode)
-            
-        writer.add_scalar('reward/train', episode_reward, i_episode)
-        
-        rewards.append(episode_reward)
-    
-        greedy_numsteps = 0
-        if i_episode != 0 and i_episode % 10 == 0:
-            state = env.reset()
-            
-            state_visited = []
-            action_taken = []
                 
+        agent.save_value_funct(
+            args.logdir + '/kd{}_sd{}_as{}_us_{}'.format(args.kd, args.seed, args.action_scale, args.updates_per_step),
+            i_episode,
+            ([-3.0, -3.0], [3.0, 3.0], [600, 600]))
+                
+        #runing evaluation episode
+        greedy_numsteps = 0
+        if i_episode % 10 == 0:
+            #state = env.reset()
+            state = torch.Tensor([env.reset()])
+
             episode_reward = 0
+            visits = []
             while True:
                 action = agent.select_action(state)
         
                 next_state, reward, done, info = env.step(action)
+                visits = np.concatenate((visits, state.numpy(), action, [reward]), axis=None)
                 episode_reward += reward
                 greedy_numsteps += 1
-                                    
-                state_visited.append(state)
-                action_taken.append(action)
-                    
-                state = next_state
-                
-                env.rate.sleep()
+                        
+                #state = next_state
+                state = torch.Tensor([next_state])
 
                 if done or greedy_numsteps % args.num_steps == 0:
                     break
                 
-            # plot q value
-            env.Q_plot(agent, i_episode)
-            
-            # plot action
-            agent.plot_path(state_visited, action_taken, i_episode)
-            #agent.save_path(state_visited, action_taken, i_episode)
-            
-            writer.add_scalar('reward/test', episode_reward, i_episode)
-        
+            #writer.add_scalar('reward/test', episode_reward, i_episode)
+            test_writer.writerow(np.concatenate(([episode_reward], visits), axis=None))
+
             rewards.append(episode_reward)
             print("Episode: {}, total numsteps: {}, reward: {}, average reward: {}".format(i_episode, total_numsteps, rewards[-1], np.mean(rewards[-10:])))
-    
+            print('Time per episode: {} s'.format((time.time() - t_start) / (i_episode+1)))
+
     # -- close environment --
     env.close()
 
     #-- saves model --
     if args.save_agent:
-        agent.save_model(args.env_name, args.batch_size, args.num_episodes, '.pth')
-        with open('exp_replay.pk1', 'wb') as output:
+        agent.save_model(args.env_name, args.batch_size, args.num_episodes, 'sd{}_as{}_us_{}.pth'.format(args.seed,args.action_scale,args.updates_per_step))
+        with open(args.logdir+'/exp_buffer_sd{}_as{}_us_{}.pk'.format(args.seed,args.action_scale,args.updates_per_step), 'wb') as output:
             pickle.dump(memory.memory, output, pickle.HIGHEST_PROTOCOL)
 
     print('Training ended after {} minutes'.format((time.time() - t_start)/60.0))

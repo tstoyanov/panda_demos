@@ -68,8 +68,8 @@ namespace hiqp
       return 0;
     }
 
-    int TDynRandom::update(const RobotStatePtr robot_state, 
-                const std::shared_ptr< TaskDefinition > def) {
+    int TDynRandom::update(const RobotStatePtr robot_state,
+                           const TaskDefinitionPtr def) {
 
       const KDL::JntArray jointpositions = robot_state->kdl_jnt_array_vel_.value();
 
