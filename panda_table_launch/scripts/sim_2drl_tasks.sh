@@ -24,77 +24,66 @@ rosservice call /hiqp_joint_effort_controller/set_primitives \
   visible: true
   color: [0.0, 0.0, 1.0, 1.0]
   parameters: [0.0, 0.0, 0.0]
-
 - name: 'ee_z_axis'  
   type: 'line'
   frame_id: 'tool'
   visible: false
   color: [0.0, 1.0, 1.0, 1.0]
   parameters: [0.0, 0.0, 1.0, 0.0, 0.0, 0.0]
-
 - name: 'table_plane'
   type: 'plane'
   frame_id: 'world'
   visible: true
   color: [1.0, 0.0, 1.0, 1.0]   
   parameters: [0.0, 0.0, 1.0, 0.77]
-
 - name: 'table_z_axis'  
   type: 'line'
   frame_id: 'world'
   visible: false
   color: [0.0, 1.0, 1.0, 1.0]
   parameters: [0.0, 0.0, 1.0, 0.0, -0.2, 0.7]
-
 - name: back_plane
   type: plane 
   frame_id: world
   visible: false
   color: [0.2, 0.5, 0.2, 0.21]
   parameters: [0.0, 1.0, 0.0, -0.3]
-
 - name: front_plane
   type: plane 
   frame_id: world
   visible: false
   color: [0.2, 0.5, 0.2, 0.21]
   parameters: [0.0, 1.0, 0.0, 0.2]
-
 - name: left_plane
   type: plane 
   frame_id: world
   visible: false
   color: [0.2, 0.5, 0.2, 0.21]
   parameters: [1.0, 0.0, 0.0, 0.1]
-
 - name: right_plane
   type: plane 
   frame_id: world
   visible: false
   color: [0.2, 0.5, 0.2, 0.21]
   parameters: [1.0, 0.0, 0.0, -0.4]
-
 - name: 'obst1'  
   type: 'cylinder'
   frame_id: 'world'
   visible: true
   color: [1.0, 0.0, 0.0, 1.0]
   parameters: [0,0,1, -0.1, 0.1, 0.77, 0.02, 0.05]
-
 - name: 'obst2'  
   type: 'cylinder'
   frame_id: 'world'
   visible: true
   color: [1.0, 0.0, 0.0, 1.0]
   parameters: [0,0,1, -0.25, 0.0, 0.77, 0.03, 0.05]
-
 - name: 'obst3'  
   type: 'cylinder'
   frame_id: 'world'
   visible: true
   color: [1.0, 0.0, 0.0, 1.0]
   parameters: [0,0,1, -0.15, -0.13, 0.77, 0.035, 0.05]
-
 - name: 'goal'
   type: 'sphere'
   frame_id: 'world'

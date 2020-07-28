@@ -48,7 +48,7 @@ model_free_hiqp_joint_effort_controller:
   visualization_publish_rate: 25 #Hz
   load_primitives_from_tf: true
   marker_prefix: ""
-  model_based: false
+  model_based: true
   joints:
     - panda_joint1
     - panda_joint2
@@ -81,7 +81,7 @@ hiqp_joint_effort_controller:
   task_monitoring:
     active: 1
     publish_rate: 150.0
-  kv: 
+  kv:
     - 30.0
     - 30.0
     - 30.0
@@ -89,7 +89,7 @@ hiqp_joint_effort_controller:
     - 20.0
     - 12.0
     - 10.0
-  kd: 
+  kd:
     - 11.0
     - 11.0
     - 11.0
@@ -138,7 +138,7 @@ franka_hiqp_joint_effort_controller:
     publish_rate: 150.0
   alpha_vel: 0.2
   delta_tau_max: 1.0
-  kv: 
+  kv:
     - 30.0
     - 30.0
     - 30.0
@@ -146,7 +146,7 @@ franka_hiqp_joint_effort_controller:
     - 20.0
     - 12.0
     - 10.0
-  kd: 
+  kd:
     - 11.0
     - 11.0
     - 11.0
