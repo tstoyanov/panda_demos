@@ -44,8 +44,8 @@ namespace hiqp
 
       ROS_INFO("Creating object TDynPolicy");
       int size = parameters.size();
-      if (size != 4) {
-        printHiqpWarning("TDynAsyncPolicy requires 4 parameters, got " 
+      if (size != 5) {
+        printHiqpWarning("TDynAsyncPolicy requires 5 parameters, got "
           + std::to_string(size) + "! Initialization failed!");
 
         return -1;
@@ -55,12 +55,14 @@ namespace hiqp
       damping_ = std::stod(parameters.at(1));
       action_topic_ = parameters.at(2);
       state_topic_ = parameters.at(3);
+      logdir_base_ = parameters.at(4);
 
       e_ddot_star_.resize(e_initial.rows());
       desired_dynamics_ = Eigen::VectorXd::Zero(e_initial.rows());
 
       last_publish_ = ros::Time::now();
       initialized_ = true;
+
       update_lock_.unlock();
 
       //subscribers and publishers will be requesting locks themselves, let's make it easier on them
@@ -117,6 +119,8 @@ namespace hiqp
 
       e_ddot_star_= desired_dynamics_ - damping_*def->getTaskDerivative();
 
+#if 1
+      //logdir_base_ = "/home/quantao/hiqp_logs/";
       std::ofstream J_up_stream, rhs_stream, J_stream, desired_stream;
       J_up_stream.open(logdir_base_+"J_upper.dat", std::ios::out|std::ios::app);
       J_stream.open(logdir_base_+"J_lower.dat", std::ios::out|std::ios::app);
@@ -132,6 +136,7 @@ namespace hiqp
       J_stream.close();
       rhs_stream.close();
       desired_stream.close();
+#endif
 
       publishStateMessage(def->getTaskValue());
       update_lock_.unlock();

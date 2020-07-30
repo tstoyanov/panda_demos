@@ -58,7 +58,7 @@ def main():
                         help='load saved experience')
     parser.add_argument('--logdir', default="",
                         help='directory where to dump log files')
-    parser.add_argument('--action_scale', type=float, default=100.0, metavar='N',
+    parser.add_argument('--action_scale', type=float, default=10.0, metavar='N',
                         help='scale applied to the normalized actions (default: 10)')
     parser.add_argument('--kd', type=float, default=1.0, metavar='N',
                         help='derivative gain for ee_rl (default: 10)')
@@ -69,13 +69,12 @@ def main():
 
     if args.env_name == 'PandaEnv':
         env = ManipulateEnv()
-        print(args.action_scale)
         env.set_scale(args.action_scale)
         env.set_kd(args.kd)
     else:
         env = gym.make(args.env_name)
     
-    writer = SummaryWriter('runs/')
+    #writer = SummaryWriter('runs/')
 
     path = Path(args.logdir)
     if not path.exists():
@@ -88,6 +87,7 @@ def main():
     csv_test = open(args.logdir+'/kd{}_sd{}_as{}_us_{}_test.csv'.format(args.kd, args.seed, args.action_scale, args.updates_per_step), 'w',
                   newline='')
     test_writer = csv.writer(csv_test, delimiter=' ')
+
 
     env.seed(args.seed)
     torch.manual_seed(args.seed)
@@ -120,7 +120,8 @@ def main():
     for i_episode in range(args.num_episodes+1):
         # -- reset environment for every episode --
         print('++++++++i_episode+++++++:', i_episode)
-        state = env.reset()
+        #state = env.reset()
+        state = torch.Tensor([env.reset()])
 
         # -- initialize noise (random process N) --
         if args.ou_noise:
@@ -144,7 +145,8 @@ def main():
             action = torch.Tensor(action)
             mask = torch.Tensor([not done])
             reward = torch.Tensor([reward])
-
+            next_state = torch.Tensor([next_state])
+            
             memory.push(state, action, mask, next_state, reward)
                 
             state = next_state
@@ -174,10 +176,10 @@ def main():
                 
                 updates += 1  
                 
-        agent.save_value_funct(
-            args.logdir + '/kd{}_sd{}_as{}_us_{}'.format(args.kd, args.seed, args.action_scale, args.updates_per_step),
-            i_episode,
-            ([-3.0, -3.0], [3.0, 3.0], [600, 600]))
+        #agent.save_value_funct(
+        #    args.logdir + '/kd{}_sd{}_as{}_us_{}'.format(args.kd, args.seed, args.action_scale, args.updates_per_step),
+        #    i_episode,
+        #    ([-3.0, -3.0], [3.0, 3.0], [600, 600]))
                 
         #runing evaluation episode
         greedy_numsteps = 0

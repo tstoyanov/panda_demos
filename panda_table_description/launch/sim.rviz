@@ -8,6 +8,8 @@ Panels:
         - /Status1
         - /TF1/Frames1
         - /TF1/Tree1
+        - /Effort1
+        - /Effort1/Status1
       Splitter Ratio: 0.497854083776474
     Tree Height: 796
   - Class: rviz/Selection
@@ -78,16 +80,6 @@ Visualization Manager:
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
-        column1:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        column2:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
         mount_flange_link:
           Alpha: 1
           Show Axes: false
@@ -157,11 +149,6 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
-        work_piece:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
         world:
           Alpha: 1
           Show Axes: false
@@ -188,6 +175,33 @@ Visualization Manager:
         /yumi: true
       Queue Size: 100
       Value: true
+    - Alpha: 1
+      Class: rviz/Effort
+      Enabled: true
+      History Length: 1
+      Joints:
+        panda_joint1:
+          Value: true
+        panda_joint2:
+          Value: true
+        panda_joint3:
+          Value: true
+        panda_joint4:
+          Value: true
+        panda_joint5:
+          Value: true
+        panda_joint6:
+          Value: true
+        panda_joint7:
+          Value: true
+      Name: Effort
+      Robot Description: robot_description
+      Scale: 1
+      TF Prefix: ""
+      Topic: /joint_states
+      Unreliable: false
+      Value: true
+      Width: 0.019999999552965164
   Enabled: true
   Global Options:
     Background Color: 230; 230; 230
@@ -216,7 +230,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 4.348052501678467
+      Distance: 3.4978818893432617
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -231,10 +245,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.3297947943210602
+      Pitch: 0.43479475378990173
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 0.1740688532590866
+      Yaw: 3.5122499465942383
     Saved: ~
 Window Geometry:
   Displays:

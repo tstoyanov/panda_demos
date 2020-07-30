@@ -38,13 +38,17 @@ namespace tasks {
 class TDefRLPick : public TaskDefinition {
 public:
 
-    inline TDefRLPick() {} //this empty constructor needed because pluginlib complains
+    inline TDefRLPick() {ROS_INFO("creating object TDefRLPick");} //this empty constructor needed because pluginlib complains
 
     inline TDefRLPick(std::shared_ptr<GeometricPrimitiveMap> geom_prim_map,
                       std::shared_ptr<Visualizer> visualizer)
-        : TaskDefinition(geom_prim_map, visualizer) {}
+        : TaskDefinition(geom_prim_map, visualizer) {
+        ROS_INFO("creating object TDefRLPick");
+    }
 
-    ~TDefRLPick() noexcept {}
+    ~TDefRLPick() noexcept {
+        ROS_INFO("Destroying object TDefRLPick");
+    }
 
     int init(const std::vector<std::string>& parameters,
              RobotStatePtr robot_state);
