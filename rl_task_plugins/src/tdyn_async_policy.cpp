@@ -167,6 +167,7 @@ namespace hiqp
 	msg.de = std::vector<double>(error_derivative.data(), error_derivative.data()+error_derivative.size());
 	msg.q = std::vector<double>(q.data(), q.data()+q.size());
 	msg.dq = std::vector<double>(qdot.data(), qdot.data()+qdot.size());
+	msg.ddq_star = std::vector<double>(robot_state->ddq_star.data(), robot_state->ddq_star.data()+robot_state->ddq_star.size());
 	msg.J_upper = std::vector<double>(J_upper.data(), J_upper.data()+J_upper.size());
 	msg.J_lower = std::vector<double>(J_lower.data(), J_lower.data()+J_lower.size());
 	msg.b_upper = std::vector<double>(rhs.data(), rhs.data()+rhs.size());

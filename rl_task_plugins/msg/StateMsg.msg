@@ -6,6 +6,7 @@ float64[] e
 float64[] de
 float64[] q
 float64[] dq
+float64[] ddq_star
 
 float64[] J_upper
 float64[] J_lower
