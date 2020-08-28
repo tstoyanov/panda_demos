@@ -63,10 +63,10 @@ class ManipulateEnv(gym.Env):
         ee_prim = Primitive(name='ee_point',type='point',frame_id='panda_hand',visible=True,color=[1,0,0,1],parameters=[0,0,0])
         goal_prim = Primitive(name='goal',type='box',frame_id='world',visible=True,color=[0,1,0,1],parameters=[self.goal[0],self.goal[1],self.goal[2],0.04, 0.04, 0.04])
         table_plane = Primitive(name='table_plane',type='plane',frame_id='world',visible=True,color=[1,0,1,0.5],parameters=[0,0,1,0.7])
-        back_plane = Primitive(name='back_plane',type='plane',frame_id='world',visible=True,color=[0.2,0.5,0.2,0.21],parameters=[0,1,0,-0.5])
-        front_plane = Primitive(name='front_plane',type='plane',frame_id='world',visible=True,color=[0.2,0.5,0.2,0.21],parameters=[0,1,0,0.5])
-        left_plane = Primitive(name='left_plane',type='plane',frame_id='world',visible=True,color=[0.2,0.5,0.2,0.21],parameters=[1,0,0,-0.5])
-        right_plane = Primitive(name='right_plane',type='plane',frame_id='world',visible=True,color=[0.2,0.5,0.2,0.21],parameters=[1,0,0,0.5])
+        back_plane = Primitive(name='back_plane',type='plane',frame_id='world',visible=True,color=[0.2,0.5,0.2,0.21],parameters=[0,1,0,-0.4])
+        front_plane = Primitive(name='front_plane',type='plane',frame_id='world',visible=True,color=[0.2,0.5,0.2,0.21],parameters=[0,1,0,0.4])
+        left_plane = Primitive(name='left_plane',type='plane',frame_id='world',visible=True,color=[0.2,0.5,0.2,0.21],parameters=[1,0,0,-0.4])
+        right_plane = Primitive(name='right_plane',type='plane',frame_id='world',visible=True,color=[0.2,0.5,0.2,0.21],parameters=[1,0,0,0.4])
         table_z_axis = Primitive(name='table_z_axis',type='line',frame_id='world',visible=True,color=[0,1,1,1],parameters=[0,0,1,0,0,0])
         ee_z_axis = Primitive(name='ee_z_axis',type='line',frame_id='panda_hand',visible=True,color=[0,1,1,1],parameters=[0,0,1,0,0,0])
         
@@ -97,10 +97,10 @@ class ManipulateEnv(gym.Env):
                           def_params=['TDefRLPick','1','0','0','0','1','0','0','0','1','ee_point'],
                           dyn_params=['TDynAsyncPolicy', '{}'.format(self.kd), 'ee_rl/act', 'ee_rl/state', '/home/quantao/panda_logs/'])
         redundancy = Task(name='full_pose',priority=5,visible=True,active=True,monitored=True,
-                          def_params=['TDefFullPose', '0.0', '-1.17', '0.0', '-2.89', '-0.0', '1.82', '0.84'],
-                          dyn_params=['TDynPD', '0.5', '1.5'])
+                          def_params=['TDefFullPose', '0.0', '-1.17', '0.0', '-2.89', '0.0', '1.82', '0.84'],
+                          dyn_params=['TDynPD', '16.0', '9.0'])
 
-        hiqp_task_srv([ee_plane, cage_front, cage_back, cage_left, cage_right, rl_task, approach_align_z, redundancy])    
+        hiqp_task_srv([ee_plane, cage_front, cage_back, cage_left, cage_right, approach_align_z, rl_task, redundancy])    
 
     
     def _next_observation(self, data):
@@ -133,14 +133,15 @@ class ManipulateEnv(gym.Env):
         
         if self.reset_rand_goal:
             self.reset_goal()
-            
+        
         cs = rospy.ServiceProxy('/controller_manager/switch_controller', SwitchController)
         cs_unload = rospy.ServiceProxy('/controller_manager/unload_controller', UnloadController)
         cs_load = rospy.ServiceProxy('/controller_manager/load_controller', LoadController)
         remove_tasks = rospy.ServiceProxy('/hiqp_joint_effort_controller/remove_tasks', RemoveTasks)
+        #remove_tasks = rospy.ServiceProxy('/hiqp_joint_effort_controller/remove_all_tasks', RemoveAllTasks)
         #print('removing tasks')
-        #remove_tasks(['ee_cage_front', 'ee_cage_back', 'ee_cage_left', 'ee_cage_right', 'ee_rl', 'full_pose'])
-        remove_tasks()
+        remove_tasks(['ee_plane_table', 'ee_cage_front', 'ee_cage_back', 'ee_cage_left', 'ee_cage_right', 'approach_align_z', 'ee_rl'])
+        #remove_tasks()
         #time.sleep(1)
 
         #stop hiqp
@@ -151,13 +152,14 @@ class ManipulateEnv(gym.Env):
 
         #print('setting to home pose')
         joints = ['panda_joint1', 'panda_joint2', 'panda_joint3', 'panda_joint4', 'panda_joint5', 'panda_joint6', 'panda_joint7']
-        self.effort_pub.publish(JointTrajectory(joint_names=joints, points=[JointTrajectoryPoint(positions=[0.1, -0.3, 0.0, 0.0, 0.1, -0.3, 0.0], time_from_start=rospy.Duration(4.0))]))
+        self.effort_pub.publish(JointTrajectory(joint_names=joints, points=[JointTrajectoryPoint(positions=[0.0, -1.17, 0.0, -2.89, 0.0, 1.82, 0.84], time_from_start=rospy.Duration(4.0))]))
         time.sleep(4.5)
         #restart hiqp
         cs_load('hiqp_joint_effort_controller')
 
         #print("restarting controller")
         resp = cs({'hiqp_joint_effort_controller'}, {'position_joint_trajectory_controller'}, 2, True, 0.1)
+
         #set tasks to controller
         self.set_primitives()
         self.set_tasks()

@@ -28,10 +28,10 @@ def main():
     parser.add_argument('--tau', type=float, default=0.001,
                         help='discount factor for model (default: 0.001)')
     parser.add_argument('--ou_noise', type=bool, default=True)
-    parser.add_argument('--noise_scale', type=float, default=0.3, metavar='G',
-                        help='initial noise scale (default: 0.3)')
-    parser.add_argument('--final_noise_scale', type=float, default=0.4, metavar='G',
-                        help='final noise scale (default: 0.4)')
+    parser.add_argument('--noise_scale', type=float, default=0.5, metavar='G',
+                        help='initial noise scale (default: 0.5)')
+    parser.add_argument('--final_noise_scale', type=float, default=0.2, metavar='G',
+                        help='final noise scale (default: 0.2)')
     parser.add_argument('--exploration_end', type=int, default=100, metavar='N',
                         help='number of episodes with noise (default: 100)')
     parser.add_argument('--seed', type=int, default=4, metavar='N',
@@ -44,8 +44,8 @@ def main():
                         help='number of episodes (default: 5000)')
     parser.add_argument('--hidden_size', type=int, default=128, metavar='N',
                         help='hidden size (default: 128)')
-    parser.add_argument('--updates_per_step', type=int, default=5, metavar='N',
-                    help='model updates per simulator step (default: 5)')
+    parser.add_argument('--updates_per_step', type=int, default=20, metavar='N',
+                    help='model updates per simulator step (default: 20)')
     parser.add_argument('--replay_size', type=int, default=1000000, metavar='N',
                         help='size of replay buffer (default: 1000000)')
     parser.add_argument('--save_agent', type=bool, default=True,
@@ -58,10 +58,10 @@ def main():
                         help='load saved experience')
     parser.add_argument('--logdir', default="",
                         help='directory where to dump log files')
-    parser.add_argument('--action_scale', type=float, default=10.0, metavar='N',
-                        help='scale applied to the normalized actions (default: 10)')
-    parser.add_argument('--kd', type=float, default=1.0, metavar='N',
-                        help='derivative gain for ee_rl (default: 10)')
+    parser.add_argument('--action_scale', type=float, default=1.0, metavar='N',
+                        help='scale applied to the normalized actions (default: 1.0)')
+    parser.add_argument('--kd', type=float, default=0.0, metavar='N',
+                        help='derivative gain for ee_rl (default: 0.0)')
     parser.add_argument('--greedy_steps', type=int, default=10, metavar='N',
                         help='amount of times greedy goes (default: 10)')
 
