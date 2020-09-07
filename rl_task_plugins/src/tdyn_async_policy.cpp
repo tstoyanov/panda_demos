@@ -151,7 +151,7 @@ namespace hiqp
       //publishStateMessage(def->getTaskValue());
       Eigen::VectorXd error = def->getTaskValue();
       Eigen::VectorXd error_derivative = def->getTaskDerivative();
-      Eigen::VectorXd rhs_fixed_term = (-def->getJacobianDerivative()*q);
+      Eigen::VectorXd rhs_fixed_term = (-def->getJacobianDerivative()*qdot);
 
       //we will do this directly here, too much to carry around right now
       ros::Time now = ros::Time::now();
