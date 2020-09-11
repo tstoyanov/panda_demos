@@ -8,10 +8,22 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 import matplotlib.cm as cmx
 from mpl_toolkits.mplot3d import Axes3D
-        
+import quad
+
+      
+  
 #@profile
 def MSELoss(input, target):
     return torch.sum((input - target)**2) / input.data.nelement()
+
+def RegLoss(means,Ax_batch,bx_batch):
+    #note this is not done in parallel. In general, the number of constraints can varry, so Ax and bx cannot be trivially stacked
+    #suggestions for improvement welcome
+    #computes 1/n sum \lambda^T(A_ix\mu - b_i) for \lmbda = ones*factor
+    factor=10.0
+    r = torch.nn.ReLU()
+    return factor*torch.sum(torch.stack([torch.sum(r(torch.mm(Ax_batch[i], means[i, :].reshape([2, 1])) - bx_batch[i]))
+                                  for i in range(len(Ax_batch))])) / len(Ax_batch)
 
 #@profile
 def soft_update(target, source, tau):
@@ -60,6 +72,9 @@ class Policy(nn.Module):
         self.tril_mask = Variable(torch.tril(torch.ones(
             num_outputs, num_outputs), diagonal=-1).unsqueeze(0))
         self.diag_mask = Variable(torch.diag(torch.diag(torch.ones(num_outputs, num_outputs))).unsqueeze(0))
+        
+        #regularizer for covariance matrix
+        self.lam = 0.0001
 
     #@profile
     def forward(self, inputs):
@@ -72,13 +87,13 @@ class Policy(nn.Module):
         mu = (self.mu(x)).tanh()
 
         Q = None
+        num_outputs = mu.size(1)
+        L = self.L(x).view(-1, num_outputs, num_outputs)
+        L = L * \
+            self.tril_mask.expand_as(
+                L) + torch.exp(L) * self.diag_mask.expand_as(L) + self.lam*self.diag_mask.expand_as(L)
+        P = torch.bmm(L, L.transpose(2, 1))
         if u is not None:
-            num_outputs = mu.size(1)
-            L = self.L(x).view(-1, num_outputs, num_outputs)
-            L = L * \
-                self.tril_mask.expand_as(
-                    L) + torch.exp(L) * self.diag_mask.expand_as(L)
-            P = torch.bmm(L, L.transpose(2, 1))
 
             u_mu = (u - mu).unsqueeze(2)
             A = -0.5 * \
@@ -86,7 +101,7 @@ class Policy(nn.Module):
 
             Q = A + V
 
-        return mu, Q, V
+        return mu, Q, V, P
 
 
 class NAF:
@@ -107,15 +122,33 @@ class NAF:
     #@profile
     def select_action(self, state, action_noise=None):
         self.model.eval()
-        mu, _, _ = self.model((Variable(state), None))
+        mu, _, _, _ = self.model((Variable(state), None))
         self.model.train()
         mu = mu.data
         if action_noise is not None:
             mu += torch.Tensor(action_noise.noise())
         return mu.clamp(-1, 1)
 
+    def select_proj_action(self, state, Ax, bx, action_noise=None, simple_noise=0):
+        self.model.eval()
+        mu, _, _, P = self.model((Variable(state), None))
+        self.model.train()
+        mu = mu.data
+
+        pa = quad.project_action_cov(mu.numpy()[0], Ax, bx, P.detach().numpy()[0])
+        if action_noise is not None:
+            pa = torch.Tensor([quad.project_action(pa + action_noise.noise(), Ax, bx)])
+        else:
+            if simple_noise!= 0:
+                #use project with noise
+                pa = torch.Tensor([quad.project_and_sample(pa, Ax, bx, simple_noise)])
+            else:
+                #no noise
+                pa = torch.Tensor([pa])
+        return pa
+
     #@profile
-    def update_parameters(self, batch):
+    def update_parameters(self, batch, optimize_feasible_mu=False):
         state_batch = Variable(torch.cat(batch.state))
         action_batch = Variable(torch.cat(batch.action))
         reward_batch = Variable(torch.cat(batch.reward))
@@ -129,9 +162,12 @@ class NAF:
 
         expected_state_action_values = reward_batch + (self.gamma * mask_batch * next_state_values)
 
-        _, state_action_values, _ = self.model((state_batch, action_batch))
+        means, state_action_values, _, _ = self.model((state_batch, action_batch))
 
         loss = MSELoss(state_action_values, expected_state_action_values)
+        regularizer_loss = RegLoss(means, batch.Ax, batch.bx)
+        if(optimize_feasible_mu):
+            loss = loss + regularizer_loss
 
         self.optimizer.zero_grad()
         loss.backward()
@@ -140,7 +176,7 @@ class NAF:
 
         soft_update(self.target_model, self.model, self.tau)
 
-        return loss.item(), 0
+        return loss.item(), regularizer_loss.item()
 
     def save_model(self, env_name, batch_size, episode, suffix="", model_path=None):
         if not os.path.exists('models/'):
@@ -156,6 +192,50 @@ class NAF:
             model_path = "models/naf_{}_{}_{}_{}".format(env_name, batch_size, episode, suffix)
         print('Loading model from {}'.format(model_path))
         self.model.load_state_dict(torch.load(model_path))
+
+    # saves state value function as a pickle
+    # @sample_range is a tripplet with per-dimension min,max,and n_samples
+    def save_value_funct(self, base_name, episode, sample_range):
+        n_dim = len(sample_range[0])
+        axis_list = []
+        for j in range(n_dim):
+            di = torch.linspace(sample_range[0][j],sample_range[1][j],sample_range[2][j])
+            axis_list.append(di)
+        axis = tuple(axis_list)
+        mesh = torch.meshgrid(axis)
+        mesh = torch.stack(mesh,2)
+        mesh = torch.flatten(mesh,start_dim=0,end_dim=1)
+        #mesh = mesh.unsqueeze(0)
+
+        self.model.eval()
+        mu, _, V = self.model((Variable(mesh),None))
+        self.model.train()
+
+#        with open(base_name+"_ep{}_val.pk".format(episode), 'wb') as output:
+#            pickle.dump((mu,V),output)
+
+        #draw picture
+        Varray = V.detach().numpy()
+        #Varray = numpy.reshape(Varray,sample_range[2])
+        Varray = np.reshape(Varray,-1)
+
+        fig = plt.figure()
+        cmap = plt.cm.viridis
+        cNorm = colors.Normalize(vmin=np.min(Varray), vmax=np.max(Varray))
+        scalarMap = cmx.ScalarMappable(norm=cNorm, cmap=cmap)
+        plt.plot(-0.2,-0.5,'ro')
+        plt.plot([-0.8,0.8,0.8,-0.8,-0.8],[-0.8,-0.8,0.8,0.8,-0.8],'b-',linewidth=2)
+        grid = mesh.numpy()
+        plt.scatter(grid[:,0],grid[:,1],c=Varray)
+        plt.title("Value function at episode {}".format(episode))
+        plt.colorbar()
+        plt.tight_layout()
+        plt.xlim((sample_range[0][0], sample_range[1][0]))
+        plt.ylim((sample_range[0][1], sample_range[1][1]))
+        figname= base_name+"_ep{}_val.png".format(episode)
+        plt.savefig(figname)
+        plt.close()
+        
 
     def plot_path(self, state, action, episode):
         self.model.eval()
@@ -214,51 +294,4 @@ class NAF:
         f.write('\n')       
         f.close()
 
-    # saves state value function as a pickle
-    # @sample_range is a tripplet with per-dimension min,max,and n_samples
-    def save_value_funct(self, base_name, episode, sample_range):
-        n_dim = len(sample_range[0])
-        axis_list = []
-        for j in range(n_dim):
-            di = torch.linspace(sample_range[0][j],sample_range[1][j],sample_range[2][j])
-            axis_list.append(di)
-        axis = tuple(axis_list)
-        mesh = torch.meshgrid(axis)
-        mesh = torch.stack(mesh,2)
-        mesh = torch.flatten(mesh,start_dim=0,end_dim=1)
-        #mesh = mesh.unsqueeze(0)
-
-        self.model.eval()
-        mu, _, V = self.model((Variable(mesh),None))
-        self.model.train()
-
-#        with open(base_name+"_ep{}_val.pk".format(episode), 'wb') as output:
-#            pickle.dump((mu,V),output)
-
-        #draw picture
-        Varray = V.detach().numpy()
-        #Varray = numpy.reshape(Varray,sample_range[2])
-        Varray = numpy.reshape(Varray,-1)
-
-        fig = plt.figure()
-        cmap = plt.cm.viridis
-        cNorm = colors.Normalize(vmin=np.min(Varray), vmax=np.max(Varray))
-        scalarMap = cmx.ScalarMappable(norm=cNorm, cmap=cmap)
-        plt.plot(-0.2,-0.5,'ro')
-        plt.plot([-0.8,0.8,0.8,-0.8,-0.8],[-0.8,-0.8,0.8,0.8,-0.8],'b-',linewidth=2)
-        grid = mesh.numpy()
-        plt.scatter(grid[:,0],grid[:,1],c=Varray)
-        plt.title("Value function at episode {}".format(episode))
-        plt.colorbar()
-        plt.tight_layout()
-        plt.xlim((sample_range[0][0], sample_range[1][0]))
-        plt.ylim((sample_range[0][1], sample_range[1][1]))
-        figname= base_name+"_ep{}_val.png".format(episode)
-        plt.savefig(figname)
-        plt.close()
-        
-        
-        
-        
-        
-        
+    

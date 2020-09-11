@@ -20,6 +20,8 @@ from hiqp_msgs.msg import *
 from controller_manager_msgs.srv import *
 from trajectory_msgs.msg import *
 
+from halfspaces import qhull
+
 
 class ManipulateEnv(gym.Env):
     """Manipulation Environment that follows gym interface"""
@@ -28,10 +30,12 @@ class ManipulateEnv(gym.Env):
         super(ManipulateEnv, self).__init__()
 
         self.goal = [-0.2, 0.0, 0.72]
-        self.reset_rand_goal = False
         
-        self.action_space = spaces.Box(low=np.array([-300, -300, -300]), high=np.array([300, 300, 300]), dtype=np.float32)
-        self.observation_space = spaces.Box(low=np.array([-300, -300, -300]), high=np.array([300, 300, 300]), dtype=np.float32)
+        self.action_space = spaces.Box(low=np.array([-300, -300, -300]), high=np.array([300, 300, 300]), dtype=np.float32)        
+        obs_low = np.array([-3.14, -3.14, -3.14, -3.14, -3.14, -3.14, -3.14,
+                            -2.5, -2.5, -2.5, -2.5, -2.5, -2.5, -2.5,
+                            -1, -1, -1])
+        self.observation_space = spaces.Box(low=obs_low, high=-obs_low, dtype=np.float32)
         
         self.action_scale = 10
         self.kd = 10
@@ -50,14 +54,14 @@ class ManipulateEnv(gym.Env):
 
         csv_train = open("/home/quantao/panda_logs/constraints.csv", 'w', newline='')
         self.twriter = csv.writer(csv_train, delimiter=' ')
-        
+        self.episode_trace = [(np.identity(self.action_space.shape[0]),self.action_space.high,0)]
+             
     def set_scale(self,action_scale):
         self.action_scale = action_scale
 
     def set_kd(self,kd):
         self.kd = kd    
         
-     
     def set_primitives(self):
         hiqp_primitve_srv = rospy.ServiceProxy('/hiqp_joint_effort_controller/set_primitives', SetPrimitives)
         ee_prim = Primitive(name='ee_point',type='point',frame_id='panda_hand',visible=True,color=[1,0,0,1],parameters=[0,0,0])
@@ -67,11 +71,10 @@ class ManipulateEnv(gym.Env):
         front_plane = Primitive(name='front_plane',type='plane',frame_id='world',visible=True,color=[0.2,0.5,0.2,0.21],parameters=[0,1,0,0.4])
         left_plane = Primitive(name='left_plane',type='plane',frame_id='world',visible=True,color=[0.2,0.5,0.2,0.21],parameters=[1,0,0,-0.4])
         right_plane = Primitive(name='right_plane',type='plane',frame_id='world',visible=True,color=[0.2,0.5,0.2,0.21],parameters=[1,0,0,0.4])
-        table_z_axis = Primitive(name='table_z_axis',type='line',frame_id='world',visible=True,color=[0,1,1,1],parameters=[0,0,1,0,0,0])
-        ee_z_axis = Primitive(name='ee_z_axis',type='line',frame_id='panda_hand',visible=True,color=[0,1,1,1],parameters=[0,0,1,0,0,0])
+        #table_z_axis = Primitive(name='table_z_axis',type='line',frame_id='world',visible=True,color=[0,1,1,1],parameters=[0,0,1,0,0,0])
+        #ee_z_axis = Primitive(name='ee_z_axis',type='line',frame_id='panda_hand',visible=True,color=[0,1,1,1],parameters=[0,0,1,0,0,0])
         
-        hiqp_primitve_srv([ee_prim, goal_prim, back_plane, table_plane, front_plane, left_plane, right_plane, table_z_axis, ee_z_axis])
-        
+        hiqp_primitve_srv([ee_prim, goal_prim, table_plane, back_plane, front_plane, left_plane, right_plane])     
         
     def set_tasks(self):
         hiqp_task_srv = rospy.ServiceProxy('/hiqp_joint_effort_controller/set_tasks', SetTasks)
@@ -90,30 +93,44 @@ class ManipulateEnv(gym.Env):
         cage_right = Task(name='ee_cage_right',priority=2,visible=True,active=True,monitored=True,
                           def_params=['TDefGeomProj','point', 'plane', 'ee_point < right_plane'],
                           dyn_params=['TDynPD', '1.0', '2.0'])
-        approach_align_z = Task(name='approach_align_z',priority=3,visible=True,active=True,monitored=True,
-                                def_params=['TDefGeomAlign','line', 'line', 'ee_z_axis = table_z_axis'],
-                                dyn_params=['TDynPD', '1.0', '2.0'])
-        rl_task = Task(name='ee_rl',priority=4,visible=True,active=True,monitored=True,
+        #approach_align_z = Task(name='approach_align_z',priority=3,visible=True,active=True,monitored=True,
+        #                        def_params=['TDefGeomAlign','line', 'line', 'ee_z_axis = table_z_axis'],
+        #                        dyn_params=['TDynPD', '1.0', '2.0'])
+        rl_task = Task(name='ee_rl',priority=3,visible=True,active=True,monitored=True,
                           def_params=['TDefRLPick','1','0','0','0','1','0','0','0','1','ee_point'],
-                          dyn_params=['TDynAsyncPolicy', '{}'.format(self.kd), 'ee_rl/act', 'ee_rl/state', '/home/quantao/panda_logs/'])
-        redundancy = Task(name='full_pose',priority=5,visible=True,active=True,monitored=True,
+                          dyn_params=['TDynAsyncPolicy', '{}'.format(self.kd), 'ee_rl/act', 'ee_rl/state'])
+        redundancy = Task(name='full_pose',priority=4,visible=True,active=True,monitored=True,
                           def_params=['TDefFullPose', '0.0', '-1.17', '0.0', '-2.89', '0.0', '1.82', '0.84'],
                           dyn_params=['TDynPD', '16.0', '9.0'])
 
-        hiqp_task_srv([ee_plane, cage_front, cage_back, cage_left, cage_right, approach_align_z, rl_task, redundancy])    
-
+        hiqp_task_srv([ee_plane, cage_front, cage_back, cage_left, cage_right, rl_task, redundancy])    
     
     def _next_observation(self, data):
-        self.observation = data.e
-        self.de = data.de
-        self.J = np.transpose(np.reshape(np.array(data.J_lower),[data.n_joints,data.n_constraints_lower]))
-        self.A = np.transpose(np.reshape(np.array(data.J_upper),[data.n_joints,data.n_constraints_upper]))
-        self.b = np.reshape(np.array(data.b_upper),[data.n_constraints_upper,1])
-        self.rhs = np.reshape(np.array(data.rhs_fixed_term),[data.n_constraints_lower,1])
-        self.q = np.reshape(np.array(data.q),[data.n_joints,1])
-        self.dq = np.reshape(np.array(data.dq),[data.n_joints,1])
+        self.e = np.array(data.e)
+        self.de = np.array(data.de)
+        self.J = np.transpose(np.reshape(np.array(data.J_lower), [data.n_joints,data.n_constraints_lower]))       
+        self.A = np.transpose(np.reshape(np.array(data.J_upper), [data.n_joints,data.n_constraints_upper]))          
+        self.b = np.reshape(np.array(data.b_upper), [data.n_constraints_upper,1])       
+        self.rhs = np.reshape(np.array(data.rhs_fixed_term), [data.n_constraints_lower,1])
+        self.q = np.reshape(np.array(data.q), [data.n_joints,1])       
+        self.dq = np.reshape(np.array(data.dq), [data.n_joints,1])
+        self.ddq_star = np.reshape(np.array(data.ddq_star), [data.n_joints,1])
+    
+        self.J = self.J[:,:-2]
+        self.A = self.A[:,:-2]
+        self.q = self.q[:-2]
+        self.dq = self.dq[:-2]
+        self.ddq_star = self.ddq_star[:-2]
+        
+        #print("J:", self.J)
+        #print("A:", self.A)
+        #print("q:", self.q)
+        #print("dq:", self.dq)
+        #print("ddq_star:", self.ddq_star)
+        
+        self.observation = np.concatenate([np.squeeze(self.q), np.squeeze(self.dq), self.e-self.goal])
+        
         self.fresh = True
-
 
     def step(self, action):
         # Execute one time step within the environment
@@ -124,24 +141,41 @@ class ManipulateEnv(gym.Env):
         while not self.fresh:
             self.rate.sleep()
         
-        reward, done, obs_hit = self.calc_shaped_reward()
-        return self.observation, reward, done, obs_hit
+        success, Ax, bx = qhull(self.A,self.J,self.b)
+        Ax = -Ax
+        if(success) :
+            self.twriter.writerow(self.episode_trace[-1][0])
+            self.twriter.writerow(self.episode_trace[-1][1])
+            self.twriter.writerow(self.A)
+            self.twriter.writerow(self.b)
+            self.twriter.writerow(self.J)
+            self.twriter.writerow(action.numpy()[0])
+            self.twriter.writerow(self.observation)
+            self.twriter.writerow(self.ddq_star)
+            self.twriter.writerow(self.rhs)
+            bx = bx - Ax.dot(self.rhs).transpose()
+            #we should be checking the actiuons were feasible according to previous set of constraints
+            feasible = self.episode_trace[-1][0].dot(action.numpy()[0] * self.action_scale) - self.episode_trace[-1][1]
+            n_infeasible = np.sum(feasible>0.001)
+            self.episode_trace.append((Ax,bx,n_infeasible))
+            #print(feasible)
+            
+        reward, done = self.calc_shaped_reward()
+        return self.observation, reward, done, Ax, bx
 
     def reset(self):
         # Reset the state of the environment to an initial state
-        #subprocess.call("~/Workspaces/catkin_ws/src/panda_demos/panda_table_launch/scripts/sim_reset_episode_fast.sh", shell=True)
-        
-        if self.reset_rand_goal:
-            self.reset_goal()
+        self.episode_trace.clear()
+        self.episode_trace = [(np.identity(self.action_space.shape[0]),self.action_space.high,0)]
         
         cs = rospy.ServiceProxy('/controller_manager/switch_controller', SwitchController)
         cs_unload = rospy.ServiceProxy('/controller_manager/unload_controller', UnloadController)
         cs_load = rospy.ServiceProxy('/controller_manager/load_controller', LoadController)
-        remove_tasks = rospy.ServiceProxy('/hiqp_joint_effort_controller/remove_tasks', RemoveTasks)
-        #remove_tasks = rospy.ServiceProxy('/hiqp_joint_effort_controller/remove_all_tasks', RemoveAllTasks)
+        #remove_tasks = rospy.ServiceProxy('/hiqp_joint_effort_controller/remove_tasks', RemoveTasks)
+        remove_tasks = rospy.ServiceProxy('/hiqp_joint_effort_controller/remove_all_tasks', RemoveAllTasks)
         #print('removing tasks')
-        remove_tasks(['ee_plane_table', 'ee_cage_front', 'ee_cage_back', 'ee_cage_left', 'ee_cage_right', 'approach_align_z', 'ee_rl'])
-        #remove_tasks()
+        #remove_tasks(['ee_plane_table', 'ee_cage_front', 'ee_cage_back', 'ee_cage_left', 'ee_cage_right', 'approach_align_z', 'ee_rl'])
+        remove_tasks()
         #time.sleep(1)
 
         #stop hiqp
@@ -221,8 +255,8 @@ class ManipulateEnv(gym.Env):
             self.twriter.writerow(normal.tolist())
 
     def close (self):
-        subprocess.call("~/Workspaces/catkin_ws/src/panda_demos/panda_table_launch/scripts/sim_reset_episode_fast.sh", shell=True)
-
+        pass
+    
     def calc_dist(self):
         dist = np.linalg.norm(np.array(self.observation[0:3])-np.array(self.goal))      # math.sqrt((self.observation[0]-self.goal[0]) ** 2 + (self.observation[1]-self.goal[1])  ** 2)
         return dist
@@ -230,7 +264,6 @@ class ManipulateEnv(gym.Env):
     def calc_shaped_reward(self):
         reward = 0
         done = False
-        obs_hit = False
 
         dist = self.calc_dist()
 
@@ -241,7 +274,7 @@ class ManipulateEnv(gym.Env):
         else:
             reward += -10*dist
 
-        return reward, done, obs_hit
+        return reward, done
 
 
     def Q_plot(self, agent, episode):
