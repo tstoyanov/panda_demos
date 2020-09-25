@@ -72,25 +72,31 @@ def main():
 
     args = parser.parse_args()
 
+    print("++++++action_scale:{} project_actions:{} optimize_actions:{}++++++".format(args.action_scale, args.project_actions, args.optimize_actions))
+
+
     if args.env_name == 'PandaEnv':
-        env = ManipulateEnv()
+        env = ManipulateEnv(bEffort=False)
         env.set_scale(args.action_scale)
         env.set_kd(args.kd)
+        
+        #env.set_primitives()
+        #env.set_tasks()
     else:
         env = gym.make(args.env_name)
     
-    writer = SummaryWriter(args.logdir+'/runs/sd{}_us_{}'.format(args.seed,args.updates_per_step))
+    #writer = SummaryWriter(args.logdir+'/runs/sd{}_us_{}'.format(args.seed,args.updates_per_step))
+    basename = 'sd{}_us_{}_ns_{}_run_{}'.format(args.seed,args.updates_per_step,args.noise_scale,args.run_id)
+    writer = SummaryWriter(args.logdir+'/runs/'+basename)
 
     path = Path(args.logdir)
     if not path.exists():
         raise argparse.ArgumentTypeError("Parameter {} is not a valid path".format(path))
 
-    csv_train = open(args.logdir+'/kd{}_sd{}_as{}_us_{}_train.csv'.format(args.kd, args.seed,args.action_scale,args.updates_per_step), 'w',
-              newline='')
+    csv_train = open(args.logdir+'/'+basename+'_train.csv', 'w', newline='')
     train_writer = csv.writer(csv_train, delimiter=' ')
 
-    csv_test = open(args.logdir+'/kd{}_sd{}_as{}_us_{}_test.csv'.format(args.kd, args.seed, args.action_scale, args.updates_per_step), 'w',
-                  newline='')
+    csv_test = open(args.logdir+'/'+basename+'_test.csv', 'w', newline='')
     test_writer = csv.writer(csv_test, delimiter=' ')
 
 
@@ -108,12 +114,12 @@ def main():
 
     # -- load existing model --
     if args.load_agent:
-        agent.load_model(args.env_name, args.batch_size, args.num_episodes, '.pth')
-        print("agent: naf_{}_{}_{}_{}, is loaded".format(args.env_name, args.batch_size, args.num_episodes, '.pth'))
+        agent.load_model(args.env_name, args.batch_size, args.num_episodes, basename+'.pth', model_path=args.logdir)
+        print('loaded agent '+basename+' from '+args.logdir)
 
     # -- load experience buffer --
     if args.load_exp:
-        with open('/home/quantao/Workspaces/catkin_ws/src/panda_demos/naf_env/src/exp_replay.pk1', 'rb') as input:
+        with open(args.logdir+'/'+basename+'.pk', 'rb') as input:
             memory.memory = pickle.load(input)
             memory.position = len(memory)
 
@@ -121,13 +127,15 @@ def main():
     total_numsteps = 0
     updates = 0
     
+    env.stop()
+    
     t_start = time.time()
     for i_episode in range(args.num_episodes+1):
         # -- reset environment for every episode --
         print('++++++++i_episode+++++++:', i_episode)
         t_st = time.time()
         #state = env.reset()
-        state = torch.Tensor([env.reset()])
+        state = torch.Tensor([env.start()])
         print("reset took {}".format(time.time() - t_st))
 
         scale = (args.noise_scale - args.final_noise_scale) * max(0, args.exploration_end - i_episode) / args.exploration_end + args.final_noise_scale
@@ -153,16 +161,18 @@ def main():
                 action = agent.select_action(state, ounoise) if args.train_model else agent.select_action(state)
                 if args.project_actions:
                     #project, add noise, project again
-                    action = agent.select_proj_action(state,Ax_prev,bx_prev,ounoise)
+                    action = agent.select_proj_action(state, Ax_prev, bx_prev, ounoise)
+                    #print("action", action)
                     #else clause: just plain OU noise on top (or no-noise)
             else:
                 if args.constr_gauss_sample:
                     #Gaussian noise sample
-                    action = agent.select_proj_action(state,Ax_prev,bx_prev,simple_noise=scale)
+                    action = agent.select_proj_action(state, Ax_prev, bx_prev, simple_noise=scale)
                 else:
                     #noise-free run
-                    action = agent.select_proj_action(state,Ax_prev,bx_prev)
+                    action = agent.select_proj_action(state, Ax_prev, bx_prev)
                     
+            # env step        
             t_st0 = time.time()
             next_state, reward, done, Ax, bx = env.step(action)
             t_act += time.time() - t_st0
@@ -191,16 +201,21 @@ def main():
                 #print('total_numsteps', total_numsteps)
                 break
             
-        print("Train Episode: {}, total numsteps: {}, reward: {}, time: {} act: {} project: {}".format(i_episode, total_numsteps,
+        print("===>Train Episode: {}, total numsteps: {}, reward: {}, time: {} act: {} project: {}".format(i_episode, total_numsteps,
                                                                          episode_reward,time.time()-t_st,t_act,t_project))
         print("Percentage of actions in constraint violation was {}".format(np.sum([env.episode_trace[i][2]>0 for i in range(len(env.episode_trace))])))
 
         train_writer.writerow(np.concatenate(([episode_reward],visits),axis=None))
         rewards.append(episode_reward)
         
+        #trying out this?
+        env.stop()
+        t_st = time.time()
+        
         #Training models
         if len(memory) > args.batch_size and args.train_model:
             print("Training model")
+            env.step(torch.Tensor([[0,0,0]]))
             
             for _ in range(args.updates_per_step*args.num_steps):
                 transitions = memory.sample(args.batch_size)
@@ -208,8 +223,9 @@ def main():
                 value_loss, reg_loss = agent.update_parameters(batch, optimize_feasible_mu=args.optimize_actions)
                 
                 writer.add_scalar('loss/full', value_loss, updates)
-                writer.add_scalar('loss/value', value_loss-reg_loss, updates)
-                writer.add_scalar('loss/regularizer', reg_loss, updates)
+                if args.optimize_actions:
+                    writer.add_scalar('loss/value', value_loss-reg_loss, updates)
+                    writer.add_scalar('loss/regularizer', reg_loss, updates)
                 
                 updates += 1
             print("train took {}".format(time.time() - t_st))
@@ -222,9 +238,13 @@ def main():
                 
         #runing evaluation episode
         greedy_numsteps = 0
-        if i_episode % 10 == 0:
+        if i_episode % 2 == 0:
             #state = env.reset()
-            state = torch.Tensor([env.reset()])
+            if time.time() - t_st < 4:
+                print("waiting for reset...")
+                time.sleep(4.0)
+                print("DONE")
+            state = torch.Tensor([env.start()])
             Ax_prev = np.identity(env.action_space.shape[0])
             bx_prev = env.action_space.high
 
@@ -256,13 +276,16 @@ def main():
             print('Time per episode: {} s'.format((time.time() - t_start) / (i_episode+1)))
             print("Percentage of actions in constraint violation was {}".format(np.sum([env.episode_trace[i][2]>0 for i in range(len(env.episode_trace))])))
 
+            env.stop()
+            time.sleep(4.0) #wait for reset
+
     # -- close environment --
     env.close()
 
     #-- saves model --
     if args.save_agent:
-        agent.save_model(args.env_name, args.batch_size, args.num_episodes, 'sd{}_as{}_us_{}.pth'.format(args.seed,args.action_scale,args.updates_per_step))
-        with open(args.logdir+'/exp_buffer_sd{}_as{}_us_{}.pk'.format(args.seed,args.action_scale,args.updates_per_step), 'wb') as output:
+        agent.save_model(args.env_name, args.batch_size, args.num_episodes, basename+'.pth')
+        with open(args.logdir+'/'+basename+'.pk', 'wb') as output:
             pickle.dump(memory.memory, output, pickle.HIGHEST_PROTOCOL)
 
     print('Training ended after {} minutes'.format((time.time() - t_start)/60.0))

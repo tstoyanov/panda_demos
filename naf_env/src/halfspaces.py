@@ -70,20 +70,17 @@ def qhull(A,J,b):
     n_jnts = np.shape(A[1])[0]
     n_constraints = np.shape(A)[0]
     n_action_dim = np.shape(J)[0]
-    #print("n_jnts:", n_jnts)
-    #print("n_constraints:", n_constraints)
-    #print("n_action_dim:", n_action_dim)
 
     Ax = np.zeros((1, n_action_dim))
     bx = np.zeros(1)
 
-    #construct an LPto find a feasible point in upper space
-    norm_vector = np.reshape(np.linalg.norm(A, axis=1),(n_constraints, 1))
+    #construct an LP to find a feasible point in upper space
+    norm_vector = np.reshape(np.linalg.norm(A, axis=1), (n_constraints, 1))
     c = np.zeros((n_jnts+1,))
     c[-1] = -1
     A_up = np.hstack((A, norm_vector))
     # a feasible point that is furthest from constraints solution
-    upper_feasible = linprog(c,A_ub=A_up, b_ub=b, bounds=(None, None))
+    upper_feasible = linprog(c, A_ub=A_up, b_ub=b, bounds=(None, None))
 
     print("upper_feasible.x[-1]:", upper_feasible.x[-1])
     if(upper_feasible.success and upper_feasible.x[-1]>0):

@@ -3,6 +3,16 @@ joint_state_controller:
   type: joint_state_controller/JointStateController
   publish_rate: 500
 
+effort_controller:
+  type: effort_controllers/JointGroupEffortController
+  joints:
+    - panda_joint1
+    - panda_joint2
+    - panda_joint3
+    - panda_joint4
+    - panda_joint5
+    - panda_joint6
+    - panda_joint7
 
 # HiQP Effort Controller ----------------------------------------
 hiqp_joint_effort_controller:
@@ -41,9 +51,14 @@ hiqp_joint_effort_controller:
     - 7.0
     - 6.5
 
-
-effort_controller:
-  type: effort_controllers/JointGroupEffortController
+# HiQP Velocity Controller ----------------------------------------
+hiqp_joint_velocity_controller:
+  type: hiqp_ros/HiQPJointVelocityController
+  visualization_publish_rate: 25 #Hz
+  load_primitives_from_tf: true
+  marker_prefix: ""
+  chain_root: "panda_link0"
+  chain_tip: "panda_hand"
   joints:
     - panda_joint1
     - panda_joint2
@@ -52,8 +67,12 @@ effort_controller:
     - panda_joint5
     - panda_joint6
     - panda_joint7
+  task_monitoring:
+    active: 1
+    publish_rate: 150.0
 
 
+#trajectory controllers
 position_joint_trajectory_controller:
     type: effort_controllers/JointTrajectoryController
     joints:
@@ -80,5 +99,29 @@ position_joint_trajectory_controller:
     state_publish_rate: 25
 
 
+velocity_joint_trajectory_controller:
+  type: velocity_controllers/JointTrajectoryController
+  joints:
+    - panda_joint1
+    - panda_joint2
+    - panda_joint3
+    - panda_joint4
+    - panda_joint5
+    - panda_joint6
+    - panda_joint7
+
+  gains:
+    panda_joint1: { p: 600, d: 30, i: 0, i_clamp: 1 }
+    panda_joint2: { p: 600, d: 30, i: 0, i_clamp: 1 }
+    panda_joint3: { p: 600, d: 30, i: 0, i_clamp: 1 }
+    panda_joint4: { p: 600, d: 30, i: 0, i_clamp: 1 }
+    panda_joint5: { p: 250, d: 10, i: 0, i_clamp: 1 }
+    panda_joint6: { p: 150, d: 10, i: 0, i_clamp: 1 }
+    panda_joint7: { p: 50, d: 5, i: 0, i_clamp: 1 }
+
+  constraints:
+    goal_time: 1.0
+
+  state_publish_rate: 25
 
 

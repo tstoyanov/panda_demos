@@ -22,7 +22,8 @@ def RegLoss(means,Ax_batch,bx_batch):
     #computes 1/n sum \lambda^T(A_ix\mu - b_i) for \lmbda = ones*factor
     factor=10.0
     r = torch.nn.ReLU()
-    return factor*torch.sum(torch.stack([torch.sum(r(torch.mm(Ax_batch[i], means[i, :].reshape([2, 1])) - bx_batch[i]))
+    #print("Ax_batch shape:", len(Ax_batch))
+    return factor*torch.sum(torch.stack([torch.sum(r(torch.mm(Ax_batch[i], means[i, :].reshape([3, 1])) - bx_batch[i]))
                                   for i in range(len(Ax_batch))])) / len(Ax_batch)
 
 #@profile
@@ -74,7 +75,7 @@ class Policy(nn.Module):
         self.diag_mask = Variable(torch.diag(torch.diag(torch.ones(num_outputs, num_outputs))).unsqueeze(0))
         
         #regularizer for covariance matrix
-        self.lam = 0.0001
+        self.lam = 0.001
 
     #@profile
     def forward(self, inputs):
@@ -155,7 +156,7 @@ class NAF:
         mask_batch = Variable(torch.cat(batch.mask))
         next_state_batch = Variable(torch.cat(batch.next_state))
 
-        _, _, next_state_values = self.target_model((next_state_batch, None))
+        _, _, next_state_values, _ = self.target_model((next_state_batch, None))
 
         reward_batch = reward_batch.unsqueeze(1)
         mask_batch = mask_batch.unsqueeze(1)
@@ -165,8 +166,8 @@ class NAF:
         means, state_action_values, _, _ = self.model((state_batch, action_batch))
 
         loss = MSELoss(state_action_values, expected_state_action_values)
-        regularizer_loss = RegLoss(means, batch.Ax, batch.bx)
         if(optimize_feasible_mu):
+            regularizer_loss = RegLoss(means, batch.Ax, batch.bx)
             loss = loss + regularizer_loss
 
         self.optimizer.zero_grad()
@@ -176,7 +177,10 @@ class NAF:
 
         soft_update(self.target_model, self.model, self.tau)
 
-        return loss.item(), regularizer_loss.item()
+        if(optimize_feasible_mu):
+            return loss.item(), regularizer_loss.item()
+        else:
+            return loss.item(), 0
 
     def save_model(self, env_name, batch_size, episode, suffix="", model_path=None):
         if not os.path.exists('models/'):
