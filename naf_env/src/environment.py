@@ -29,7 +29,7 @@ class ManipulateEnv(gym.Env):
     def __init__(self, bEffort=True):
         super(ManipulateEnv, self).__init__()
 
-        self.goal = [-0.2, 0.0, 0.72]
+        self.goal = np.array([0.0, 0.0, 0.72])
         self.bEffort = bEffort
         
         self.action_space = spaces.Box(low=np.array([-1, -1, -1]), high=np.array([1, 1, 1]), dtype=np.float32)        
@@ -372,7 +372,7 @@ class ManipulateEnv(gym.Env):
         pass
     
     def calc_dist(self):
-        dist = np.linalg.norm(np.array(self.observation[0:3])-np.array(self.goal))      # math.sqrt((self.observation[0]-self.goal[0]) ** 2 + (self.observation[1]-self.goal[1])  ** 2)
+        dist = np.linalg.norm(self.e-self.goal)      # math.sqrt((self.observation[0]-self.goal[0]) ** 2 + (self.observation[1]-self.goal[1])  ** 2)
         return dist
 
     def calc_shaped_reward(self):

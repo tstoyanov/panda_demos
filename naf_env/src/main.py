@@ -129,6 +129,7 @@ def main():
     total_numsteps = 0
     updates = 0
     
+    # env cleanup
     env.stop()
     
     t_start = time.time()
