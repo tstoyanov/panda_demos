@@ -9,7 +9,7 @@ Panels:
         - /TF1/Frames1
         - /TF1/Tree1
         - /Effort1
-        - /Effort1/Status1
+        - /MarkerArray3
       Splitter Ratio: 0.497854083776474
     Tree Height: 796
   - Class: rviz/Selection
@@ -172,7 +172,7 @@ Visualization Manager:
       Marker Topic: /hiqp_joint_effort_controller/visualization_marker
       Name: MarkerArray
       Namespaces:
-        /yumi: true
+        {}
       Queue Size: 100
       Value: true
     - Alpha: 1
@@ -202,6 +202,14 @@ Visualization Manager:
       Unreliable: false
       Value: true
       Width: 0.019999999552965164
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /hiqp_joint_velocity_controller/visualization_marker
+      Name: MarkerArray
+      Namespaces:
+        /yumi: true
+      Queue Size: 100
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 230; 230; 230
@@ -230,7 +238,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 3.4978818893432617
+      Distance: 2.5934183597564697
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -245,10 +253,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.43479475378990173
+      Pitch: 0.6747953295707703
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.5122499465942383
+      Yaw: 3.047253370285034
     Saved: ~
 Window Geometry:
   Displays:

@@ -82,12 +82,12 @@ def qhull(A,J,b):
     # a feasible point that is furthest from constraints solution
     upper_feasible = linprog(c, A_ub=A_up, b_ub=b, bounds=(None, None))
 
-    print("upper_feasible.x[-1]:", upper_feasible.x[-1])
     if(upper_feasible.success and upper_feasible.x[-1]>0):
         #check = A.dot(second_feasible.x[:-1]) - b #should be < 0
         feasible_point = upper_feasible.x[:-1]
     else:
         print("infeasible (upper)")
+        print("upper_feasible.x[-1]:", upper_feasible.x[-1])
         return False, Ax, bx
 
     #construct halfspace intersection -> convex feasible region in upper space

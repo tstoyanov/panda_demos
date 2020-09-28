@@ -51,6 +51,8 @@ def main():
                         help='hidden size (default: 128)')
     parser.add_argument('--updates_per_step', type=int, default=20, metavar='N',
                     help='model updates per simulator step (default: 20)')
+    parser.add_argument('--run_id', type=int, default=0, metavar='N',
+                        help='increment this externally to re-run same parameters multiple times')
     parser.add_argument('--replay_size', type=int, default=1000000, metavar='N',
                         help='size of replay buffer (default: 1000000)')
     parser.add_argument('--save_agent', type=bool, default=True,
@@ -215,8 +217,9 @@ def main():
         #Training models
         if len(memory) > args.batch_size and args.train_model:
             print("Training model")
-            env.step(torch.Tensor([[0,0,0]]))
-            
+            #env.step(torch.Tensor([[0,0,0]]))
+            #print("======>step zero action")
+
             for _ in range(args.updates_per_step*args.num_steps):
                 transitions = memory.sample(args.batch_size)
                 batch = Transition(*zip(*transitions))
@@ -272,7 +275,7 @@ def main():
             test_writer.writerow(np.concatenate(([episode_reward], visits), axis=None))
 
             rewards.append(episode_reward)
-            print("Episode: {}, total numsteps: {}, reward: {}, average reward: {}".format(i_episode, total_numsteps, rewards[-1], np.mean(rewards[-10:])))
+            print("===>Evaluation Episode: {}, total numsteps: {}, reward: {}, average reward: {}".format(i_episode, total_numsteps, rewards[-1], np.mean(rewards[-10:])))
             print('Time per episode: {} s'.format((time.time() - t_start) / (i_episode+1)))
             print("Percentage of actions in constraint violation was {}".format(np.sum([env.episode_trace[i][2]>0 for i in range(len(env.episode_trace))])))
 
