@@ -52,6 +52,8 @@ class ManipulateEnv(gym.Env):
         
         #queue size = 1 only keeps most recent message
         self.sub = rospy.Subscriber("/ee_rl/state", StateMsg, self._next_observation, queue_size=1)
+        #monitor constraints      
+        self.sub_monitor = rospy.Subscriber("/hiqp_joint_velocity_controller/task_measures", TaskMeasures, self._constraint_monitor, queue_size=1)
 
         self.rate.sleep()
         time.sleep(1) #wait for ros to start up
@@ -77,6 +79,7 @@ class ManipulateEnv(gym.Env):
         ee_prim = Primitive(name='ee_point',type='point',frame_id='panda_hand',visible=True,color=[1,0,0,1],parameters=[0,0,0])
         goal_prim = Primitive(name='goal',type='box',frame_id='world',visible=True,color=[0,1,0,1],parameters=[self.goal[0],self.goal[1],self.goal[2],0.04, 0.04, 0.04])
         table_plane = Primitive(name='table_plane',type='plane',frame_id='world',visible=True,color=[1,0,1,0.5],parameters=[0,0,1,0.7])
+        up_plane = Primitive(name='up_plane',type='plane',frame_id='world',visible=True,color=[1,0,1,0.5],parameters=[0,0,1,1.2])
         back_plane = Primitive(name='back_plane',type='plane',frame_id='world',visible=True,color=[0.2,0.5,0.2,0.21],parameters=[0,1,0,-0.3])
         front_plane = Primitive(name='front_plane',type='plane',frame_id='world',visible=True,color=[0.2,0.5,0.2,0.21],parameters=[0,1,0,0.3])
         left_plane = Primitive(name='left_plane',type='plane',frame_id='world',visible=True,color=[0.2,0.5,0.2,0.21],parameters=[1,0,0,-0.3])
@@ -84,7 +87,7 @@ class ManipulateEnv(gym.Env):
         #table_z_axis = Primitive(name='table_z_axis',type='line',frame_id='world',visible=True,color=[0,1,1,1],parameters=[0,0,1,0,0,0])
         #ee_z_axis = Primitive(name='ee_z_axis',type='line',frame_id='panda_hand',visible=True,color=[0,1,1,1],parameters=[0,0,1,0,0,0])
         
-        hiqp_primitve_srv([ee_prim, goal_prim, table_plane, back_plane, front_plane, left_plane, right_plane])
+        hiqp_primitve_srv([ee_prim, goal_prim, table_plane, up_plane, back_plane, front_plane, left_plane, right_plane])
         
     def set_tasks(self):
         if self.bEffort:
@@ -95,6 +98,9 @@ class ManipulateEnv(gym.Env):
             
         ee_plane = Task(name='ee_plane_table',priority=1,visible=True,active=True,monitored=True,
                         def_params=['TDefGeomProj','point', 'plane', 'ee_point > table_plane'],
+                        dyn_params=['TDynPD', '1.0', '2.0'])
+        cage_up = Task(name='ee_cage_up',priority=2,visible=True,active=True,monitored=True,
+                        def_params=['TDefGeomProj','point', 'plane', 'ee_point < up_plane'],
                         dyn_params=['TDynPD', '1.0', '2.0'])
         cage_front = Task(name='ee_cage_front',priority=2,visible=True,active=True,monitored=True,
                           def_params=['TDefGeomProj','point', 'plane', 'ee_point < front_plane'],
@@ -118,7 +124,7 @@ class ManipulateEnv(gym.Env):
                           def_params=['TDefFullPose', '0.0', '-1.17', '0.0', '-2.89', '0.0', '1.82', '0.84'],
                           dyn_params=['TDynPD', '1.0', '2.0'])
 
-        hiqp_task_srv([ee_plane, cage_front, cage_back, cage_left, cage_right, rl_task, redundancy])
+        hiqp_task_srv([ee_plane, cage_up, cage_front, cage_back, cage_left, cage_right, rl_task, redundancy])
         #hiqp_task_srv([rl_task])
     
     def _next_observation(self, data):
@@ -141,6 +147,55 @@ class ManipulateEnv(gym.Env):
         self.observation = np.concatenate([np.squeeze(self.q), np.squeeze(self.dq), self.e-self.goal])
         
         self.fresh = True
+
+    def _constraint_monitor(self, data):
+        for task in data.task_measures:
+            if task.task_name == "ee_cage_back" and task.e[0] < 0:
+                print("*************ee_cage_back violated!")
+            
+            if task.task_name == "ee_cage_front" and task.e[0] > 0:
+                print("*************ee_cage_front violated!")
+            
+            if task.task_name == "ee_cage_left" and task.e[0] < 0:
+                print("*************ee_cage_left violated!")
+            
+            if task.task_name == "ee_cage_right" and task.e[0] > 0:
+                print("*************ee_cage_right violated!")
+                
+            if task.task_name == "ee_cage_up" and task.e[0] > 0:
+                print("*************ee_cage_up violated!")
+            
+            if task.task_name == "ee_plane_table" and task.e[0] < 0:
+                print("*************ee_plane_table violated!")
+                
+            if task.task_name == "jnt1_limits":
+                if task.e[0] < 0 or task.e[1] > 0 or task.e[2] < 0 or task.e[3] > 0 or task.e[4] < 0 or task.e[5] > 0:
+                    print("*************jnt1_limits violated!")
+                    
+            if task.task_name == "jnt2_limits":
+                if task.e[0] < 0 or task.e[1] > 0 or task.e[2] < 0 or task.e[3] > 0 or task.e[4] < 0 or task.e[5] > 0:
+                    print("*************jnt2_limits violated!")
+                    
+            if task.task_name == "jnt3_limits":
+                if task.e[0] < 0 or task.e[1] > 0 or task.e[2] < 0 or task.e[3] > 0 or task.e[4] < 0 or task.e[5] > 0:
+                    print("*************jnt3_limits violated!")
+                    
+            if task.task_name == "jnt4_limits":
+                if task.e[0] < 0 or task.e[1] > 0 or task.e[2] < 0 or task.e[3] > 0 or task.e[4] < 0 or task.e[5] > 0:
+                    print("*************jnt4_limits violated!")
+                    
+            if task.task_name == "jnt5_limits":
+                if task.e[0] < 0 or task.e[1] > 0 or task.e[2] < 0 or task.e[3] > 0 or task.e[4] < 0 or task.e[5] > 0:
+                    print("*************jnt5_limits violated!")
+                    
+            if task.task_name == "jnt6_limits":
+                if task.e[0] < 0 or task.e[1] > 0 or task.e[2] < 0 or task.e[3] > 0 or task.e[4] < 0 or task.e[5] > 0:
+                    print("*************jnt6_limits violated!")
+                    
+            if task.task_name == "jnt7_limits":
+                if task.e[0] < 0 or task.e[1] > 0 or task.e[2] < 0 or task.e[3] > 0 or task.e[4] < 0 or task.e[5] > 0:
+                    print("*************jnt7_limits violated!")
+         
 
     def step(self, action):
         # Execute one time step within the environment
@@ -219,7 +274,7 @@ class ManipulateEnv(gym.Env):
 
         while not self.fresh:
             self.rate.sleep()
-        return self.observation  # reward, done, info can't be included
+        return self.observation  # reward, done, info can't be included      
 
     def reset_vel(self):
         self.episode_trace.clear()
