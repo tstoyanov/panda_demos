@@ -81,9 +81,6 @@ def main():
         env = ManipulateEnv(bEffort=False)
         env.set_scale(args.action_scale)
         env.set_kd(args.kd)
-        
-        #env.set_primitives()
-        #env.set_tasks()
     else:
         env = gym.make(args.env_name)
     
@@ -136,11 +133,7 @@ def main():
     for i_episode in range(args.num_episodes+1):
         # -- reset environment for every episode --
         print('++++++++i_episode+++++++:', i_episode)
-        t_st = time.time()
-        #state = env.reset()
-        state = torch.Tensor([env.start()])
-        print("reset took {}".format(time.time() - t_st))
-
+        
         scale = (args.noise_scale - args.final_noise_scale) * max(0, args.exploration_end - i_episode) / args.exploration_end + args.final_noise_scale
         scale = [min(scale,0.4), min(scale,0.2)]
         print("noise scale is {} {}".format(scale[0],scale[1]))
@@ -158,14 +151,19 @@ def main():
         
         t_project = 0
         t_act = 0
+        
+        t_st = time.time()
+        #state = env.reset()
+        state = torch.Tensor([env.start()])
+        print("reset took {}".format(time.time() - t_st))
+        
         while True:
             # -- action selection, observation and store transition --
-            if args.ou_noise:
+            if args.ou_noise:               
                 action = agent.select_action(state, ounoise) if args.train_model else agent.select_action(state)
                 if args.project_actions:
                     #project, add noise, project again
                     action = agent.select_proj_action(state, Ax_prev, bx_prev, ounoise)
-                    #print("action", action)
                     #else clause: just plain OU noise on top (or no-noise)
             else:
                 if args.constr_gauss_sample:
@@ -221,6 +219,7 @@ def main():
             #env.step(torch.Tensor([[0,0,0]]))
             #print("======>step zero action")
 
+            t_st = time.time()
             for _ in range(args.updates_per_step*args.num_steps):
                 transitions = memory.sample(args.batch_size)
                 batch = Transition(*zip(*transitions))
@@ -272,7 +271,7 @@ def main():
                 if done or greedy_numsteps % args.num_steps == 0:
                     break
                 
-            #writer.add_scalar('reward/test', episode_reward, i_episode)
+            writer.add_scalar('reward/test', episode_reward, i_episode)
             test_writer.writerow(np.concatenate(([episode_reward], visits), axis=None))
 
             rewards.append(episode_reward)

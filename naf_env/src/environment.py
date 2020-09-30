@@ -84,7 +84,7 @@ class ManipulateEnv(gym.Env):
         #table_z_axis = Primitive(name='table_z_axis',type='line',frame_id='world',visible=True,color=[0,1,1,1],parameters=[0,0,1,0,0,0])
         #ee_z_axis = Primitive(name='ee_z_axis',type='line',frame_id='panda_hand',visible=True,color=[0,1,1,1],parameters=[0,0,1,0,0,0])
         
-        hiqp_primitve_srv([ee_prim, goal_prim, table_plane, back_plane, front_plane, left_plane, right_plane])     
+        hiqp_primitve_srv([ee_prim, goal_prim, table_plane, back_plane, front_plane, left_plane, right_plane])
         
     def set_tasks(self):
         if self.bEffort:
@@ -116,9 +116,10 @@ class ManipulateEnv(gym.Env):
                           dyn_params=['TDynAsyncPolicy', '{}'.format(self.kd), 'ee_rl/act', 'ee_rl/state'])
         redundancy = Task(name='full_pose',priority=4,visible=True,active=True,monitored=True,
                           def_params=['TDefFullPose', '0.0', '-1.17', '0.0', '-2.89', '0.0', '1.82', '0.84'],
-                          dyn_params=['TDynPD', '16.0', '9.0'])
+                          dyn_params=['TDynPD', '1.0', '2.0'])
 
-        hiqp_task_srv([ee_plane, cage_front, cage_back, cage_left, cage_right, rl_task, redundancy])    
+        hiqp_task_srv([ee_plane, cage_front, cage_back, cage_left, cage_right, rl_task, redundancy])
+        #hiqp_task_srv([rl_task])
     
     def _next_observation(self, data):
         self.e = np.array(data.e)
@@ -380,7 +381,15 @@ class ManipulateEnv(gym.Env):
         done = False
 
         dist = self.calc_dist()
-
+        
+        if dist < 0.1:
+            reward += 100
+            print("---0.1 region reached!")
+            
+        if dist < 0.05:
+            reward += 200
+            print("---0.1 region reached!")
+        
         if dist < 0.02:
             reward += 500
             print("--- Goal reached!! ---")

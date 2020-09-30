@@ -87,7 +87,7 @@ def qhull(A,J,b):
         feasible_point = upper_feasible.x[:-1]
     else:
         print("infeasible (upper)")
-        print("upper_feasible.x[-1]:", upper_feasible.x[-1])
+        #print("upper_feasible.x[-1]:", upper_feasible.x[-1])
         return False, Ax, bx
 
     #construct halfspace intersection -> convex feasible region in upper space
