@@ -29,17 +29,17 @@ def main():
     parser.add_argument('--ou_noise', type=bool, default=True)
     parser.add_argument('--constr_gauss_sample', type=bool, default=False,
                         help='Should we use constrained Gaussian sampling?')
-    parser.add_argument('--noise_scale', type=float, default=0.5, metavar='G',
+    parser.add_argument('--noise_scale', type=float, default=0.6, metavar='G',
                         help='initial noise scale (default: 0.5)')
-    parser.add_argument('--final_noise_scale', type=float, default=0.2, metavar='G',
+    parser.add_argument('--final_noise_scale', type=float, default=0.2, metavar='G',####0.2
                         help='final noise scale (default: 0.2)')
-    parser.add_argument('--project_actions', type=bool, default=False,
+    parser.add_argument('--project_actions', type=bool, default=True,########False
                         help='project to feasible actions only during training')
     parser.add_argument('--optimize_actions', type=bool, default=False,
                         help='add loss to objective')
     parser.add_argument('--exploration_end', type=int, default=100, metavar='N',
                         help='number of episodes with noise (default: 100)')
-    parser.add_argument('--seed', type=int, default=4, metavar='N',
+    parser.add_argument('--seed', type=int, default=54123, metavar='N',####4
                         help='random seed (default: 4)')
     parser.add_argument('--batch_size', type=int, default=512, metavar='N',
                         help='batch size (default: 512)')
@@ -49,7 +49,7 @@ def main():
                         help='number of episodes (default: 5000)')
     parser.add_argument('--hidden_size', type=int, default=128, metavar='N',
                         help='hidden size (default: 128)')
-    parser.add_argument('--updates_per_step', type=int, default=20, metavar='N',
+    parser.add_argument('--updates_per_step', type=int, default=10, metavar='N',###20
                     help='model updates per simulator step (default: 20)')
     parser.add_argument('--run_id', type=int, default=0, metavar='N',
                         help='increment this externally to re-run same parameters multiple times')
@@ -132,16 +132,15 @@ def main():
     t_start = time.time()
     for i_episode in range(args.num_episodes+1):
         # -- reset environment for every episode --
-        print('++++++++i_episode+++++++:', i_episode)
+        print('++++++++i_episode++++++++:', i_episode)
         
         scale = (args.noise_scale - args.final_noise_scale) * max(0, args.exploration_end - i_episode) / args.exploration_end + args.final_noise_scale
-        scale = [min(scale,0.4), min(scale,0.2)]
-        print("noise scale is {} {}".format(scale[0],scale[1]))
+        #scale = [min(scale,0.4), min(scale,0.2)]
+        print("noise scale is {}".format(scale))
 
         # -- initialize noise (random process N) --
         if args.ou_noise:
-            ounoise.scale = (args.noise_scale - args.final_noise_scale) * max(
-                0, args.exploration_end - i_episode / args.exploration_end + args.final_noise_scale)
+            ounoise.scale = scale
             ounoise.reset()
 
         episode_reward = 0
@@ -175,6 +174,7 @@ def main():
                     
             # env step        
             t_st0 = time.time()
+            #print(">>>>>>action:", action)
             next_state, reward, done, Ax, bx = env.step(action)
             t_act += time.time() - t_st0
             #print("act took {}".format(time.time() - t_st0))
@@ -198,7 +198,7 @@ def main():
                 
             state = next_state
                 
-            if done or total_numsteps % args.num_steps == 0:
+            if done or total_numsteps % args.num_steps == 0 or env.bConstraint:
                 #print('total_numsteps', total_numsteps)
                 break
             

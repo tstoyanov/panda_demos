@@ -93,6 +93,7 @@ class Policy(nn.Module):
         L = L * \
             self.tril_mask.expand_as(
                 L) + torch.exp(L) * self.diag_mask.expand_as(L) + self.lam*self.diag_mask.expand_as(L)
+
         P = torch.bmm(L, L.transpose(2, 1))
         if u is not None:
 

@@ -65,8 +65,19 @@ def plot_halfspace_2d(halfspaces,hs,feasible,signs):
     #plt.plot(hs.dual_points[:,0],hs.dual_points[:,1], 'rx')
     plt.show()
 
+def check_coplane(A):
+    epsilon = 0.001
+    n = len(A)   
+    for i in range(n-1):
+        for j in range(i+1, n):
+            if np.abs(np.dot(A[i], A[j])/(np.linalg.norm(A[i])*np.linalg.norm(A[j]))) > 1 - epsilon:
+                print("A[{}] parallel to A[{}]".format(i, j))
 
 def qhull(A,J,b):
+    # check co-hyperplanes
+    if False:
+        check_coplane(A)
+        
     n_jnts = np.shape(A[1])[0]
     n_constraints = np.shape(A)[0]
     n_action_dim = np.shape(J)[0]
@@ -83,8 +94,15 @@ def qhull(A,J,b):
     upper_feasible = linprog(c, A_ub=A_up, b_ub=b, bounds=(None, None))
 
     if(upper_feasible.success and upper_feasible.x[-1]>0):
-        #check = A.dot(second_feasible.x[:-1]) - b #should be < 0
+        check = A.dot(np.reshape(upper_feasible.x[:-1],[n_jnts, 1])) - b #should be < 0
+        #print("check:", check)
+        if not all(check):
+            print("unsatisfied checks are:", [i for i, value in enumerate(check) if value > 0])
         feasible_point = upper_feasible.x[:-1]
+        
+        # distance of feasible point to each constraint 
+        distance = np.abs(check)/norm_vector
+        #print("distance:", distance)
     else:
         print("infeasible (upper)")
         #print("upper_feasible.x[-1]:", upper_feasible.x[-1])
@@ -92,6 +110,8 @@ def qhull(A,J,b):
 
     #construct halfspace intersection -> convex feasible region in upper space
     halfspaces = np.hstack((A,np.reshape(-b,(n_constraints,1))))
+    #print("halfspaces:", halfspaces)
+    #print("feasible_point:", feasible_point)
     hs = HalfspaceIntersection(halfspaces, feasible_point)
 
     #project vertices to lower space
@@ -99,12 +119,13 @@ def qhull(A,J,b):
 
     # convex hull in lower space should be boundary to allowed region
     hull = ConvexHull(lower_points.T)
+    #print("hull=",hull.equations[:,:-1])
 
     Ax = hull.equations[:,:-1]
     bx = -hull.equations[:,-1]
-
+    
     # just for fun, let's check feasible point
-    ff = Ax.dot(J.dot(feasible_point)) - bx
+    #ff = Ax.dot(J.dot(feasible_point)) - bx
     return True, Ax, bx
 
 def evl_Gaussain(x, mu, Sigma):
