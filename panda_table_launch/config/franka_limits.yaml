@@ -61,7 +61,7 @@ hiqp_joint_velocity_controller:
       priority: 0
       active: true
       monitored: true
-      def_params: ['TDefJntLimits','panda_link1', '1.0', '2.0', '-1.4', '1.4'] #ddq_max, dq_max, lower link limit, upper joint limit
+      def_params: ['TDefJntLimits','panda_link1', '1.0', '2.0', '-1.5', '1.5'] #ddq_max, dq_max, lower link limit, upper joint limit
       dyn_params: ['TDynPD', '1.0', '2.0']
     - name: 'jnt2_limits'
       priority: 0
@@ -73,13 +73,13 @@ hiqp_joint_velocity_controller:
       priority: 0
       active: true
       monitored: true
-      def_params: ['TDefJntLimits','panda_link3', '1.0', '2.0', '-2.7', '2.7']
+      def_params: ['TDefJntLimits','panda_link3', '1.0', '2.0', '-2.8', '2.8']
       dyn_params: ['TDynPD', '1.0', '2.0']
     - name: 'jnt4_limits'
       priority: 0
       active: true
       monitored: true
-      def_params: ['TDefJntLimits','panda_link4', '1.0', '2.0', '-2.95', '-0.15']
+      def_params: ['TDefJntLimits','panda_link4', '1.0', '2.0', '-3.0', '-0.15']
       dyn_params: ['TDynPD', '1.0', '2.0']
     - name: 'jnt5_limits'
       priority: 0

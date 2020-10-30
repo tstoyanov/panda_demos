@@ -102,6 +102,8 @@ class Policy(nn.Module):
                 torch.bmm(torch.bmm(u_mu.transpose(2, 1), P), u_mu)[:, :, 0]
 
             Q = A + V
+        else:
+            Q = V
 
         return mu, Q, V, P
 
@@ -124,19 +126,18 @@ class NAF:
     #@profile
     def select_action(self, state, action_noise=None):
         self.model.eval()
-        mu, _, _, _ = self.model((Variable(state), None))
+        mu, Q, _, _ = self.model((Variable(state), None))
         self.model.train()
         mu = mu.data
         if action_noise is not None:
             mu += torch.Tensor(action_noise.noise())
-        return mu.clamp(-1, 1)
+        return mu.clamp(-1, 1), Q
 
     def select_proj_action(self, state, Ax, bx, action_noise=None, simple_noise=0):
         self.model.eval()
-        mu, _, _, P = self.model((Variable(state), None))
+        mu, Q, V, P = self.model((Variable(state), None))
         self.model.train()
         mu = mu.data
-
         pa = quad.project_action_cov(mu.numpy()[0], Ax, bx, P.detach().numpy()[0])
         if action_noise is not None:
             pa = torch.Tensor([quad.project_action(pa + action_noise.noise(), Ax, bx)])
@@ -147,8 +148,9 @@ class NAF:
             else:
                 #no noise
                 pa = torch.Tensor([pa])
-        return pa
-
+                 
+        return pa, Q
+        
     #@profile
     def update_parameters(self, batch, optimize_feasible_mu=False):
         state_batch = Variable(torch.cat(batch.state))
@@ -244,9 +246,10 @@ class NAF:
 
     def plot_path(self, state, action, episode):
         self.model.eval()
-        _, Q, _ = self.model((Variable(torch.cat(state)), Variable(torch.cat(action))))
+        #print("state:", state)
+        _, Q, _, _ = self.model((Variable(torch.cat(state),0), Variable(torch.cat(action),0)))
         self.model.train()
-        sx, sy, sz = torch.cat(state).numpy().T
+        sx, sy, sz = torch.cat(state).numpy().T[-3:]
         ax, ay, az = torch.cat(action).numpy().T
 
         qCat = []
@@ -256,14 +259,18 @@ class NAF:
         # 3D plot
         fig = plt.figure()
         ax3d = fig.gca(projection='3d')
-        ax3d.scatter3D(sx, sy, sz)
-        ax3d.scatter3D(sx[-1], sy[-1], sz[-1], color='r')
+        bar = ax3d.scatter3D(sx, sy, sz)
+        ax3d.scatter3D(sx[0], sy[0], sz[0], color='red', marker='^')
+        ax3d.scatter3D(sx[-1], sy[-1], sz[-1], color='green', marker='*')
         ax3d.set_xlabel('delta_x', fontsize=10, labelpad=20)
         ax3d.set_ylabel('delta_y', fontsize=10, labelpad=20)
         ax3d.set_zlabel('delta_z', fontsize=10, labelpad=20)
+        ax3d.set_xlim(-0.5,0.5)
+        ax3d.set_ylim(-0.5,0.5)
+        ax3d.set_zlim(0,0.5)
         #plt.xticks(np.arange(-0.3, 0.3, 0.1))
         #plt.yticks(np.arange(-0.3, 0.3, 0.1))
-        plt.title("Trajectory")
+        plt.title("Trajectory episode {}".format(episode))
 
         # plot arrow
         #ax3d.quiver(sx, sy, sz, ax/100.0, ay/100.0, az/100.0)
@@ -273,10 +280,12 @@ class NAF:
         for i in range(len(sx)):
             colorVal = scalarMap.to_rgba(qCat[i])
             if i == len(sx)-1:
-                colorVal = (1.0, 0.0, 0.0, 1.0)
+                colorVal = (0.0, 0.0, 1.0, 1.0)
 
-            ax3d.quiver(sx[i], sy[i], sz[i], ax[i]/100.0, ay[i]/100.0, az[i]/100.0, fc=colorVal, ec=colorVal)
-            
+            ax3d.quiver(sx[i], sy[i], sz[i], ax[i]/10.0, ay[i]/10.0, az[i]/10.0, fc=colorVal, ec=colorVal)
+        
+        fig.colorbar(bar,shrink=0.5)
+        #plt.show()
         fig = 'path_{}_{}'.format(episode, '.png')
         plt.savefig(fig, dpi=300)
         plt.close()
