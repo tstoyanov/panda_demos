@@ -253,12 +253,13 @@ class ManipulateEnv(gym.Env):
             '''
             #self.bConstraint = False
 
+    # Execute one time step within the environment       
     def step(self, action):
-        # Execute one time step within the environment
-        a = action.numpy()[0] * self.action_scale
         # clip action
         if not all(np.abs(a)<=1):
-            a = np.clip(a, -1, 1) 
+            a = np.clip(a, -1, 1)
+            
+        a = action.numpy()[0] * self.action_scale
         self.pub.publish(a)
         self.fresh = False
         while not self.fresh:
