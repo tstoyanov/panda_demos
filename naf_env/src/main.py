@@ -204,8 +204,8 @@ def main():
             
             Ax_prev = Ax
             bx_prev = bx[0]
-            
-            memory.push(state, action, mask, next_state, reward, Ax_trace, bx_trace)
+            if not env.bConstraint:
+                memory.push(state, action, mask, next_state, reward, Ax_trace, bx_trace)
                 
             state = next_state
                 

@@ -138,6 +138,7 @@ class NAF:
         mu, Q, V, P = self.model((Variable(state), None))
         self.model.train()
         mu = mu.data
+        
         pa = quad.project_action_cov(mu.numpy()[0], Ax, bx, P.detach().numpy()[0])
         if action_noise is not None:
             pa = torch.Tensor([quad.project_action(pa + action_noise.noise(), Ax, bx)])
@@ -267,7 +268,7 @@ class NAF:
         ax3d.set_zlabel('delta_z', fontsize=10, labelpad=20)
         ax3d.set_xlim(-0.5,0.5)
         ax3d.set_ylim(-0.5,0.5)
-        ax3d.set_zlim(0,0.5)
+        ax3d.set_zlim(0,0.8)
         #plt.xticks(np.arange(-0.3, 0.3, 0.1))
         #plt.yticks(np.arange(-0.3, 0.3, 0.1))
         plt.title("Trajectory episode {}".format(episode))

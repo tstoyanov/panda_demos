@@ -82,7 +82,7 @@ class ManipulateEnv(gym.Env):
         #ee_prim_link6 = Primitive(name='ee_point_link6',type='point',frame_id='panda_link6',visible=True,color=[1,0,0,1],parameters=[0,0,0.1])
         goal_prim = Primitive(name='goal',type='box',frame_id='world',visible=True,color=[0,1,0,1],parameters=[self.goal[0],self.goal[1],self.goal[2],0.04, 0.04, 0.04])
         table_plane = Primitive(name='table_plane',type='plane',frame_id='world',visible=True,color=[0,0,1,0.5],parameters=[0,0,1,0.7])
-        up_plane = Primitive(name='up_plane',type='plane',frame_id='world',visible=False,color=[0,0,0.1,0.1],parameters=[0,0,1,1.2])
+        up_plane = Primitive(name='up_plane',type='plane',frame_id='world',visible=False,color=[0,0,0.1,0.1],parameters=[0,0,1,1.3])
         back_plane = Primitive(name='back_plane',type='plane',frame_id='world',visible=True,color=[0,0,0.1,0.1],parameters=[0,1,0,-0.3])
         front_plane = Primitive(name='front_plane',type='plane',frame_id='world',visible=True,color=[0,0,0.1,0.1],parameters=[0,1,0,0.3])
         left_plane = Primitive(name='left_plane',type='plane',frame_id='world',visible=True,color=[0,0,0.1,0.1],parameters=[1,0,0,-0.3])
@@ -94,10 +94,10 @@ class ManipulateEnv(gym.Env):
         corner2 = Primitive(name='corner2',type='sphere',frame_id='world',visible=True,color=[0,0,1,1],parameters=[0.3,-0.3,0.7,0.01])
         corner3 = Primitive(name='corner3',type='sphere',frame_id='world',visible=True,color=[0,0,1,1],parameters=[-0.3,-0.3,0.7,0.01])
         corner4 = Primitive(name='corner4',type='sphere',frame_id='world',visible=True,color=[0,0,1,1],parameters=[-0.3,0.3,0.7,0.01])
-        corner5 = Primitive(name='corner5',type='sphere',frame_id='world',visible=True,color=[0,0,1,1],parameters=[0.3,0.3,1.2,0.01])
-        corner6 = Primitive(name='corner6',type='sphere',frame_id='world',visible=True,color=[0,0,1,1],parameters=[0.3,-0.3,1.2,0.01])
-        corner7 = Primitive(name='corner7',type='sphere',frame_id='world',visible=True,color=[0,0,1,1],parameters=[-0.3,-0.3,1.2,0.01])
-        corner8 = Primitive(name='corner8',type='sphere',frame_id='world',visible=True,color=[0,0,1,1],parameters=[-0.3,0.3,1.2,0.01])
+        corner5 = Primitive(name='corner5',type='sphere',frame_id='world',visible=True,color=[0,0,1,1],parameters=[0.3,0.3,1.3,0.01])
+        corner6 = Primitive(name='corner6',type='sphere',frame_id='world',visible=True,color=[0,0,1,1],parameters=[0.3,-0.3,1.3,0.01])
+        corner7 = Primitive(name='corner7',type='sphere',frame_id='world',visible=True,color=[0,0,1,1],parameters=[-0.3,-0.3,1.3,0.01])
+        corner8 = Primitive(name='corner8',type='sphere',frame_id='world',visible=True,color=[0,0,1,1],parameters=[-0.3,0.3,1.3,0.01])
         
         hiqp_primitve_srv([ee_prim, goal_prim, table_plane, up_plane, back_plane, front_plane, left_plane, right_plane,
                            corner1, corner2, corner3, corner4, corner5, corner6, corner7, corner8])
@@ -166,7 +166,7 @@ class ManipulateEnv(gym.Env):
         self.fresh = True
 
     def _constraint_monitor(self, data):
-        violate_thre = 0.05
+        violate_thre = 0.01
         penalty_scale = 100
         for task in data.task_measures:
             if task.task_name == "ee_cage_back" and task.e[0] < 0:
@@ -257,8 +257,8 @@ class ManipulateEnv(gym.Env):
         # Execute one time step within the environment
         a = action.numpy()[0] * self.action_scale
         # clip action
-        #if not all(np.abs(a)<=1):
-        #    a = np.clip(a, -1, 1) 
+        if not all(np.abs(a)<=1):
+            a = np.clip(a, -1, 1) 
         self.pub.publish(a)
         self.fresh = False
         while not self.fresh:
@@ -266,8 +266,7 @@ class ManipulateEnv(gym.Env):
         
         if self.project_actions:           
             success, Ax, bx = qhull(self.A, self.J, self.b)
-            #print("Ax", Ax)
-            #print("bx", bx)
+
             Ax = -Ax
             if(success) :
                 self.twriter.writerow(self.episode_trace[-1][0])
