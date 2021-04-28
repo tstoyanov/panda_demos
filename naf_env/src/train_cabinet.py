@@ -14,15 +14,14 @@ import csv
 from naf import NAF
 from ounoise import OUNoise
 from replay_memory import Transition, ReplayMemory
-from environment import ManipulateEnv
-
+from cabinet_env import CabinetEnv
 
 
 def main():
     parser = argparse.ArgumentParser(description='PyTorch X-job')
     parser.add_argument('--algo', default='NAF',
                         help='algorithm to use: NAF | DDPG')
-    parser.add_argument('--env_name', default="PandaEnv",
+    parser.add_argument('--env_name', default="CabinetEnv",
                         help='name of the environment')
     parser.add_argument('--gamma', type=float, default=0.99, metavar='G',
                         help='discount factor for reward (default: 0.99)')
@@ -35,8 +34,6 @@ def main():
                         help='initial noise scale (default: 0.5)')
     parser.add_argument('--final_noise_scale', type=float, default=0.2, metavar='G',####0.2
                         help='final noise scale (default: 0.2)')
-    parser.add_argument('--project_actions', type=bool, default=False,########False
-                        help='project to feasible actions only during training')
     parser.add_argument('--optimize_actions', type=bool, default=False,
                         help='add loss to objective')
     parser.add_argument('--exploration_end', type=int, default=100, metavar='N',
@@ -76,11 +73,10 @@ def main():
 
     args = parser.parse_args()
 
-    print("++++++action_scale:{} project_actions:{} optimize_actions:{}++++++".format(args.action_scale, args.project_actions, args.optimize_actions))
+    print("++++++action_scale:{} optimize_actions:{}++++++".format(args.action_scale, args.optimize_actions))
 
-
-    if args.env_name == 'PandaEnv':
-        env = ManipulateEnv(bEffort=False)
+    if args.env_name == 'CabinetEnv':
+        env = CabinetEnv(bEffort=False)
         env.set_scale(args.action_scale)
         env.set_kd(args.kd)
     else:
@@ -162,16 +158,12 @@ def main():
         
         Ax = np.identity(env.action_space.shape[0])
         bx = env.action_space.high
+                    
+        switch_once = 0
         while True:
             # -- action selection, observation and store transition --
             if args.ou_noise:               
-                if args.project_actions:
-                    #project action and ou-noise
-                    Ax, bx = env.project_constraint()
-                    action, Q = agent.select_proj_action(state, Ax, bx[0], ounoise)
-                    #else clause: just plain OU noise on top (or no-noise)
-                else:
-                    action, Q = agent.select_action(state, ounoise) if args.train_model else agent.select_action(state)
+                action, Q = agent.select_action(state, ounoise) if args.train_model else agent.select_action(state)
             else:
                 if args.constr_gauss_sample:
                     #Gaussian noise sample
@@ -184,7 +176,11 @@ def main():
             t_st0 = time.time()            
             next_state, reward, done = env.step(action)
             t_act += time.time() - t_st0
-            #print("act took {}".format(time.time() - t_st0))         
+            #print("act took {}".format(time.time() - t_st0))   
+            
+            if env.constraint_phase == 2 and switch_once == 0:
+                env.switch_constraint_phase()
+                switch_once = 1
 
             # only take error space(3-dimension) from state space
             Q = Q.detach()
@@ -204,11 +200,6 @@ def main():
             states_visited.append(state)
             actions_taken.append(action)
             
-            #print("plotting one state action pair")
-            #agent.plot_state_action_pair([state], [action], [action_naf], Ax, bx, i_episode, episode_numsteps)
-            
-            Ax_prev = Ax
-            bx_prev = bx[0]
             if not env.bConstraint:
                 memory.push(state, action, mask, next_state, reward, Ax_trace, bx_trace)
                 
@@ -227,7 +218,7 @@ def main():
             
         print("Train Episode: {}, episode numsteps: {}, reward: {}, time: {} act: {} project: {}".format(i_episode, episode_numsteps,
                                                                          episode_reward, time.time()-t_st, t_act, t_project))
-        print("Percentage of actions in constraint violation was {}".format(np.sum([env.episode_trace[i][2]>0 for i in range(len(env.episode_trace))])))
+        #print("Percentage of actions in constraint violation was {}".format(np.sum([env.episode_trace[i][2]>0 for i in range(len(env.episode_trace))])))
 
         train_writer.writerow(np.concatenate(([episode_reward],visits),axis=None))
         rewards.append(episode_reward)
@@ -257,12 +248,6 @@ def main():
         
         #plot state value functions!!!!!!
         agent.plot_path(states_visited, actions_taken, i_episode)
-                
-        #agent.save_value_funct(
-        #    args.logdir + '/kd{}_sd{}_as{}_us_{}'.format(args.kd, args.seed, args.action_scale, args.updates_per_step),
-        #    i_episode,
-        #    ([-3.0, -3.0], [3.0, 3.0], [600, 600]))
-        
             
         if time.time() - t_st < 4:
             print("waiting for reset...")
@@ -282,18 +267,13 @@ def main():
             visits = []
             while True:
                 action, Q = agent.select_action(state)
-                if args.project_actions:
-                    Ax, bx = env.project_constraint()
-                    action, Q = agent.select_proj_action(state, Ax, bx[0])
                 
                 next_state, reward, done = env.step(action)
                 Q = Q.detach()
                 visits = np.concatenate((visits, state.numpy()[0][-3:], args.action_scale*action, [reward], [Q]), axis=None)
                 episode_reward += reward
                 greedy_numsteps += 1
-                Ax_prev = Ax
-                bx_prev = bx[0]
-                        
+                
                 #state = next_state
                 state = torch.Tensor([next_state])
 
@@ -307,7 +287,7 @@ def main():
             rewards.append(episode_reward)
             print("Evaluation Episode: {}, total numsteps: {}, reward: {}, average reward: {}".format(i_episode, episode_numsteps, rewards[-1], np.mean(rewards[-10:])))
             print('Time per episode: {} s'.format((time.time() - t_start) / (i_episode+1)))
-            print("Percentage of actions in constraint violation was {}".format(np.sum([env.episode_trace[i][2]>0 for i in range(len(env.episode_trace))])))
+            #print("Percentage of actions in constraint violation was {}".format(np.sum([env.episode_trace[i][2]>0 for i in range(len(env.episode_trace))])))
 
             env.stop()
             time.sleep(4.0) #wait for reset

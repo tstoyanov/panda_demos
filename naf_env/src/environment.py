@@ -23,6 +23,7 @@ from trajectory_msgs.msg import *
 from halfspaces import qhull
 
 
+
 class ManipulateEnv(gym.Env):
     """Manipulation Environment that follows gym interface"""
     metadata = {'render.modes': ['human']}
@@ -33,14 +34,13 @@ class ManipulateEnv(gym.Env):
         self.bEffort = bEffort
         self.bConstraint = False
         self.reward = 0
-        self.project_actions = False
         self.action_space = spaces.Box(low=np.array([-1, -1, -1]), high=np.array([1, 1, 1]), dtype=np.float32)        
         obs_low = np.array([-2.9, -2.9, -2.9, -2.9, -2.9, -2.9, -2.9,#q
                             -2.0, -2.0, -2.0, -2.0, -2.0, -2.0, -2.0,#dq
                             -1.0, -1.0, -1.0])                       #e
         self.observation_space = spaces.Box(low=obs_low, high=-obs_low, dtype=np.float32)
         
-        self.action_scale = 10
+        self.action_scale = 1.0
         self.kd = 10
         
         rospy.init_node('DRL_node', anonymous=True)
@@ -148,10 +148,10 @@ class ManipulateEnv(gym.Env):
         self.e = np.array(data.e)
         self.de = np.array(data.de)
         self.J = np.transpose(np.reshape(np.array(data.J_lower), [data.n_joints,data.n_constraints_lower]))       
-        self.A = np.transpose(np.reshape(np.array(data.J_upper), [data.n_joints,data.n_constraints_upper]))          
+        self.A = np.transpose(np.reshape(np.array(data.J_upper), [data.n_joints,data.n_constraints_upper]))   
         self.b = -np.reshape(np.array(data.b_upper), [data.n_constraints_upper,1])
         self.rhs = -np.reshape(np.array(data.rhs_fixed_term), [data.n_constraints_lower,1])
-        self.q = np.reshape(np.array(data.q), [data.n_joints,1])       
+        self.q = np.reshape(np.array(data.q), [data.n_joints,1])
         self.dq = np.reshape(np.array(data.dq), [data.n_joints,1])
         self.ddq_star = np.reshape(np.array(data.ddq_star), [data.n_joints,1])
     
@@ -166,8 +166,8 @@ class ManipulateEnv(gym.Env):
         self.fresh = True
 
     def _constraint_monitor(self, data):
-        violate_thre = 0.01
-        penalty_scale = 100
+        violate_thre = 1.0
+        penalty_scale = 10
         for task in data.task_measures:
             if task.task_name == "ee_cage_back" and task.e[0] < 0:
                 if np.abs(task.e[0]) > violate_thre:
@@ -256,46 +256,48 @@ class ManipulateEnv(gym.Env):
     # Execute one time step within the environment       
     def step(self, action):
         # clip action
+        a = action.numpy()[0]
         if not all(np.abs(a)<=1):
             a = np.clip(a, -1, 1)
             
-        a = action.numpy()[0] * self.action_scale
+        a = a * self.action_scale
         self.pub.publish(a)
         self.fresh = False
         while not self.fresh:
             self.rate.sleep()
-        
-        if self.project_actions:           
-            success, Ax, bx = qhull(self.A, self.J, self.b)
 
-            Ax = -Ax
-            if(success) :
-                self.twriter.writerow(self.episode_trace[-1][0])
-                self.twriter.writerow(self.episode_trace[-1][1])
-                self.twriter.writerow(self.A)
-                self.twriter.writerow(self.b)
-                self.twriter.writerow(self.J)
-                self.twriter.writerow(action.numpy()[0])
-                self.twriter.writerow(self.observation)
-                self.twriter.writerow(self.ddq_star)
-                self.twriter.writerow(self.rhs)
-                bx = bx - Ax.dot(self.rhs).transpose()
-                #we should be checking the actions that were feasible according to previous set of constraints
-                Axw = self.episode_trace[-1][0].dot(action.numpy()[0] * self.action_scale)
-                feasible = Axw - self.episode_trace[-1][1]
-                n_infeasible = np.sum(feasible>0.001)
-                self.episode_trace.append((Ax,bx,n_infeasible))
-        else:
-            n_action_dim = np.shape(self.J)[0]           
-            Ax = np.zeros((1, n_action_dim))
-            bx = np.zeros(1)                 
-            
         if self.bConstraint:
             done = True
         else:
             self.reward, done = self.calc_shaped_reward()
+        
+        return self.observation, self.reward, done#, Ax, bx   
+    
+    def project_constraint(self):   
+        success, Ax, bx = qhull(self.A, self.J, self.b)
 
-        return self.observation, self.reward, done, Ax, bx    
+        #???
+        Ax = -Ax
+        if(success) :
+            #self.twriter.writerow(self.episode_trace[-1][0])
+            #self.twriter.writerow(self.episode_trace[-1][1])
+            #self.twriter.writerow(self.A)
+            #self.twriter.writerow(self.b)
+            #self.twriter.writerow(self.J)
+            #self.twriter.writerow(action.numpy()[0])
+            #self.twriter.writerow(self.observation)
+            #self.twriter.writerow(self.ddq_star)
+            #self.twriter.writerow(self.rhs)
+            #???
+            bx = bx - Ax.dot(self.rhs).transpose()
+            #bx = bx + Ax.dot(self.rhs).transpose()
+            #we should be checking the actions that were feasible according to previous set of constraints
+            #Axw = self.episode_trace[-1][0].dot(action.numpy()[0] * self.action_scale)
+            #feasible = Axw - self.episode_trace[-1][1]
+            #n_infeasible = np.sum(feasible>0.001)
+            #self.episode_trace.append((Ax,bx,n_infeasible))
+                 
+        return Ax, bx
 
     def stop(self):
         self.bConstraint = False
@@ -344,35 +346,6 @@ class ManipulateEnv(gym.Env):
             self.rate.sleep()
         return self.observation  # reward, done, info can't be included      
 
-    def reset_vel(self):
-        self.episode_trace.clear()
-        self.episode_trace = [(np.identity(self.action_space.shape[0]),self.action_space.high,0)]
-
-        cs = rospy.ServiceProxy('/controller_manager/switch_controller', SwitchController)
-        cs_unload = rospy.ServiceProxy('/controller_manager/unload_controller', UnloadController)
-        cs_load = rospy.ServiceProxy('/controller_manager/load_controller', LoadController)
-        remove_tasks = rospy.ServiceProxy('/hiqp_joint_velocity_controller/remove_all_tasks', RemoveAllTasks)
-        #print('removing tasks')
-        remove_tasks()
-        resp = cs({'velocity_joint_trajectory_controller'},{'hiqp_joint_velocity_controller'},2,True,0.1)
-        cs_unload('hiqp_joint_velocity_controller')
-        print('setting to home pose')
-        joints = ['panda_joint1', 'panda_joint2', 'panda_joint3', 'panda_joint4', 'panda_joint5', 'panda_joint6', 'panda_joint7']
-        self.velocity_pub.publish(JointTrajectory(joint_names=joints,points=[JointTrajectoryPoint(positions=[0.0, -1.17, 0.0, -2.89, 0.0, 1.82, 0.84],time_from_start=rospy.Duration(4.0))]))
-        time.sleep(4.5)
-        #restart hiqp
-        cs_load('hiqp_joint_velocity_controller')
-        #print("restarting controller")
-        resp = cs({'hiqp_joint_velocity_controller'},{'velocity_joint_trajectory_controller'},2,True,0.1)
-        #set tasks to controller
-        self.set_primitives()
-        self.set_tasks()
-
-        #wait for fresh state
-        self.fresh = False
-        while not self.fresh:
-            self.rate.sleep()
-        return self.observation  # reward, done, info can't be included
 
     # reset through full pose
     def reset(self):
@@ -395,51 +368,6 @@ class ManipulateEnv(gym.Env):
             self.rate.sleep()
 
         return self.observation  # reward, done, info can't be included        
-    
-    # reset through controller switch
-    def reset_cs(self):
-        # Reset the state of the environment to an initial state
-        if not self.bEffort:
-            return self.reset_vel()
-        
-        self.episode_trace.clear()
-        self.episode_trace = [(np.identity(self.action_space.shape[0]),self.action_space.high,0)]
-        
-        # Resetting environment
-        cs = rospy.ServiceProxy('/controller_manager/switch_controller', SwitchController)
-        cs_unload = rospy.ServiceProxy('/controller_manager/unload_controller', UnloadController)
-        cs_load = rospy.ServiceProxy('/controller_manager/load_controller', LoadController)
-        #remove_tasks = rospy.ServiceProxy('/hiqp_joint_effort_controller/remove_tasks', RemoveTasks)
-        remove_tasks = rospy.ServiceProxy('/hiqp_joint_effort_controller/remove_all_tasks', RemoveAllTasks)
-        #print('removing tasks')
-        #remove_tasks(['ee_plane_table', 'ee_cage_front', 'ee_cage_back', 'ee_cage_left', 'ee_cage_right', 'approach_align_z', 'ee_rl'])
-        remove_tasks()
-        #time.sleep(1)
-
-        #stop hiqp
-        #print('switching controller')
-        resp = cs({'position_joint_trajectory_controller'}, {'hiqp_joint_effort_controller'}, 2, True, 0.1)
-        #time.sleep(0.2)
-        cs_unload('hiqp_joint_effort_controller')
-
-        #print('setting to home pose')
-        joints = ['panda_joint1', 'panda_joint2', 'panda_joint3', 'panda_joint4', 'panda_joint5', 'panda_joint6', 'panda_joint7']
-        self.effort_pub.publish(JointTrajectory(joint_names=joints, points=[JointTrajectoryPoint(positions=[0.0, -1.17, 0.0, -2.89, 0.0, 1.82, 0.84], time_from_start=rospy.Duration(4.0))]))
-        time.sleep(4.5)
-        #restart hiqp
-        cs_load('hiqp_joint_effort_controller')
-
-        #print("restarting controller")
-        resp = cs({'hiqp_joint_effort_controller'}, {'position_joint_trajectory_controller'}, 2, True, 0.1)
-
-        #set tasks to controller
-        self.set_primitives()
-        self.set_tasks()
-        self.fresh = False
-        while not self.fresh:
-            self.rate.sleep()
-
-        return self.observation  # reward, done, info can't be included
     
     def reset_goal(self):
         rand_x = random.uniform(-0.2, 0.0)
@@ -504,14 +432,6 @@ class ManipulateEnv(gym.Env):
         done = False
 
         dist = self.calc_dist()
-        
-#        if dist < 0.2:
-#            reward += 50
-#            print("---0.2 region reached!")
-            
-#        if dist < 0.05:
-#            reward += 200
-#            print("---0.05 region reached!")
         
         if dist < 0.02:
             reward += 500
