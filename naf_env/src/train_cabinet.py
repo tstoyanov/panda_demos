@@ -42,8 +42,8 @@ def main():
                         help='random seed (default: 4)')
     parser.add_argument('--batch_size', type=int, default=512, metavar='N',
                         help='batch size (default: 512)')
-    parser.add_argument('--num_steps', type=int, default=300, metavar='N',
-                        help='max episode length (default: 300)')
+    parser.add_argument('--num_steps', type=int, default=500, metavar='N',
+                        help='max episode length (default: 500)')
     parser.add_argument('--num_episodes', type=int, default=1000, metavar='N',
                         help='number of episodes (default: 1000)')
     parser.add_argument('--hidden_size', type=int, default=128, metavar='N',
@@ -211,7 +211,7 @@ def main():
                 elif done:
                     print("To break due to reaching goal")
                 else:
-                    print("To break due to 300 steps per episode")
+                    print("To break due to 500 steps per episode")
                     
                 #print("break:", episode_numsteps)
                 break
