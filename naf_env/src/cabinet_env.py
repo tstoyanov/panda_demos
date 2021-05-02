@@ -87,70 +87,127 @@ class CabinetEnv(gym.Env):
             hiqp_primitve_srv = rospy.ServiceProxy('/hiqp_joint_velocity_controller/set_primitives', SetPrimitives)
 
         if self.constraint_phase == 1:
-            print("===>Enter Constraint Phase 1!")
-            ee_prim = Primitive(name='ee_point',type='point',frame_id='panda_hand',visible=True,color=[1,0,0,1],parameters=[0,0,0.1])
-            goal_prim = Primitive(name='goal',type='box',frame_id='world',visible=True,color=[0,1,0,1],parameters=[self.goal[0],self.goal[1],self.goal[2],0.04, 0.04, 0.04])
-            down_plane = Primitive(name='down_plane',type='plane',frame_id='world',visible=True,color=[0,0,1,0.5],parameters=[0,0,1,0.0])
+            ee_prim = Primitive(name='ee_point',type='point',frame_id='panda_hand',visible=True,color=[1,0,0,1],parameters=[0.1,0,0.2])
+            #goal_prim = Primitive(name='goal',type='box',frame_id='world',visible=True,color=[0,1,0,1],parameters=[self.goal[0],self.goal[1],self.goal[2],0.04, 0.04, 0.04])
+            down_plane = Primitive(name='down_plane',type='plane',frame_id='world',visible=False,color=[0,0,1,0.5],parameters=[0,0,1,0.0])
             up_plane = Primitive(name='up_plane',type='plane',frame_id='world',visible=False,color=[0,0,0.1,0.1],parameters=[0,0,1,0.9])
-            back_plane = Primitive(name='back_plane',type='plane',frame_id='world',visible=True,color=[0,0,0.1,0.1],parameters=[0,1,0,-0.1])
-            front_plane = Primitive(name='front_plane',type='plane',frame_id='world',visible=True,color=[0,0,0.1,0.1],parameters=[0,1,0,0.3])
-            left_plane = Primitive(name='left_plane',type='plane',frame_id='world',visible=True,color=[0,0,0.1,0.1],parameters=[1,0,0,-0.3])
-            right_plane = Primitive(name='right_plane',type='plane',frame_id='world',visible=True,color=[0,0,0.1,0.1],parameters=[1,0,0,0.3])
+            back_plane = Primitive(name='back_plane',type='plane',frame_id='world',visible=False,color=[0,0,0.1,0.1],parameters=[0,1,0,-0.1])
+            front_plane = Primitive(name='front_plane',type='plane',frame_id='world',visible=False,color=[0,0,0.1,0.1],parameters=[0,1,0,0.3])
+            left_plane = Primitive(name='left_plane',type='plane',frame_id='world',visible=False,color=[0,0,0.1,0.1],parameters=[1,0,0,-0.3])
+            right_plane = Primitive(name='right_plane',type='plane',frame_id='world',visible=False,color=[0,0,0.1,0.1],parameters=[1,0,0,0.3])
+            book_corner1 = Primitive(name='book_corner1',type='point',frame_id='panda_hand',visible=True,color=[1,0,0,1],parameters=[0.1,0,0.2])
             #table_z_axis = Primitive(name='table_z_axis',type='line',frame_id='world',visible=True,color=[0,1,1,1],parameters=[0,0,1,0.5,0,0])
             #ee_z_axis = Primitive(name='ee_z_axis',type='line',frame_id='panda_hand',visible=True,color=[0,1,1,1],parameters=[0,0,1,0,0,0])
-
             # to test box
-            #constraint_box1 = Primitive(name='constraint_box',type='box',frame_id='world',visible=True,color=[0.1,0.2,0,1],parameters=[0, 0.1, 0.45, 0.6, 0.4, 0.9])
+            hiqp_primitve_srv([ee_prim, down_plane, up_plane, back_plane, front_plane, left_plane, right_plane, book_corner1])
 
         elif self.constraint_phase == 2:
-            print("===>Enter Constraint Phase 2!")
             ee_prim = Primitive(name='ee_point',type='point',frame_id='panda_hand',visible=True,color=[1,0,0,1],parameters=[0,0,0.1])
-            goal_prim = Primitive(name='goal',type='box',frame_id='world',visible=True,color=[0,1,0,1],parameters=[self.goal2[0],self.goal2[1],self.goal2[2],0.04, 0.04, 0.04])
-            down_plane = Primitive(name='down_plane',type='plane',frame_id='world',visible=True,color=[0,0,1,0.5],parameters=[0,0,1,0.6])
+            #goal_prim = Primitive(name='goal',type='box',frame_id='world',visible=True,color=[0,1,0,1],parameters=[self.goal2[0],self.goal2[1],self.goal2[2],0.04, 0.04, 0.04])
+            down_plane = Primitive(name='down_plane',type='plane',frame_id='world',visible=False,color=[0,0,1,0.5],parameters=[0,0,1,0.6])
             up_plane = Primitive(name='up_plane',type='plane',frame_id='world',visible=False,color=[0,0,0.1,0.1],parameters=[0,0,1,0.9])
-            back_plane = Primitive(name='back_plane',type='plane',frame_id='world',visible=True,color=[0,0,0.1,0.1],parameters=[0,1,0,-0.3])
-            front_plane = Primitive(name='front_plane',type='plane',frame_id='world',visible=True,color=[0,0,0.1,0.1],parameters=[0,1,0,0.3])
-            left_plane = Primitive(name='left_plane',type='plane',frame_id='world',visible=True,color=[0,0,0.1,0.1],parameters=[1,0,0,-0.3])
-            right_plane = Primitive(name='right_plane',type='plane',frame_id='world',visible=True,color=[0,0,0.1,0.1],parameters=[1,0,0,0.3])
+            back_plane = Primitive(name='back_plane',type='plane',frame_id='world',visible=False,color=[0,0,0.1,0.1],parameters=[0,1,0,-0.3])
+            front_plane = Primitive(name='front_plane',type='plane',frame_id='world',visible=False,color=[0,0,0.1,0.1],parameters=[0,1,0,0.3])
+            left_plane = Primitive(name='left_plane',type='plane',frame_id='world',visible=False,color=[0,0,0.1,0.1],parameters=[1,0,0,-0.3])
+            right_plane = Primitive(name='right_plane',type='plane',frame_id='world',visible=False,color=[0,0,0.1,0.1],parameters=[1,0,0,0.3])
+            book_corner1 = Primitive(name='book_corner1',type='point',frame_id='panda_hand',visible=True,color=[1,0,0,1],parameters=[0.1,0,0.2])
+            #book_corner2 = Primitive(name='book_corner2',type='point',frame_id='book_base_link',visible=True,color=[1,0,0,1],parameters=[0,-0.07,0.1])
+            #book_corner3 = Primitive(name='book_corner3',type='point',frame_id='book_base_link',visible=True,color=[1,0,0,1],parameters=[0,-0.07,-0.1])
+            #book_corner4 = Primitive(name='book_corner4',type='point',frame_id='book_base_link',visible=True,color=[1,0,0,1],parameters=[0,0.07,-0.1])
 
-        hiqp_primitve_srv([ee_prim, goal_prim, down_plane, up_plane, back_plane, front_plane, left_plane, right_plane])
+            #constraint_box2 = Primitive(name='constraint_phase2',type='box',frame_id='world',visible=True,color=[0.1,0.2,0,1],parameters=[0, 0, 0.75, 0.6, 0.6, 0.3])
+            hiqp_primitve_srv([ee_prim, down_plane, up_plane, back_plane, front_plane, left_plane, right_plane, book_corner1])
         
     def set_tasks(self):
         if self.bEffort:
             hiqp_task_srv = rospy.ServiceProxy('/hiqp_joint_effort_controller/set_tasks', SetTasks)
         else:
             hiqp_task_srv = rospy.ServiceProxy('/hiqp_joint_velocity_controller/set_tasks', SetTasks)
-
-            
-        cage_down = Task(name='ee_cage_down',priority=0,visible=True,active=True,monitored=True,
-                        def_params=['TDefGeomProj','point', 'plane', 'ee_point > down_plane'],
-                        dyn_params=['TDynPD', '1.0', '2.0'])
-        cage_up = Task(name='ee_cage_up',priority=0,visible=True,active=True,monitored=True,
-                        def_params=['TDefGeomProj','point', 'plane', 'ee_point < up_plane'],
-                        dyn_params=['TDynPD', '1.0', '2.0'])
-        cage_front = Task(name='ee_cage_front',priority=0,visible=True,active=True,monitored=True,
-                          def_params=['TDefGeomProj','point', 'plane', 'ee_point < front_plane'],
-                          dyn_params=['TDynPD', '1.0', '2.0'])
-        cage_back = Task(name='ee_cage_back',priority=0,visible=True,active=True,monitored=True,
-                          def_params=['TDefGeomProj','point', 'plane', 'ee_point > back_plane'],
-                          dyn_params=['TDynPD', '1.0', '2.0'])
-        cage_left = Task(name='ee_cage_left',priority=0,visible=True,active=True,monitored=True,
-                          def_params=['TDefGeomProj','point', 'plane', 'ee_point > left_plane'],
-                          dyn_params=['TDynPD', '1.0', '2.0'])
-        cage_right = Task(name='ee_cage_right',priority=0,visible=True,active=True,monitored=True,
-                          def_params=['TDefGeomProj','point', 'plane', 'ee_point < right_plane'],
-                          dyn_params=['TDynPD', '1.0', '2.0'])
+        
         #approach_align_z = Task(name='approach_align_z',priority=0,visible=True,active=True,monitored=True,
         #                        def_params=['TDefGeomAlign','line', 'line', 'ee_z_axis = table_z_axis'],
         #                        dyn_params=['TDynPD', '1.0', '2.0'])
-        rl_task = Task(name='ee_rl',priority=1,visible=True,active=True,monitored=True,
-                          def_params=['TDefRLPick','1','0','0','0','1','0','0','0','1','ee_point'],
-                          dyn_params=['TDynAsyncPolicy', '{}'.format(self.kd), 'ee_rl/act', 'ee_rl/state'])
-        redundancy = Task(name='full_pose',priority=2,visible=True,active=True,monitored=True,
+        if self.constraint_phase == 1: 
+            print("===>Enter Constraint Phase 1!")
+            '''
+            cage_down = Task(name='ee_cage_down',priority=0,visible=True,active=True,monitored=True,
+                            def_params=['TDefGeomProj','point', 'plane', 'ee_point > down_plane'],
+                            dyn_params=['TDynPD', '1.0', '2.0'])
+            cage_up = Task(name='ee_cage_up',priority=0,visible=True,active=True,monitored=True,
+                            def_params=['TDefGeomProj','point', 'plane', 'ee_point < up_plane'],
+                            dyn_params=['TDynPD', '1.0', '2.0'])
+            cage_front = Task(name='ee_cage_front',priority=0,visible=True,active=True,monitored=True,
+                              def_params=['TDefGeomProj','point', 'plane', 'ee_point < front_plane'],
+                              dyn_params=['TDynPD', '1.0', '2.0'])
+            cage_back = Task(name='ee_cage_back',priority=0,visible=True,active=True,monitored=True,
+                              def_params=['TDefGeomProj','point', 'plane', 'ee_point > back_plane'],
+                              dyn_params=['TDynPD', '1.0', '2.0'])
+            cage_left = Task(name='ee_cage_left',priority=0,visible=True,active=True,monitored=True,
+                              def_params=['TDefGeomProj','point', 'plane', 'ee_point > left_plane'],
+                              dyn_params=['TDynPD', '1.0', '2.0'])
+            cage_right = Task(name='ee_cage_right',priority=0,visible=True,active=True,monitored=True,
+                              def_params=['TDefGeomProj','point', 'plane', 'ee_point < right_plane'],
+                              dyn_params=['TDynPD', '1.0', '2.0'])
+            '''
+            cage_down_corner1 = Task(name='cage_down_corner1',priority=0,visible=True,active=True,monitored=True,
+                            def_params=['TDefGeomProj','point', 'plane', 'book_corner1 > down_plane'],
+                            dyn_params=['TDynPD', '1.0', '2.0'])
+            cage_up_corner1 = Task(name='cage_up_corner1',priority=0,visible=True,active=True,monitored=True,
+                            def_params=['TDefGeomProj','point', 'plane', 'book_corner1 < up_plane'],
+                            dyn_params=['TDynPD', '1.0', '2.0'])
+            cage_front_corner1 = Task(name='cage_front_corner1',priority=0,visible=True,active=True,monitored=True,
+                              def_params=['TDefGeomProj','point', 'plane', 'book_corner1 < front_plane'],
+                              dyn_params=['TDynPD', '1.0', '2.0'])
+            cage_back_corner1 = Task(name='cage_back_corner1',priority=0,visible=True,active=True,monitored=True,
+                              def_params=['TDefGeomProj','point', 'plane', 'book_corner1 > back_plane'],
+                              dyn_params=['TDynPD', '1.0', '2.0'])
+            cage_left_corner1 = Task(name='cage_left_corner1',priority=0,visible=True,active=True,monitored=True,
+                              def_params=['TDefGeomProj','point', 'plane', 'book_corner1 > left_plane'],
+                              dyn_params=['TDynPD', '1.0', '2.0'])
+            cage_right_corner1 = Task(name='cage_right_corner1',priority=0,visible=True,active=True,monitored=True,
+                              def_params=['TDefGeomProj','point', 'plane', 'book_corner1 < right_plane'],
+                              dyn_params=['TDynPD', '1.0', '2.0'])
+            
+            rl_task = Task(name='ee_rl', priority=1, visible=True, active=True, monitored=True,
+                       def_params=['TDefRLPick','1','0','0','0','1','0','0','0','1','ee_point'],
+                       dyn_params=['TDynAsyncPolicy', '{}'.format(self.kd), 'ee_rl/act', 'ee_rl/state'])
+            redundancy = Task(name='full_pose', priority=2, visible=True, active=True, monitored=True,
                           def_params=['TDefFullPose', '0.0', '-1.17', '0.0', '-2.85', '0.0', '1.82', '0.84'],
                           dyn_params=['TDynPD', '1.0', '2.0'])
-
-        hiqp_task_srv([cage_down, cage_up, cage_front, cage_back, cage_left, cage_right, rl_task, redundancy])
+            
+            #hiqp_task_srv([cage_down, cage_up, cage_front, cage_back, cage_left, cage_right, rl_task, redundancy])
+            hiqp_task_srv([cage_up_corner1, cage_down_corner1, cage_front_corner1, cage_back_corner1, cage_left_corner1, cage_right_corner1, rl_task, redundancy])
+            
+        elif self.constraint_phase == 2:
+            print("===>Enter Constraint Phase 2!")
+            cage_down_corner1 = Task(name='cage_down_corner1',priority=0,visible=True,active=True,monitored=True,
+                            def_params=['TDefGeomProj','point', 'plane', 'book_corner1 > down_plane'],
+                            dyn_params=['TDynPD', '1.0', '2.0'])
+            cage_up_corner1 = Task(name='cage_up_corner1',priority=0,visible=True,active=True,monitored=True,
+                            def_params=['TDefGeomProj','point', 'plane', 'book_corner1 < up_plane'],
+                            dyn_params=['TDynPD', '1.0', '2.0'])
+            cage_front_corner1 = Task(name='cage_front_corner1',priority=0,visible=True,active=True,monitored=True,
+                              def_params=['TDefGeomProj','point', 'plane', 'book_corner1 < front_plane'],
+                              dyn_params=['TDynPD', '1.0', '2.0'])
+            cage_back_corner1 = Task(name='cage_back_corner1',priority=0,visible=True,active=True,monitored=True,
+                              def_params=['TDefGeomProj','point', 'plane', 'book_corner1 > back_plane'],
+                              dyn_params=['TDynPD', '1.0', '2.0'])
+            cage_left_corner1 = Task(name='cage_left_corner1',priority=0,visible=True,active=True,monitored=True,
+                              def_params=['TDefGeomProj','point', 'plane', 'book_corner1 > left_plane'],
+                              dyn_params=['TDynPD', '1.0', '2.0'])
+            cage_right_corner1 = Task(name='cage_right_corner1',priority=0,visible=True,active=True,monitored=True,
+                              def_params=['TDefGeomProj','point', 'plane', 'book_corner1 < right_plane'],
+                              dyn_params=['TDynPD', '1.0', '2.0'])
+            
+            rl_task = Task(name='ee_rl', priority=1, visible=True, active=True, monitored=True,
+                           def_params=['TDefRLPick','1','0','0','0','1','0','0','0','1','ee_point'],
+                           dyn_params=['TDynAsyncPolicy', '{}'.format(self.kd), 'ee_rl/act', 'ee_rl/state'])
+            redundancy = Task(name='full_pose', priority=2, visible=True, active=True, monitored=True,
+                              def_params=['TDefFullPose', '0.0', '-1.17', '0.0', '-2.85', '0.0', '1.82', '0.84'],
+                              dyn_params=['TDynPD', '1.0', '2.0'])
+            
+            hiqp_task_srv([cage_up_corner1, cage_down_corner1, cage_front_corner1, cage_back_corner1, cage_left_corner1, cage_right_corner1, rl_task, redundancy])
+            
     
     def _next_observation(self, data):
         self.e = np.array(data.e)
@@ -168,13 +225,6 @@ class CabinetEnv(gym.Env):
         self.q = self.q[:-2]
         self.dq = self.dq[:-2]
         self.ddq_star = self.ddq_star[:-2]
-        
-        #test
-        #remove_primitives = rospy.ServiceProxy('/hiqp_joint_velocity_controller/remove_primitives', RemovePrimitives)
-        #remove_primitives(['ee_point1'])
-        #hiqp_primitve_srv = rospy.ServiceProxy('/hiqp_joint_velocity_controller/set_primitives', SetPrimitives)
-        #ee_prim_test = Primitive(name='ee_point1',type='point',frame_id='world',visible=True,color=[0,0,1,1],parameters=[self.e[0], self.e[1], self.e[2]])
-        #hiqp_primitve_srv([ee_prim_test])
         
         # two phases, two error spaces
         if self.constraint_phase == 1:
