@@ -279,7 +279,7 @@ def main():
             print("DONE")
             
         '''--runing evaluation episode--'''
-        if i_episode > 2 and i_episode % 2 == 0:
+        if i_episode > 100 and i_episode % 2 == 0:
             #state = env.reset()
             print('+++++++++++++++++++++evaluation i_episode++++++++++++++++++++++++:', i_episode)
             state = torch.Tensor([env.start()])

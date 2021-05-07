@@ -129,13 +129,16 @@ def main():
             state = torch.Tensor([next_state])
             
             episode_numsteps += 1
-            if done or episode_numsteps==args.num_steps or env.bConstraint:
-                if env.bConstraint:
-                    episode_violation += 1
-                elif done:
+            if done or episode_numsteps==args.num_steps:
+                if done:
+                    print("To break due to reaching goal")
                     episode_reached += 1
+                else:
+                    print("To break due to 300 steps per episode")
+                
+                episode_violation = env.constraint_violations
             
-                print("break:", episode_numsteps)
+                #print("break:", episode_numsteps)
                 break
             
         # write all episodes information
@@ -151,7 +154,7 @@ def main():
         print("Episode: {}, reward: {}".format(i_episode, np.sum(rewards)))
         
         #runing evaluation episode
-        if i_episode > 10 and i_episode%2 == 0:
+        if i_episode > 100 and i_episode%2 == 0:
             state = torch.Tensor([env.start()])
 
             greedy_numsteps = 0
@@ -171,9 +174,9 @@ def main():
                 state = torch.Tensor([next_state])
                 greedy_numsteps += 1
 
-                if done or greedy_numsteps == args.num_steps or env.bConstraint:
-                    if env.bConstraint:
-                        episode_violation += 1
+                if done or greedy_numsteps == args.num_steps:                   
+                    episode_violation = env.constraint_violations
+                    
                     break
                 
             test_writer.writerow(np.concatenate(([np.sum(rewards)], [episode_violation], visits), axis=None))
