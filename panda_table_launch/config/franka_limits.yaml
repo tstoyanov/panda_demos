@@ -1,59 +1,59 @@
 hiqp_joint_velocity_controller:
-  hiqp_preload_geometric_primitives:
-    - name: 'eef_preload'
-      type: point
-      frame_id: 'panda_hand'
-      visible: true
-      color: [ 1.0, 0.0, 0.0, 0.5 ]
-      parameters: [ 0.0, 0.0, 0.1 ]
-    - name: 'link0_cyl'
-      type: cylinder
-      frame_id: 'panda_link0'
-      visible: true
-      color: [ 1.0, 0.0, 0.0, 0.5 ]
-      parameters: [ 0.0, 0.0, 1.0, 0.0,0.0,0.0, 0.05, 0.333 ]
-    - name: 'link2_cyl'
-      type: cylinder
-      frame_id: 'panda_link2'
-      visible: true
-      color: [ 1.0, 0.0, 0.0, 0.5 ]
-      parameters: [ 0.0, -1.0, 0.0, 0.0,0.0,0.0, 0.05, 0.316 ]
-    - name: 'link4_cyl'
-      type: cylinder
-      frame_id: 'panda_link4'
-      visible: true
-      color: [ 1.0, 0.0, 0.0, 0.5 ]
-      parameters: [ 0.0, 1.0, 0.0, -0.0825,0.0,0.0, 0.05, 0.384 ]
-    - name: 'link0_sphere'
-      type: sphere
-      frame_id: 'panda_link0'
-      visible: true
-      color: [ 1.0, 0.0, 0.0, 0.5 ]
-      parameters: [ 0.0,0.0,0.0,0.1 ]
-    - name: 'link2_sphere'
-      type: sphere
-      frame_id: 'panda_link2'
-      visible: true
-      color: [ 1.0, 0.0, 0.0, 0.5 ]
-      parameters: [ 0.0,0.0,0.0,0.1 ]
-    - name: 'link4_sphere'
-      type: sphere
-      frame_id: 'panda_link4'
-      visible: true
-      color: [ 1.0, 0.0, 0.0, 0.5 ]
-      parameters: [ 0.0,0.0,0.0,0.1 ]
-    - name: 'link6_sphere'
-      type: sphere
-      frame_id: 'panda_link6'
-      visible: true
-      color: [ 1.0, 0.0, 0.0, 0.5 ]
-      parameters: [ 0.0,0.0,0.0,0.1 ]
-    #- name: 'link7_cyl'
-    #  type: cylinder
-    #  frame_id: 'panda_link7'
-    #  visible: true
-    #  color: [ 1.0, 0.0, 0.0, 0.5 ]
-    #  parameters: [ 0.0, 0.0, 1.0, 0.0,0.0,0.0, 0.05, 0.107 ]
+  # hiqp_preload_geometric_primitives:
+  #   - name: 'eef_preload'
+  #     type: point
+  #     frame_id: 'panda_hand'
+  #     visible: true
+  #     color: [ 1.0, 0.0, 0.0, 0.5 ]
+  #     parameters: [ 0.0, 0.0, 0.1 ]
+  #   - name: 'link0_cyl'
+  #     type: cylinder
+  #     frame_id: 'panda_link0'
+  #     visible: true
+  #     color: [ 1.0, 0.0, 0.0, 0.5 ]
+  #     parameters: [ 0.0, 0.0, 1.0, 0.0,0.0,0.0, 0.05, 0.333 ]
+  #   - name: 'link2_cyl'
+  #     type: cylinder
+  #     frame_id: 'panda_link2'
+  #     visible: true
+  #     color: [ 1.0, 0.0, 0.0, 0.5 ]
+  #     parameters: [ 0.0, -1.0, 0.0, 0.0,0.0,0.0, 0.05, 0.316 ]
+  #   - name: 'link4_cyl'
+  #     type: cylinder
+  #     frame_id: 'panda_link4'
+  #     visible: true
+  #     color: [ 1.0, 0.0, 0.0, 0.5 ]
+  #     parameters: [ 0.0, 1.0, 0.0, -0.0825,0.0,0.0, 0.05, 0.384 ]
+  #   - name: 'link0_sphere'
+  #     type: sphere
+  #     frame_id: 'panda_link0'
+  #     visible: true
+  #     color: [ 1.0, 0.0, 0.0, 0.5 ]
+  #     parameters: [ 0.0,0.0,0.0,0.1 ]
+  #   - name: 'link2_sphere'
+  #     type: sphere
+  #     frame_id: 'panda_link2'
+  #     visible: true
+  #     color: [ 1.0, 0.0, 0.0, 0.5 ]
+  #     parameters: [ 0.0,0.0,0.0,0.1 ]
+  #   - name: 'link4_sphere'
+  #     type: sphere
+  #     frame_id: 'panda_link4'
+  #     visible: true
+  #     color: [ 1.0, 0.0, 0.0, 0.5 ]
+  #     parameters: [ 0.0,0.0,0.0,0.1 ]
+  #   - name: 'link6_sphere'
+  #     type: sphere
+  #     frame_id: 'panda_link6'
+  #     visible: true
+  #     color: [ 1.0, 0.0, 0.0, 0.5 ]
+  #     parameters: [ 0.0,0.0,0.0,0.1 ]
+  #   - name: 'link7_cyl'
+  #     type: cylinder
+  #     frame_id: 'panda_link7'
+  #     visible: true
+  #     color: [ 1.0, 0.0, 0.0, 0.5 ]
+  #     parameters: [ 0.0, 0.0, 1.0, 0.0,0.0,0.0, 0.05, 0.107 ]
 
   #####      JOINT LIMITATIONS    #####
   hiqp_preload_tasks:
@@ -99,21 +99,20 @@ hiqp_joint_velocity_controller:
       monitored: true
       def_params: ['TDefJntLimits','panda_link7', '1.0', '2.0', '-2.8', '2.8']
       dyn_params: ['TDynPD', '1.0', '2.0']
-    - name: 'self_collide_sphere0'
-      priority: 0
-      active: true
-      monitored: true
-      def_params: [ 'TDefGeomProj','point', 'sphere', 'eef_preload > link0_sphere' ]
-      dyn_params: [ 'TDynPD', '4.0', '4.5' ]
-    - name: 'self_collide_sphere2'
-      priority: 0
-      active: true
-      monitored: true
-      def_params: [ 'TDefGeomProj','point', 'sphere', 'eef_preload > link2_sphere' ]
-      dyn_params: [ 'TDynPD', '4.0', '4.5' ]
-
-
-
+    # - name: 'self_collide_sphere0'
+    #   priority: 0
+    #   active: true
+    #   monitored: true
+    #   def_params: [ 'TDefGeomProj','point', 'sphere', 'eef_preload > link0_sphere' ]
+    #   dyn_params: [ 'TDynPD', '4.0', '4.5' ]
+    # - name: 'self_collide_sphere2'
+    #   priority: 0
+    #   active: true
+    #   monitored: true
+    #   def_params: [ 'TDefGeomProj','point', 'sphere', 'eef_preload > link2_sphere' ]
+    #   dyn_params: [ 'TDynPD', '4.0', '4.5' ]
+      
+    
 
 franka_hiqp_joint_effort_controller:
   #####      JOINT LIMITATIONS    #####

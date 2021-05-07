@@ -20,7 +20,7 @@ find_package(catkin REQUIRED COMPONENTS
 )
 find_package(Boost REQUIRED COMPONENTS thread)
 
-add_message_files(FILES DesiredErrorDynamicsMsg.msg StateMsg.msg)
+add_message_files(FILES DesiredErrorDynamicsMsg.msg StateMsg.msg StateMsgWithCorners.msg)
 
 add_service_files(
         FILES
@@ -57,6 +57,8 @@ add_library(${PROJECT_NAME}_tdef
 	    #src/tdyn_random.cpp
         src/tdyn_async_policy.cpp
         src/tdef_rl_pick.cpp
+        src/tdyn_async_policy_put_book.cpp
+        src/tdef_rl_put_book.cpp
 )
 
 add_dependencies(${PROJECT_NAME}_tdef ${PROJECT_NAME}_generate_messages_cpp)

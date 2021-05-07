@@ -11,6 +11,7 @@ from torch.autograd import Variable
 from tensorboardX import SummaryWriter
 
 from pathlib import Path
+import csv
 
 from reinforce import REINFORCE
 from environment import ManipulateEnv
@@ -42,6 +43,8 @@ def main():
                         help='hidden size (default: 128)')
     parser.add_argument('--updates_per_step', type=int, default=10, metavar='N',
                     help='model updates per simulator step (default: 50)')
+    parser.add_argument('--noise_scale', type=float, default=0.5, metavar='G',
+                        help='initial noise scale (default: 0.5)')
     parser.add_argument('--run_id', type=int, default=0, metavar='N',
                         help='increment this externally to re-run same parameters multiple times')
     parser.add_argument('--replay_size', type=int, default=1000000, metavar='N',
@@ -72,8 +75,18 @@ def main():
     else:
         env = gym.make(args.env_name)
 
-    basename = 'REINFORCE_sd{}'.format(args.seed)
+    #basename = 'REINFORCE_sd{}'.format(args.seed)
+    basename = 'sd{}_us_{}_ns_{}_run_{}'.format(args.seed,args.updates_per_step,args.noise_scale,args.run_id)
     writer = SummaryWriter(args.logdir+'/runs/'+basename)
+    
+    path = Path(args.logdir)
+    if not path.exists():
+        raise argparse.ArgumentTypeError("Parameter {} is not a valid path".format(path))
+
+    csv_train = open(args.logdir+'/'+basename+'_train.csv', 'w', newline='')
+    train_writer = csv.writer(csv_train, delimiter=' ')
+    csv_test = open(args.logdir+'/'+basename+'_test.csv', 'w', newline='')
+    test_writer = csv.writer(csv_test, delimiter=' ')
 
     env.seed(args.seed)
     torch.manual_seed(args.seed)
@@ -89,24 +102,25 @@ def main():
         print('++++++++++++++++++++++++++i_episode+++++++++++++++++++++++++++++:', i_episode)
         state = torch.Tensor([env.start()])
         
-        #Ax_prev = np.identity(env.action_space.shape[0])
-        #bx_prev = env.action_space.high
-        
         episode_numsteps = 0
         entropies = []
         log_probs = []
+        episode_reached = 0
+        episode_violation = 0
         rewards = []
+        visits = []
         while True:
             # -- action selection --   
             action, log_prob, entropy = agent.select_action(state)
             action = action.cpu()
-
             # -- project action --
-            if False:
-                #action = quad.project_action(action.numpy()[0], Ax_prev, bx_prev)
-                action = torch.Tensor([action])
+            #if False:
+            #    action = quad.project_action(action.numpy()[0], Ax_prev, bx_prev)
+            #    action = torch.Tensor([action])
                 
             next_state, reward, done = env.step(action)
+
+            visits = np.concatenate((visits,state.numpy(),args.action_scale*action,[reward]),axis=None)
 
             entropies.append(entropy)
             log_probs.append(log_prob)
@@ -114,13 +128,18 @@ def main():
 
             state = torch.Tensor([next_state])
             
-            #Ax_prev = Ax
-            #bx_prev = bx[0]
-            
             episode_numsteps += 1
-            if done or episode_numsteps==args.num_steps:
+            if done or episode_numsteps==args.num_steps or env.bConstraint:
+                if env.bConstraint:
+                    episode_violation += 1
+                elif done:
+                    episode_reached += 1
+            
                 print("break:", episode_numsteps)
                 break
+            
+        # write all episodes information
+        train_writer.writerow(np.concatenate(([np.sum(rewards)],[episode_violation],[episode_reached],visits),axis=None))
 
         env.stop()
         time.sleep(4)
@@ -130,6 +149,38 @@ def main():
         
         writer.add_scalar('reward/train', np.sum(rewards), i_episode)       
         print("Episode: {}, reward: {}".format(i_episode, np.sum(rewards)))
+        
+        #runing evaluation episode
+        if i_episode > 10 and i_episode%2 == 0:
+            state = torch.Tensor([env.start()])
+
+            greedy_numsteps = 0
+            episode_violation = 0
+            rewards = []
+            visits = []         
+
+            while True:
+                action, log_prob, entropy = agent.select_action(state)
+                action = action.cpu()
+
+                next_state, reward, done = env.step(action)
+                
+                visits = np.concatenate((visits, state.numpy(), args.action_scale*action, [reward]), axis=None)
+                rewards.append(reward)
+
+                state = torch.Tensor([next_state])
+                greedy_numsteps += 1
+
+                if done or greedy_numsteps == args.num_steps or env.bConstraint:
+                    if env.bConstraint:
+                        episode_violation += 1
+                    break
+                
+            test_writer.writerow(np.concatenate(([np.sum(rewards)], [episode_violation], visits), axis=None))
+
+            env.stop()
+            time.sleep(4.0) #wait for reset
+            
 
 if __name__ == '__main__':
     main()

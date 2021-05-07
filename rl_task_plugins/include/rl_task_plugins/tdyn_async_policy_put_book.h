@@ -14,8 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef HIQP_TDYN_ASYNC_POLICY_H
-#define HIQP_TDYN_ASYNC_POLICY_H
+#ifndef HIQP_TDYN_ASYNC_POLICY_PUT_BOOK_H
+#define HIQP_TDYN_ASYNC_POLICY_PUT_BOOK_H
 
 #include <hiqp/robot_state.h>
 #include <hiqp/task_dynamics.h>
@@ -34,6 +34,7 @@
 
 #include <rl_task_plugins/DesiredErrorDynamicsMsg.h>
 #include <rl_task_plugins/StateMsg.h>
+#include <rl_task_plugins/StateMsgWithCorners.h>
 
 
 #include <boost/thread/mutex.hpp>
@@ -45,15 +46,15 @@ namespace hiqp
 
   /*! \brief Random task error behavior? 
    *  \author Jens Lundell, Todor Stoyanov */  
-    class TDynAsyncPolicy : public TaskDynamics {
+    class TDynAsyncPolicyPutBook : public TaskDynamics {
     public:
 
-        inline TDynAsyncPolicy() : TaskDynamics() { ROS_INFO("creating object TDynPolicy"); initialized_=false;}
+        inline TDynAsyncPolicyPutBook() : TaskDynamics() { ROS_INFO("creating object TDynPolicy"); initialized_=false;}
       
-      TDynAsyncPolicy(std::shared_ptr<GeometricPrimitiveMap> geom_prim_map,
+      TDynAsyncPolicyPutBook(std::shared_ptr<GeometricPrimitiveMap> geom_prim_map,
        std::shared_ptr<Visualizer> visualizer);
 
-        ~TDynAsyncPolicy() noexcept { ROS_INFO("Destroying object TDynPolicy"); nh_.shutdown(); initialized_=false; }
+        ~TDynAsyncPolicyPutBook() noexcept { ROS_INFO("Destroying object TDynPolicy"); nh_.shutdown(); initialized_=false; }
 
       int init(const std::vector<std::string>& parameters, 
               RobotStatePtr robot_state, 
@@ -68,10 +69,10 @@ namespace hiqp
       int monitor();
 
     private:
-      TDynAsyncPolicy(const TDynAsyncPolicy& other) = delete;
-      TDynAsyncPolicy(TDynAsyncPolicy&& other) = delete;
-      TDynAsyncPolicy& operator=(const TDynAsyncPolicy& other) = delete;
-      TDynAsyncPolicy& operator=(TDynAsyncPolicy&& other) noexcept = delete;
+      TDynAsyncPolicyPutBook(const TDynAsyncPolicyPutBook& other) = delete;
+      TDynAsyncPolicyPutBook(TDynAsyncPolicyPutBook&& other) = delete;
+      TDynAsyncPolicyPutBook& operator=(const TDynAsyncPolicyPutBook& other) = delete;
+      TDynAsyncPolicyPutBook& operator=(TDynAsyncPolicyPutBook&& other) noexcept = delete;
 
       std::string action_topic_;
       std::string state_topic_;

@@ -33,6 +33,7 @@ class ManipulateEnv(gym.Env):
         self.goal = np.array([0, 0, 0.72])
         self.bEffort = bEffort
         self.bConstraint = False
+        self.constraint_violations = 0
         self.reward = 0
         self.action_space = spaces.Box(low=np.array([-1, -1, -1]), high=np.array([1, 1, 1]), dtype=np.float32)        
         obs_low = np.array([-2.9, -2.9, -2.9, -2.9, -2.9, -2.9, -2.9,#q
@@ -87,8 +88,8 @@ class ManipulateEnv(gym.Env):
         front_plane = Primitive(name='front_plane',type='plane',frame_id='world',visible=True,color=[0,0,0.1,0.1],parameters=[0,1,0,0.3])
         left_plane = Primitive(name='left_plane',type='plane',frame_id='world',visible=True,color=[0,0,0.1,0.1],parameters=[1,0,0,-0.3])
         right_plane = Primitive(name='right_plane',type='plane',frame_id='world',visible=True,color=[0,0,0.1,0.1],parameters=[1,0,0,0.3])
-        table_z_axis = Primitive(name='table_z_axis',type='line',frame_id='world',visible=True,color=[0,1,1,1],parameters=[0,0,1,0,0,0])
-        ee_z_axis = Primitive(name='ee_z_axis',type='line',frame_id='panda_hand',visible=True,color=[0,1,1,1],parameters=[0,0,1,0,0,0])
+        #table_z_axis = Primitive(name='table_z_axis',type='line',frame_id='world',visible=True,color=[0,1,1,1],parameters=[0,0,1,0,0,0])
+        #ee_z_axis = Primitive(name='ee_z_axis',type='line',frame_id='panda_hand',visible=True,color=[0,1,1,1],parameters=[0,0,1,0,0,0])
         # 8 corners      
         corner1 = Primitive(name='corner1',type='sphere',frame_id='world',visible=True,color=[0,0,1,1],parameters=[0.3,0.3,0.7,0.01])
         corner2 = Primitive(name='corner2',type='sphere',frame_id='world',visible=True,color=[0,0,1,1],parameters=[0.3,-0.3,0.7,0.01])
@@ -100,7 +101,7 @@ class ManipulateEnv(gym.Env):
         corner8 = Primitive(name='corner8',type='sphere',frame_id='world',visible=True,color=[0,0,1,1],parameters=[-0.3,0.3,1.3,0.01])
         
         hiqp_primitve_srv([ee_prim, goal_prim, table_plane, up_plane, back_plane, front_plane, left_plane, right_plane,
-                           corner1, corner2, corner3, corner4, corner5, corner6, corner7, corner8, table_z_axis, ee_z_axis])
+                           corner1, corner2, corner3, corner4, corner5, corner6, corner7, corner8])
         
     def set_tasks(self):
         if self.bEffort:
@@ -127,9 +128,9 @@ class ManipulateEnv(gym.Env):
         cage_right = Task(name='ee_cage_right',priority=0,visible=True,active=True,monitored=True,
                           def_params=['TDefGeomProj','point', 'plane', 'ee_point < right_plane'],
                           dyn_params=['TDynPD', '1.0', '2.0'])
-        approach_align_z = Task(name='approach_align_z',priority=0,visible=True,active=True,monitored=True,
-                                def_params=['TDefGeomAlign','line', 'line', 'ee_z_axis = table_z_axis'],
-                                dyn_params=['TDynPD', '1.0', '2.0'])
+        #approach_align_z = Task(name='approach_align_z',priority=0,visible=True,active=True,monitored=True,
+        #                        def_params=['TDefGeomAlign','line', 'line', 'ee_z_axis = table_z_axis'],
+        #                        dyn_params=['TDynPD', '1.0', '2.0'])
 
         rl_task = Task(name='ee_rl',priority=1,visible=True,active=True,monitored=True,
                           def_params=['TDefRLPick','1','0','0','0','1','0','0','0','1','ee_point'],
@@ -138,7 +139,7 @@ class ManipulateEnv(gym.Env):
                           def_params=['TDefFullPose', '0.0', '-1.17', '0.0', '-2.85', '0.0', '1.82', '0.84'],
                           dyn_params=['TDynPD', '1.0', '2.0'])
 
-        hiqp_task_srv([ee_plane, cage_up, cage_front, cage_back, cage_left, cage_right, approach_align_z, rl_task, redundancy])
+        hiqp_task_srv([ee_plane, cage_up, cage_front, cage_back, cage_left, cage_right, rl_task, redundancy])
         #hiqp_task_srv([rl_task])
     
     def _next_observation(self, data):
@@ -163,93 +164,100 @@ class ManipulateEnv(gym.Env):
         self.fresh = True
 
     def _constraint_monitor(self, data):
-        violate_thre = 1.0
-        penalty_scale = 10
+        violate_thre = 0.1
+        penalty_scale = 1.0
         for task in data.task_measures:
             if task.task_name == "ee_cage_back" and task.e[0] < 0:
                 if np.abs(task.e[0]) > violate_thre:
                     print("*************ee_cage_back violated!******", task.e[0])
                     self.reward -= penalty_scale*np.abs(task.e[0])
                     self.bConstraint = True
+                    self.constraint_violation += 1
+
                     
             if task.task_name == "ee_cage_front" and task.e[0] > 0:
                 if np.abs(task.e[0]) > violate_thre:
                     print("*************ee_cage_front violated!******", task.e[0])
                     self.reward -= penalty_scale*np.abs(task.e[0])
                     self.bConstraint = True
+                    self.constraint_violation += 1
             
             if task.task_name == "ee_cage_left" and task.e[0] < 0:
                 if np.abs(task.e[0]) > violate_thre:
                     print("*************ee_cage_left violated!******", task.e[0])
                     self.reward -= penalty_scale*np.abs(task.e[0])
                     self.bConstraint = True
+                    self.constraint_violation += 1
             
             if task.task_name == "ee_cage_right" and task.e[0] > 0:
                 if np.abs(task.e[0]) > violate_thre:
                     print("*************ee_cage_right violated!******", task.e[0])
                     self.reward -= penalty_scale*np.abs(task.e[0])
                     self.bConstraint = True
+                    self.constraint_violation += 1
                 
             if task.task_name == "ee_cage_up" and task.e[0] > 0:
                 if np.abs(task.e[0]) > violate_thre:
                     print("*************ee_cage_up violated!******", task.e[0])
                     self.reward -= penalty_scale*np.abs(task.e[0])
                     self.bConstraint = True
+                    self.constraint_violation += 1
             
             if task.task_name == "ee_plane_table" and task.e[0] < 0:
                 if np.abs(task.e[0]) > violate_thre:
                     print("*************ee_plane_table violated!******", task.e[0])
                     self.reward -= penalty_scale*np.abs(task.e[0])
                     self.bConstraint = True
-            '''    
+                    self.constraint_violation += 1
+              
             if task.task_name == "jnt1_limits":
                 if task.e[0] < -violate_thre or task.e[1] > violate_thre or task.e[2] < -violate_thre or task.e[3] > violate_thre or task.e[4] < -violate_thre or task.e[5] > violate_thre:
                     print("*************jnt1_limits violated!")
-                    #self.bConstraint = True
+                    self.bConstraint = True
+                    self.constraint_violation += 1
                     
             if task.task_name == "jnt2_limits":
                 if task.e[0] < -violate_thre or task.e[1] > violate_thre or task.e[2] < -violate_thre or task.e[3] > violate_thre or task.e[4] < -violate_thre or task.e[5] > violate_thre:
                     print("*************jnt2_limits violated!")
                     #self.reward -= penalty_scale*np.abs(task.e[0])
-                    #self.bConstraint = True
-
+                    self.bConstraint = True
+                    self.constraint_violation += 1
                     
             if task.task_name == "jnt3_limits":
                 if task.e[0] < -violate_thre or task.e[1] > violate_thre or task.e[2] < -violate_thre or task.e[3] > violate_thre or task.e[4] < -violate_thre or task.e[5] > violate_thre:
                     print("*************jnt3_limits violated!")
                     #self.reward -= penalty_scale*np.abs(task.e[0])
-                    #self.bConstraint = True
-
-                    
+                    self.bConstraint = True
+                    self.constraint_violation += 1
+             
             if task.task_name == "jnt4_limits":
                 if task.e[0] < -violate_thre or task.e[1] > violate_thre or task.e[2] < -violate_thre or task.e[3] > violate_thre or task.e[4] < -violate_thre or task.e[5] > violate_thre:
                     print("*************jnt4_limits violated!")
                     #self.reward -= penalty_scale*np.abs(task.e[0])
-                    #self.bConstraint = True
+                    self.bConstraint = True
+                    self.constraint_violation += 1
 
-                    
             if task.task_name == "jnt5_limits":
                 if task.e[0] < -violate_thre or task.e[1] > violate_thre or task.e[2] < -violate_thre or task.e[3] > violate_thre or task.e[4] < -violate_thre or task.e[5] > violate_thre:
                     print("*************jnt5_limits violated!")
                     #self.reward -= penalty_scale*np.abs(task.e[0])
-                    #self.bConstraint = True
-
-                    
+                    self.bConstraint = True
+                    self.constraint_violation += 1
+                   
             if task.task_name == "jnt6_limits":
                 if task.e[0] < -violate_thre or task.e[1] > violate_thre or task.e[2] < -violate_thre or task.e[3] > violate_thre or task.e[4] < -violate_thre or task.e[5] > violate_thre:
                     print("*************jnt6_limits violated!")
                     #self.reward -= penalty_scale*np.abs(task.e[0])
-                    #self.bConstraint = True
-
+                    self.bConstraint = True
+                    self.constraint_violation += 1
                     
             if task.task_name == "jnt7_limits":
                 if task.e[0] < -violate_thre or task.e[1] > violate_thre or task.e[2] < -violate_thre or task.e[3] > violate_thre or task.e[4] < -violate_thre or task.e[5] > violate_thre:
                     print("*************jnt7_limits violated!")
                     #self.reward -= penalty_scale*np.abs(task.e[0])
-                    #self.bConstraint = True
-            '''
-            #self.bConstraint = False
-
+                    self.bConstraint = True
+                    self.constraint_violation += 1
+            
     # Execute one time step within the environment       
     def step(self, action):
         # clip action
@@ -263,10 +271,8 @@ class ManipulateEnv(gym.Env):
         while not self.fresh:
             self.rate.sleep()
 
-        if self.bConstraint:
-            done = True
-        else:
-            self.reward, done = self.calc_shaped_reward()
+
+        self.reward, done = self.calc_shaped_reward()
         
         return self.observation, self.reward, done#, Ax, bx   
     
@@ -297,7 +303,6 @@ class ManipulateEnv(gym.Env):
         return Ax, bx
 
     def stop(self):
-        self.bConstraint = False
         self.episode_trace.clear()
         self.episode_trace = [(np.identity(self.action_space.shape[0]),self.action_space.high,0)]
         joints = ['panda_joint1', 'panda_joint2', 'panda_joint3', 'panda_joint4', 'panda_joint5', 'panda_joint6', 'panda_joint7']
@@ -322,6 +327,8 @@ class ManipulateEnv(gym.Env):
                 JointTrajectoryPoint(positions=[0.0, -1.17, 0.0, -2.85, 0.0, 1.82, 0.84],time_from_start=rospy.Duration(4.0))]))
 
     def start(self):
+        self.bConstraint = False
+        self.constraint_violation = 0
         cs = rospy.ServiceProxy('/controller_manager/switch_controller', SwitchController)
         if self.bEffort:
             resp = cs({'hiqp_joint_effort_controller'},{'position_joint_trajectory_controller'},2,True,0.1)

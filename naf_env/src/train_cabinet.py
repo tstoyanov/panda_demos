@@ -30,7 +30,7 @@ def main():
     parser.add_argument('--ou_noise', type=bool, default=True)
     parser.add_argument('--constr_gauss_sample', type=bool, default=False,
                         help='Should we use constrained Gaussian sampling?')
-    parser.add_argument('--noise_scale', type=float, default=2.0, metavar='G',
+    parser.add_argument('--noise_scale', type=float, default=0.5, metavar='G',
                         help='initial noise scale (default: 0.5)')
     parser.add_argument('--final_noise_scale', type=float, default=0.2, metavar='G',####0.2
                         help='final noise scale (default: 0.2)')
@@ -40,12 +40,12 @@ def main():
                         help='number of episodes with noise (default: 100)')
     parser.add_argument('--seed', type=int, default=54123, metavar='N',####4
                         help='random seed (default: 4)')
-    parser.add_argument('--batch_size', type=int, default=512, metavar='N',
-                        help='batch size (default: 512)')
-    parser.add_argument('--num_steps', type=int, default=500, metavar='N',
-                        help='max episode length (default: 500)')
-    parser.add_argument('--num_episodes', type=int, default=1000, metavar='N',
-                        help='number of episodes (default: 1000)')
+    parser.add_argument('--batch_size', type=int, default=1024, metavar='N',
+                        help='batch size (default: 1024)')
+    parser.add_argument('--num_steps', type=int, default=100, metavar='N',
+                        help='max episode length (default: 100)')
+    parser.add_argument('--num_episodes', type=int, default=500, metavar='N',
+                        help='number of episodes (default: 500)')
     parser.add_argument('--hidden_size', type=int, default=128, metavar='N',
                         help='hidden size (default: 128)')
     parser.add_argument('--updates_per_step', type=int, default=10, metavar='N',###20
@@ -178,8 +178,10 @@ def main():
             t_act += time.time() - t_st0
             #print("act took {}".format(time.time() - t_st0))   
             
+            '''switch constraint phase'''
             if env.constraint_phase == 2 and switch_once == 0:
                 env.switch_constraint_phase()
+                env.switch_phase_done = True
                 switch_once = 1
 
             # only take error space(3-dimension) from state space
@@ -199,23 +201,22 @@ def main():
             # for plot_path
             states_visited.append(state)
             actions_taken.append(action)
+            #print("reward:", reward)
             
-            if not env.bConstraint:
+            if not env.bCollision and reward > -5000:
                 memory.push(state, action, mask, next_state, reward, Ax_trace, bx_trace)
                 
             state = next_state
                 
-            if done or episode_numsteps == args.num_steps or env.bConstraint:
-                if env.bConstraint:
-                    print("To break due to bConstraint")
-                elif done:
+            if done or episode_numsteps == args.num_steps:
+                if done:
                     print("To break due to reaching goal")
                 else:
-                    print("To break due to 500 steps per episode")
+                    print("To break due to 200 steps per episode")
                     
-                #print("break:", episode_numsteps)
                 break
             
+        writer.add_scalar('reward/train', episode_reward, i_episode)    
         print("Train Episode: {}, episode numsteps: {}, reward: {}, time: {} act: {} project: {}".format(i_episode, episode_numsteps,
                                                                          episode_reward, time.time()-t_st, t_act, t_project))
         #print("Percentage of actions in constraint violation was {}".format(np.sum([env.episode_trace[i][2]>0 for i in range(len(env.episode_trace))])))
@@ -265,10 +266,18 @@ def main():
             greedy_numsteps = 0
             episode_reward = 0
             visits = []
+            switch_once = 0
             while True:
                 action, Q = agent.select_action(state)
                 
                 next_state, reward, done = env.step(action)
+                
+                '''switch constraint phase'''
+                if env.constraint_phase == 2 and switch_once == 0:
+                    env.switch_constraint_phase()
+                    env.switch_phase_done = True
+                    switch_once = 1
+                
                 Q = Q.detach()
                 visits = np.concatenate((visits, state.numpy()[0][-3:], args.action_scale*action, [reward], [Q]), axis=None)
                 episode_reward += reward
