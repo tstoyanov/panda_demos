@@ -21,7 +21,7 @@ from environment import ManipulateEnv
 
 def main():
     parser = argparse.ArgumentParser(description='PyTorch X-job')
-    parser.add_argument('--algo', default='NAF',
+    parser.add_argument('--algo', default='DDPG',
                         help='algorithm to use: NAF | DDPG')
     parser.add_argument('--env_name', default="PandaEnv",
                         help='name of the environment')
@@ -214,7 +214,8 @@ def main():
             Ax_prev = Ax
             bx_prev = bx[0]
             
-            memory.push(state, action, mask, next_state, reward, Ax_trace, bx_trace)
+            if not env.bConstraint:
+                memory.push(state, action, mask, next_state, reward, Ax_trace, bx_trace)
                 
             state = next_state
                 
@@ -225,9 +226,11 @@ def main():
                 else:
                     print("To break due to 300 steps per episode")
                 
-                episode_violation = env.constraint_violations
-                #print("break:", episode_numsteps)
                 break
+            
+        if env.bConstraint:
+            episode_violation += 1
+            print("one violation")
             
         print("Train Episode: {}, episode numsteps: {}, reward: {}, time: {} act: {} project: {}".format(i_episode, episode_numsteps,
                                                                          episode_reward, time.time()-t_st, t_act, t_project))
@@ -279,7 +282,7 @@ def main():
             print("DONE")
             
         '''--runing evaluation episode--'''
-        if i_episode > 100 and i_episode % 2 == 0:
+        if i_episode > 200 and i_episode % 2 == 0:
             #state = env.reset()
             print('+++++++++++++++++++++evaluation i_episode++++++++++++++++++++++++:', i_episode)
             state = torch.Tensor([env.start()])

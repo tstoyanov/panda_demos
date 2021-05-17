@@ -141,6 +141,8 @@ def main():
     
         episode_numsteps = 0
         episode_reward = 0
+        episode_reached = 0
+        episode_violation = 0
         visits = []
         Ax_prev = np.identity(env.action_space.shape[0])
         bx_prev = env.action_space.high
@@ -186,7 +188,7 @@ def main():
 
             # only take error space(3-dimension) from state space
             Q = Q.detach()
-            visits = np.concatenate((visits,state.numpy()[0][-3:],args.action_scale*action,[reward],[Q]),axis=None)
+            visits = np.concatenate((visits,state.numpy()[0][-3:],args.action_scale*action,[reward]),axis=None)
             #env.render()       
             episode_numsteps += 1
             episode_reward += reward
@@ -203,25 +205,31 @@ def main():
             actions_taken.append(action)
             #print("reward:", reward)
             
-            if not env.bCollision and reward > -5000:
+            if reward > -5000:
                 memory.push(state, action, mask, next_state, reward, Ax_trace, bx_trace)
                 
             state = next_state
                 
             if done or episode_numsteps == args.num_steps:
                 if done:
-                    print("To break due to reaching goal")
+                    print("To break due to reaching goal")                
+                    episode_reached += 1
                 else:
                     print("To break due to 200 steps per episode")
                     
+                #episode_violation = env.constraint_violations                    
                 break
+            
+        if env.bViolated:
+            print("one violation")
+            episode_violation += 1
             
         writer.add_scalar('reward/train', episode_reward, i_episode)    
         print("Train Episode: {}, episode numsteps: {}, reward: {}, time: {} act: {} project: {}".format(i_episode, episode_numsteps,
                                                                          episode_reward, time.time()-t_st, t_act, t_project))
         #print("Percentage of actions in constraint violation was {}".format(np.sum([env.episode_trace[i][2]>0 for i in range(len(env.episode_trace))])))
 
-        train_writer.writerow(np.concatenate(([episode_reward],visits),axis=None))
+        train_writer.writerow(np.concatenate(([episode_reward],[episode_violation],[episode_reached],visits),axis=None))
         rewards.append(episode_reward)
         
         #trying out this?
@@ -256,7 +264,7 @@ def main():
             print("DONE")
             
         '''--runing evaluation episode--'''
-        if i_episode > 100 and i_episode % 2 == 0:
+        if i_episode > 200 and i_episode % 2 == 0:
             #state = env.reset()
             print('+++++++++++++++++++++evaluation i_episode++++++++++++++++++++++++:', i_episode)
             state = torch.Tensor([env.start()])
@@ -264,6 +272,7 @@ def main():
             bx_prev = env.action_space.high
 
             greedy_numsteps = 0
+            episode_violation = 0
             episode_reward = 0
             visits = []
             switch_once = 0
@@ -279,7 +288,7 @@ def main():
                     switch_once = 1
                 
                 Q = Q.detach()
-                visits = np.concatenate((visits, state.numpy()[0][-3:], args.action_scale*action, [reward], [Q]), axis=None)
+                visits = np.concatenate((visits, state.numpy()[0][-3:], args.action_scale*action, [reward]), axis=None)
                 episode_reward += reward
                 greedy_numsteps += 1
                 
@@ -287,11 +296,12 @@ def main():
                 state = torch.Tensor([next_state])
 
                 if done or greedy_numsteps == args.num_steps:
-                    print("evaluation break")                    
+                    print("evaluation break")
+                    #episode_violation = env.constraint_violations
                     break
             
             writer.add_scalar('reward/test', episode_reward, i_episode)
-            test_writer.writerow(np.concatenate(([episode_reward], visits), axis=None))
+            test_writer.writerow(np.concatenate(([episode_reward], [episode_violation], visits), axis=None))
 
             rewards.append(episode_reward)
             print("Evaluation Episode: {}, total numsteps: {}, reward: {}, average reward: {}".format(i_episode, episode_numsteps, rewards[-1], np.mean(rewards[-10:])))

@@ -135,11 +135,13 @@ def main():
                     episode_reached += 1
                 else:
                     print("To break due to 300 steps per episode")
-                
-                episode_violation = env.constraint_violations
-            
+                            
                 #print("break:", episode_numsteps)
                 break
+        
+        if env.bConstraint:
+            episode_violation += 1
+            print("one violation")     
             
         # write all episodes information
         train_writer.writerow(np.concatenate(([np.sum(rewards)],[episode_violation],[episode_reached],visits),axis=None))
@@ -154,7 +156,7 @@ def main():
         print("Episode: {}, reward: {}".format(i_episode, np.sum(rewards)))
         
         #runing evaluation episode
-        if i_episode > 100 and i_episode%2 == 0:
+        if i_episode > 200 and i_episode%2 == 0:
             state = torch.Tensor([env.start()])
 
             greedy_numsteps = 0

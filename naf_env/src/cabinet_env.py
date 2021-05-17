@@ -36,7 +36,8 @@ class CabinetEnv(gym.Env):
                                       [-0.39,0.58]])
 
         self.bEffort = bEffort
-        self.bCollision = False
+        self.bViolated = False
+        self.constraint_violations = 0
         self.switch_phase_done = False
         self.constraint_phase = 1
         self.reward = 0
@@ -287,9 +288,9 @@ class CabinetEnv(gym.Env):
         self.fresh = True
 
     def _constraint_monitor(self, data):
-        if False:
+        if True:
         #if self.switch_phase_done:
-            violate_thre = 0.5
+            violate_thre = 0.1
             penalty_scale = 1.0
 
             for task in data.task_measures:
@@ -297,15 +298,19 @@ class CabinetEnv(gym.Env):
                                       "cage_down_corner2", "cage_back_corner2", "cage_left_corner2",
                                       "cage_down_corner3", "cage_back_corner3", "cage_left_corner3",
                                       "cage_down_corner4", "cage_back_corner4", "cage_left_corner4"] and task.e[0] < 0 and np.abs(task.e[0]) > violate_thre:
-                    print("******Constraint {} violated!******".format(task.task_name))
-                    self.reward -= penalty_scale*np.abs(task.e[0])
+                    #print("******Constraint {} violated!******".format(task.task_name))
+                    self.bViolated = True
+                    self.constraint_violations += 1
+                    #self.reward -= penalty_scale*np.abs(task.e[0])
                         
                 if task.task_name in ["cage_up_corner1", "cage_front_corner1", "cage_right_corner1",
                                       "cage_up_corner2", "cage_front_corner2", "cage_right_corner2",
                                       "cage_up_corner3", "cage_front_corner3", "cage_right_corner3",
                                       "cage_up_corner4", "cage_front_corner4", "cage_right_corner4"] and task.e[0] > 0 and np.abs(task.e[0]) > violate_thre:
-                    print("******Constraint {} violated!******".format(task.task_name))
-                    self.reward -= penalty_scale*np.abs(task.e[0])
+                    #print("******Constraint {} violated!******".format(task.task_name))
+                    self.bViolated = True
+                    self.constraint_violations += 1
+                    #self.reward -= penalty_scale*np.abs(task.e[0])
                 '''
                 if task.task_name in ["jnt1_limits","jnt2_limits","jnt3_limits","jnt4_limits","jnt5_limits","jnt6_limits","jnt7_limits"]:
                     if task.e[0] < -violate_thre or task.e[1] > violate_thre or task.e[2] < -violate_thre or task.e[3] > violate_thre or task.e[4] < -violate_thre or task.e[5] > violate_thre:
@@ -331,7 +336,6 @@ class CabinetEnv(gym.Env):
 
     def stop(self):
         print("stop function")
-        self.bCollision = False
 
         joints = ['panda_joint1', 'panda_joint2', 'panda_joint3', 'panda_joint4', 'panda_joint5', 'panda_joint6', 'panda_joint7']
         if self.bEffort:
@@ -356,6 +360,8 @@ class CabinetEnv(gym.Env):
 
     def start(self):
         print("start function")
+        self.bViolated = False
+        self.constraint_violations = 0
         self.constraint_phase = 1
         self.reward = 0
         self.switch_phase_done = False
