@@ -3,6 +3,7 @@
 #include <iostream>
 #include <cmath>
 #include <memory>
+#include <string>
 
 #include "utilities.h"
 
@@ -45,19 +46,23 @@ namespace force_controllers {
 
     cartesian_stiffness_.setZero();
     cartesian_damping_.setZero();
-    cartesian_stiffness_(0,0) = 10000;
-    cartesian_stiffness_(1,1) = 10000;
-    cartesian_stiffness_(2,2) = 10000;
-    cartesian_stiffness_(3,3) = 5000;
-    cartesian_stiffness_(4,4) = 5000;
-    cartesian_stiffness_(5,5) = 5000;
+  
+    Stiffness stiffness = getParameterStiffness(&getControllerNodeHandle());
+    Damping damping = getParameterDamping(&getControllerNodeHandle());
+
+    cartesian_stiffness_(0,0) = stiffness.translational_x;
+    cartesian_stiffness_(1,1) = stiffness.translational_y;
+    cartesian_stiffness_(2,2) = stiffness.translational_z;
+    cartesian_stiffness_(3,3) = stiffness.rotational_x;
+    cartesian_stiffness_(4,4) = stiffness.rotational_y;
+    cartesian_stiffness_(5,5) = stiffness.rotational_z;
     
-    cartesian_damping_(0,0) = 500;
-    cartesian_damping_(1,1) = 500;
-    cartesian_damping_(2,2) = 500;
-    cartesian_damping_(3,3) = 100;
-    cartesian_damping_(4,4) = 100;
-    cartesian_damping_(5,5) = 100;
+    cartesian_damping_(0,0) = damping.translational_x;
+    cartesian_damping_(1,1) = damping.translational_y;
+    cartesian_damping_(2,2) = damping.translational_z;
+    cartesian_damping_(3,3) = damping.rotational_x;
+    cartesian_damping_(4,4) = damping.rotational_y;
+    cartesian_damping_(5,5) = damping.rotational_z;
   }
 
   void ImpedanceController::setJointAccelerations(RobotStatePtr robot_state, Eigen::VectorXd& ddq) 

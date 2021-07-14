@@ -1,16 +1,8 @@
-/naf_env/src/models/*
-/naf_env/src/runs/*
-/naf_env/src/saved_plots/*
-/naf_env/src/*.pyc
-/models/*
-/*.png
-/*.pk1
-/.idea/*
 # Customs
-panda_table_description/launch/sim.rviz
+.my-credentials
 
-# Created by https://www.gitignore.io/api/vim,ros,c++,cmake,linux,visualstudiocode
-# Edit at https://www.gitignore.io/?templates=vim,ros,c++,cmake,linux,visualstudiocode
+# Created by https://www.gitignore.io/api/ros,c++,cmake,linux,visualstudiocode
+# Edit at https://www.gitignore.io/?templates=ros,c++,cmake,linux,visualstudiocode
 
 ### C++ ###
 # Prerequisites
@@ -129,33 +121,16 @@ qtcreator-*
 # Catkin custom files
 CATKIN_IGNORE
 
-### Vim ###
-# Swap
-[._]*.s[a-v][a-z]
-[._]*.sw[a-p]
-[._]s[a-rt-v][a-z]
-[._]ss[a-gi-z]
-[._]sw[a-p]
-
-# Session
-Session.vim
-
-# Temporary
-.netrwhist
-# Auto-generated tag files
-tags
-# Persistent undo
-[._]*.un~
-
 ### VisualStudioCode ###
 .vscode/*
-.vscode/settings.json
-.vscode/tasks.json
-.vscode/launch.json
-.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
 
 ### VisualStudioCode Patch ###
 # Ignore all local history of files
 .history
 
-# End of https://www.gitignore.io/api/vim,ros,c++,cmake,linux,visualstudiocode
+# End of https://www.gitignore.io/api/ros,c++,cmake,linux,visualstudiocode
+
