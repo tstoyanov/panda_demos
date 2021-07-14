@@ -9,6 +9,7 @@
     <arg name="debug" default="false"/>
     <arg name="start_moveit" default="false"/>
     <arg name="load_gripper" default="false"/>
+    <arg name="controllers" default="joint_state_controller impedance_controller"/>
     
     <!-- load robot description from xacro file -->
     <param name="robot_description" command="$(find xacro)/xacro --inorder $(find panda_table_description)/urdf/panda_table.urdf.xacro load_gripper:=$(arg load_gripper)"/>
@@ -29,7 +30,8 @@
     <rosparam file="$(find force_controllers)/config/panda_impedance.yaml" command="load"/>
 
     <!-- load the controllers -->
-    <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="joint_state_controller position_joint_trajectory_controller" /> 
+    <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="$(arg controllers)"/>
+    <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="joint_state_controller effort_joint_trajectory_controller" /> 
     <!-- impedance_controller -->
 
 

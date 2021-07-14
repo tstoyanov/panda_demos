@@ -1,5 +1,5 @@
 controller_list:
-  - name: effort_joint_trajectory_controller
+  - name: velocity_joint_trajectory_controller
     action_ns: follow_joint_trajectory
     type: FollowJointTrajectory
     default: true

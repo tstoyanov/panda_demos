@@ -11,7 +11,7 @@
     <arg name="load_gripper" default="true"/>
     
     <!-- load robot description from xacro file -->
-    <param name="robot_description" command="$(find xacro)/xacro --inorder $(find panda_table_description)/urdf/panda_table.urdf.xacro load_gripper:=$(arg load_gripper)"/>
+    <param name="robot_description" command="$(find xacro)/xacro --inorder '$(find panda_table_description)/urdf/panda_table_vel.urdf.xacro' load_gripper:=$(arg load_gripper)"/>
 
     <!--launch GAZEBO with own world configuration -->
     <include file="$(find gazebo_ros)/launch/empty_world.launch">
@@ -28,7 +28,7 @@
     <rosparam file="$(find panda_table_description)/config/panda_gazebo_control.yaml" command="load"/>
 
     <!-- load the controllers -->
-    <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="joint_state_controller effort_joint_trajectory_controller franka_gripper" />
+    <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="joint_state_controller velocity_joint_trajectory_controller franka_gripper_vel" />
 
 
     <!-- convert joint states to TF transforms for rviz, etc -->
@@ -41,6 +41,7 @@
     <include file="$(find panda_moveit_config)/launch/move_group.launch" if="$(arg start_moveit)">
      <arg name="allow_trajectory_execution" value="true"/>
      <arg name="fake_execution" value="false"/>
+     <arg name="controller_manager_name" value="panda_velocity"/>
    </include>
     <include file="$(find panda_moveit_config)/launch/moveit_rviz.launch" if="$(arg start_moveit)">
      <arg name="config" value="true"/>
