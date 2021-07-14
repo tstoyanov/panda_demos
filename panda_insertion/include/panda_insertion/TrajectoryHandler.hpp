@@ -4,6 +4,7 @@
 #include "ros/ros.h"
 
 #include "panda_insertion/Panda.hpp"
+#include <boost/thread/mutex.hpp>
 
 #include "vector"
 #include "string"
@@ -20,6 +21,7 @@ class TrajectoryHandler
 private:
     ros::NodeHandle* nodeHandler;
     Panda* panda;
+    boost::mutex mutex;
 
 public:
     TrajectoryHandler();
@@ -27,6 +29,8 @@ public:
 
     Trajectory generateArchimedeanSpiral(double a, double b, int nrOfPoints);
     Trajectory generateInitialPositionTrajectory(int nrOfPoints);
+    Trajectory generateExternalDownTrajectory(int nrOfPoints);
+    Trajectory generateInternalUpTrajectory(int nrOfPoints);
 
     void writeTrajectoryToFile(Trajectory trajectory,
                                const std::string& fileName,

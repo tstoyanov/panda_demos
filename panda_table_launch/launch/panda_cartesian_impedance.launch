@@ -6,7 +6,7 @@
   <arg name="robot_namespace" default="panda"/>
   <arg name="load_gripper" default="false"/>
   <arg name="robot_ip" default="192.168.200.3"/>
-  <arg name="controllers" default="franka_state_controller cartesian_impedance_controller"/>
+  <arg name="controllers" default="franka_state_controller cartesian_impedance_mod_controller"/>
   <arg name="rviz" default="false"/>
 
   <rosparam command="load" file="$(find panda_table_launch)/config/controllers.yaml" ns="$(arg robot_namespace)" />
