@@ -57,8 +57,8 @@ add_library(${PROJECT_NAME}_tdef
 	    #src/tdyn_random.cpp
         src/tdyn_async_policy.cpp
         src/tdef_rl_pick.cpp
-        src/tdyn_async_policy_put_book.cpp
-        src/tdef_rl_put_book.cpp
+	# src/tdyn_async_policy_put_book.cpp # <-- does not compile Quantao
+	# src/tdef_rl_put_book.cpp <-- FIXME does not compile either
 )
 
 add_dependencies(${PROJECT_NAME}_tdef ${PROJECT_NAME}_generate_messages_cpp)

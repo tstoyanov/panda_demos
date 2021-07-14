@@ -4,7 +4,7 @@
     <!-- arguments -->
     <arg name="paused" default="false"/>
     <arg name="use_sim_time" default="true"/>
-    <arg name="gui" default="true"/>
+    <arg name="gui" default="false"/>
     <arg name="headless" default="false"/>
     <arg name="debug" default="false"/>
     <arg name="start_moveit" default="true"/>
@@ -32,7 +32,7 @@
 
 
     <!-- convert joint states to TF transforms for rviz, etc -->
-    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" respawn="true" output="screen"  launch-prefix="xterm -e gdb --args"/>
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" respawn="true" output="screen"/>
 
     <!-- enabled only if we want to run moveit in simulation -->
     <include file="$(find panda_moveit_config)/launch/planning_context.launch" if="$(arg start_moveit)">
