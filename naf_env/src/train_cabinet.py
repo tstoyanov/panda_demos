@@ -12,18 +12,16 @@ import csv
 
 #import files...
 from naf import NAF
-from ddpg import DDPG
 from ounoise import OUNoise
 from replay_memory import Transition, ReplayMemory
-from environment import ManipulateEnv
-
+from cabinet_env import CabinetEnv
 
 
 def main():
     parser = argparse.ArgumentParser(description='PyTorch X-job')
-    parser.add_argument('--algo', default='DDPG',
+    parser.add_argument('--algo', default='NAF',
                         help='algorithm to use: NAF | DDPG')
-    parser.add_argument('--env_name', default="PandaEnv",
+    parser.add_argument('--env_name', default="CabinetEnv",
                         help='name of the environment')
     parser.add_argument('--gamma', type=float, default=0.99, metavar='G',
                         help='discount factor for reward (default: 0.99)')
@@ -32,24 +30,22 @@ def main():
     parser.add_argument('--ou_noise', type=bool, default=True)
     parser.add_argument('--constr_gauss_sample', type=bool, default=False,
                         help='Should we use constrained Gaussian sampling?')
-    parser.add_argument('--noise_scale', type=float, default=2.0, metavar='G',
+    parser.add_argument('--noise_scale', type=float, default=0.5, metavar='G',
                         help='initial noise scale (default: 0.5)')
     parser.add_argument('--final_noise_scale', type=float, default=0.2, metavar='G',####0.2
                         help='final noise scale (default: 0.2)')
-    parser.add_argument('--project_actions', type=bool, default=False,########False
-                        help='project to feasible actions only during training')
     parser.add_argument('--optimize_actions', type=bool, default=False,
                         help='add loss to objective')
     parser.add_argument('--exploration_end', type=int, default=100, metavar='N',
                         help='number of episodes with noise (default: 100)')
     parser.add_argument('--seed', type=int, default=54123, metavar='N',####4
                         help='random seed (default: 4)')
-    parser.add_argument('--batch_size', type=int, default=512, metavar='N',
-                        help='batch size (default: 512)')
-    parser.add_argument('--num_steps', type=int, default=300, metavar='N',
-                        help='max episode length (default: 300)')
-    parser.add_argument('--num_episodes', type=int, default=1000, metavar='N',
-                        help='number of episodes (default: 1000)')
+    parser.add_argument('--batch_size', type=int, default=1024, metavar='N',
+                        help='batch size (default: 1024)')
+    parser.add_argument('--num_steps', type=int, default=100, metavar='N',
+                        help='max episode length (default: 100)')
+    parser.add_argument('--num_episodes', type=int, default=500, metavar='N',
+                        help='number of episodes (default: 500)')
     parser.add_argument('--hidden_size', type=int, default=128, metavar='N',
                         help='hidden size (default: 128)')
     parser.add_argument('--updates_per_step', type=int, default=10, metavar='N',###20
@@ -77,10 +73,10 @@ def main():
 
     args = parser.parse_args()
 
-    print("++++++seed:{} algo:{} updates_per_step:{} project_actions:{} optimize_actions:{}++++++".format(args.seed, args.algo, args.updates_per_step, args.project_actions, args.optimize_actions))
+    print("++++++action_scale:{} optimize_actions:{}++++++".format(args.action_scale, args.optimize_actions))
 
-    if args.env_name == 'PandaEnv':
-        env = ManipulateEnv(bEffort=False)
+    if args.env_name == 'CabinetEnv':
+        env = CabinetEnv(bEffort=False)
         env.set_scale(args.action_scale)
         env.set_kd(args.kd)
     else:
@@ -96,6 +92,7 @@ def main():
 
     csv_train = open(args.logdir+'/'+basename+'_train.csv', 'w', newline='')
     train_writer = csv.writer(csv_train, delimiter=' ')
+
     csv_test = open(args.logdir+'/'+basename+'_test.csv', 'w', newline='')
     test_writer = csv.writer(csv_test, delimiter=' ')
 
@@ -104,10 +101,8 @@ def main():
     np.random.seed(args.seed)
 
     # -- initialize agent --
-    if args.algo == "NAF":
-        agent = NAF(args.gamma, args.tau, args.hidden_size, env.observation_space.shape[0], env.action_space)
-    elif args.algo == "DDPG":
-        agent = DDPG(args.gamma, args.tau, args.hidden_size, env.observation_space.shape[0], env.action_space)
+    agent = NAF(args.gamma, args.tau, args.hidden_size,
+                env.observation_space.shape[0], env.action_space)
 
     # -- declare memory buffer and random process N
     memory = ReplayMemory(args.replay_size)
@@ -124,13 +119,12 @@ def main():
             memory.memory = pickle.load(input)
             memory.position = len(memory)
 
-    reaches = []
-    violations = []
     rewards = []
     updates = 0
     
     # env cleanup
     env.stop()
+    
     t_start = time.time()
     for i_episode in range(args.num_episodes+1):
         # -- reset environment for every episode --
@@ -146,52 +140,54 @@ def main():
             ounoise.reset()
     
         episode_numsteps = 0
+        episode_reward = 0
         episode_reached = 0
         episode_violation = 0
-        episode_reward = 0
         visits = []
         Ax_prev = np.identity(env.action_space.shape[0])
         bx_prev = env.action_space.high
         
-        #states_visited = []
-        #actions_taken = []
+        states_visited = []
+        actions_taken = []
         
         t_project = 0
         t_act = 0
         
         t_st = time.time()
+        #state = env.reset()
         state = torch.Tensor([env.start()])
         print("reset took {}".format(time.time() - t_st))
         
         Ax = np.identity(env.action_space.shape[0])
         bx = env.action_space.high
+                    
+        switch_once = 0
         while True:
             # -- action selection, observation and store transition --
             if args.ou_noise:               
-                if args.project_actions:
-                    #project action and ou-noise
-                    Ax, bx = env.project_constraint()
-                    action, Q = agent.select_proj_action(state, Ax, bx[0], ounoise)
-                    #else clause: just plain OU noise on top (or no-noise)
-                else:
-                    if args.algo == "NAF":
-                        action, _ = agent.select_action(state, ounoise) if args.train_model else agent.select_action(state)
-                    else:
-                        action = agent.select_action(state, ounoise) if args.train_model else agent.select_action(state)
+                action, Q = agent.select_action(state, ounoise) if args.train_model else agent.select_action(state)
             else:
                 if args.constr_gauss_sample:
                     #Gaussian noise sample
-                    action, _ = agent.select_proj_action(state, Ax_prev, bx_prev, simple_noise=scale)
+                    action, Q = agent.select_proj_action(state, Ax_prev, bx_prev, simple_noise=scale)
                 else:
                     #noise-free run
-                    action, _ = agent.select_proj_action(state, Ax_prev, bx_prev)
+                    action, Q = agent.select_proj_action(state, Ax_prev, bx_prev)
                     
             ''' env step '''
             t_st0 = time.time()            
             next_state, reward, done = env.step(action)
             t_act += time.time() - t_st0
-            #print("act took {}".format(time.time() - t_st0))         
+            #print("act took {}".format(time.time() - t_st0))   
+            
+            '''switch constraint phase'''
+            if env.constraint_phase == 2 and switch_once == 0:
+                env.switch_constraint_phase()
+                env.switch_phase_done = True
+                switch_once = 1
 
+            # only take error space(3-dimension) from state space
+            Q = Q.detach()
             visits = np.concatenate((visits,state.numpy()[0][-3:],args.action_scale*action,[reward]),axis=None)
             #env.render()       
             episode_numsteps += 1
@@ -205,43 +201,38 @@ def main():
             bx_trace = torch.Tensor([bx])
             
             # for plot_path
-            #states_visited.append(state)
-            #actions_taken.append(action)
+            states_visited.append(state)
+            actions_taken.append(action)
+            #print("reward:", reward)
             
-            #print("plotting one state action pair")
-            #agent.plot_state_action_pair([state], [action], [action_naf], Ax, bx, i_episode, episode_numsteps)
-            
-            Ax_prev = Ax
-            bx_prev = bx[0]
-            
-            if not env.bConstraint:
+            if reward > -5000:
                 memory.push(state, action, mask, next_state, reward, Ax_trace, bx_trace)
                 
             state = next_state
                 
             if done or episode_numsteps == args.num_steps:
                 if done:
-                    print("To break due to reaching goal")
+                    print("To break due to reaching goal")                
                     episode_reached += 1
                 else:
-                    print("To break due to 300 steps per episode")
-                
+                    print("To break due to 200 steps per episode")
+                    
+                #episode_violation = env.constraint_violations                    
                 break
             
-        if env.bConstraint:
-            episode_violation += 1
+        if env.bViolated:
             print("one violation")
+            episode_violation += 1
             
+        writer.add_scalar('reward/train', episode_reward, i_episode)    
         print("Train Episode: {}, episode numsteps: {}, reward: {}, time: {} act: {} project: {}".format(i_episode, episode_numsteps,
                                                                          episode_reward, time.time()-t_st, t_act, t_project))
-        print("Percentage of actions in constraint violation was {}".format(np.sum([env.episode_trace[i][2]>0 for i in range(len(env.episode_trace))])))
+        #print("Percentage of actions in constraint violation was {}".format(np.sum([env.episode_trace[i][2]>0 for i in range(len(env.episode_trace))])))
 
-        writer.add_scalar('reward/train', episode_reward, i_episode)
         train_writer.writerow(np.concatenate(([episode_reward],[episode_violation],[episode_reached],visits),axis=None))
         rewards.append(episode_reward)
-        violations.append(episode_violation)
-        reaches.append(episode_reached)
         
+        #trying out this?
         env.stop()
         t_st = time.time()
         
@@ -253,11 +244,8 @@ def main():
             for _ in range(args.updates_per_step):
                 transitions = memory.sample(args.batch_size)
                 batch = Transition(*zip(*transitions))
-                if args.algo == "NAF":
-                    value_loss, reg_loss = agent.update_parameters(batch,optimize_feasible_mu=args.optimize_actions)
-                else:
-                    value_loss, reg_loss = agent.update_parameters(batch)
-                    
+                value_loss, reg_loss = agent.update_parameters(batch, optimize_feasible_mu=args.optimize_actions)
+                
                 writer.add_scalar('loss/full', value_loss, updates)
                 if args.optimize_actions:
                     writer.add_scalar('loss/value', value_loss-reg_loss, updates)
@@ -268,17 +256,11 @@ def main():
         #Training end
         
         #plot state value functions!!!!!!
-        #agent.plot_path(states_visited, actions_taken, i_episode)
-                
-        #agent.save_value_funct(
-        #    args.logdir + '/kd{}_sd{}_as{}_us_{}'.format(args.kd, args.seed, args.action_scale, args.updates_per_step),
-        #    i_episode,
-        #    ([-3.0, -3.0], [3.0, 3.0], [600, 600]))
-        
+        agent.plot_path(states_visited, actions_taken, i_episode)
             
         if time.time() - t_st < 4:
             print("waiting for reset...")
-            time.sleep(4.0)
+            time.sleep(5.0)
             print("DONE")
             
         '''--runing evaluation episode--'''
@@ -293,40 +275,38 @@ def main():
             episode_violation = 0
             episode_reward = 0
             visits = []
+            switch_once = 0
             while True:
-                if args.algo == "NAF":
-                    action, _ = agent.select_action(state, ounoise) if args.train_model else agent.select_action(state)
-                else:
-                    action = agent.select_action(state, ounoise) if args.train_model else agent.select_action(state)
-                
-                if args.project_actions:
-                    Ax, bx = env.project_constraint()
-                    action, _ = agent.select_proj_action(state, Ax, bx[0])
+                action, Q = agent.select_action(state)
                 
                 next_state, reward, done = env.step(action)
+                
+                '''switch constraint phase'''
+                if env.constraint_phase == 2 and switch_once == 0:
+                    env.switch_constraint_phase()
+                    env.switch_phase_done = True
+                    switch_once = 1
+                
+                Q = Q.detach()
                 visits = np.concatenate((visits, state.numpy()[0][-3:], args.action_scale*action, [reward]), axis=None)
                 episode_reward += reward
                 greedy_numsteps += 1
-                Ax_prev = Ax
-                bx_prev = bx[0]
-                        
+                
                 #state = next_state
                 state = torch.Tensor([next_state])
 
-                if done or greedy_numsteps == args.num_steps:                   
-                    episode_violation = env.constraint_violations
-                    
+                if done or greedy_numsteps == args.num_steps:
+                    print("evaluation break")
+                    #episode_violation = env.constraint_violations
                     break
             
             writer.add_scalar('reward/test', episode_reward, i_episode)
             test_writer.writerow(np.concatenate(([episode_reward], [episode_violation], visits), axis=None))
 
             rewards.append(episode_reward)
-            violations.append(episode_violation)
-
             print("Evaluation Episode: {}, total numsteps: {}, reward: {}, average reward: {}".format(i_episode, episode_numsteps, rewards[-1], np.mean(rewards[-10:])))
             print('Time per episode: {} s'.format((time.time() - t_start) / (i_episode+1)))
-            print("Percentage of actions in constraint violation was {}".format(np.sum([env.episode_trace[i][2]>0 for i in range(len(env.episode_trace))])))
+            #print("Percentage of actions in constraint violation was {}".format(np.sum([env.episode_trace[i][2]>0 for i in range(len(env.episode_trace))])))
 
             env.stop()
             time.sleep(4.0) #wait for reset
@@ -345,8 +325,6 @@ def main():
     print('Mean reward: {}'.format(np.mean(rewards)))
     print('Max reward: {}'.format(np.max(rewards)))
     print('Min reward: {}'.format(np.min(rewards)))
-    print('Total constraint violations: {} out of {} episodes'.format(np.sum(violations), args.num_episodes))
-
     
 
 if __name__ == '__main__':
