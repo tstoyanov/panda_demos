@@ -1,7 +1,26 @@
-# Panda Insertion
+
+# Panda Demos Repo
+
+Contains a number of demo scripts with the franka panda robot and varous controllers.
+
+## NAF - Normalized Advantage Functions RL in controller nullspace
+
+### Requirements
+
+To run null space based RL methods, you need to install our [HiQP controller](https://github.com/OrebroUniversity/hiqp/tree/origin/noetic-devel) and [Gurobi solver](https://www.gurobi.com/).
+
+
+### How To Run
+
+1. $ roslaunch panda_table_description panda_gazebo_hiqp_vel.launch
+
+2. $ ./eval_baseline.sh
+
+
+## Panda Insertion
 Panda insertion is a ROS package for performing a peg-in-hole insertion with a [Franka Emika Panda](https://www.franka.de/panda/) robot arm. The package is located at the [panda_insertion/](/panda_insertion) directory of this repository.
 
-## Table of Contents
+### Table of Contents
 * [About The Project](#about-the-project)
 * [Installation](#installation)
     * [ROS](#ros)
@@ -17,28 +36,28 @@ Panda insertion is a ROS package for performing a peg-in-hole insertion with a [
 * [License](#license)
 * [Acknowledgement](#acknowledgement)
 
-## About The Project
+### About The Project
 This project is an exam work done for the Center for Applied Autonomous Sensor Systems (AASS) which is a research environment on autonomous systems, robotics and artificial intelligence at Örebro University. AASS was contacted by SAAB to investigate a solution for automation of drill assembly using a robotic arm with lower precision than the clearance of the hole would demand.
 
-## Installation
+### Installation
 
-### ROS
+#### ROS
 This project is build with Kinetic Kame distribution. Follow the [ROS Kinetic installation instructions](http://wiki.ros.org/kinetic/Installation) to install the environemnt needed to run the packages.
 
-### Clone
+#### Clone
 After ROS has been fully installed, you can clone the branch into your machine inside the `src` directory of your ROS workspace. Clone the branch with the following command:
 ```bash
 $ git clone --single-branch --branch insertion https://github.com/tstoyanov/panda_demos
 ```
 
-### Packages Dependencies
+#### Packages Dependencies
 There are several packages included in this repository which all have dependencies that needs to be installed. To do this, use the tool [rosdep](http://wiki.ros.org/rosdep). To install all dependencies needed, run the following command:
 ```
 $ rosdep install --from-paths src --ignore-src -r -y
 ```
 If you run in to any trouble, check out the [rosdep tutorial](http://wiki.ros.org/ROS/Tutorials/rosdep).
 
-### Build
+#### Build
 Once the repository has been cloned the workspace should look like:
 ```
 ros_workspace/
@@ -53,13 +72,13 @@ You can now [build the packages using catkin](http://wiki.ros.org/ROS/Tutorials/
 $ catkin_make
 ```
 
-## Code Structure
+### Code Structure
 As shown in the image below, the `Insertion` class contains the three main components of the node, the `Panda`, `Controller` and `State Machine`. The `Panda` object is syncing the current state of the robot, this includes the pose and forces acted upon the end effector. The `Controller` object is performing all the computations such as generating trajectories, changing the robot pose and communicating wit other ROS nodes. Finally the `State Machine` is deciding on the order of execution of the controller.
 
 ![](/panda_insertion/meta/class_diagram_simple.png)
 
-## Usage
-### Launch Files
+### Usage
+#### Launch Files
 There are two [launch files](http://wiki.ros.org/roslaunch/XML) to run the `panda_insertion` package, one for running in simulation and one for running live on the robot. To execute the launch files, use the tool [roslaunch](http://wiki.ros.org/roslaunch). To see what nodes are being launch you can look at the content of the `.launch` files.
 
 Run the package in **simulation** with the following command:
@@ -72,7 +91,7 @@ Run the package on the **robot** with the following command:
 $ roslaunch panda_insertion panda_insertion_live.launch
 ```
 
-### Available Services
+#### Available Services
 There are some ROS [services](http://wiki.ros.org/Services) to help debugging and testing the state machine:
 - **change_state**, used for manually changing to a state in the state machine. Example usage of changing the state to the *spiralMotion* state:
     ```bash
@@ -86,18 +105,18 @@ There are some ROS [services](http://wiki.ros.org/Services) to help debugging an
     position_joint_trajectory_controller"
     ```
 
-### Parameters
+#### Parameters
 Some of the data used in the panda_insertion controller are parameterized and are available to modify in the `config/spring_parameters.yaml` file. The parameters are:
 - Goal x, y and z-coordinate.
 - Translational stiffness
 - Rotational stiffness
 
-## Authors
+### Authors
 - [Tobias Lans](https://github.com/lanstobias) - [lanstobias@gmail.com](mailto:lanstobias@gmail.com)
 - [Bobo Lillqvist](https://github.com/BoboLillqvist) - [bobo.lillqvist@gmail.com](mailto:bobo.lillqvist@gmail.com)
 
-## License
+### License
 [BSD](https://github.com/tstoyanov/panda_demos/blob/insertion/LICENSE.md)
 
-## Acknowledgement 
+### Acknowledgement 
 - Our supervisor [Todor Stoyanov](https://github.com/tstoyanov)

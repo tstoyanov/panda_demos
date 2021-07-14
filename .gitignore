@@ -1,3 +1,11 @@
+/naf_env/src/models/*
+/naf_env/src/runs/*
+/naf_env/src/saved_plots/*
+/naf_env/src/*.pyc
+/models/*
+/*.png
+/*.pk1
+/.idea/*
 # Customs
 panda_table_description/launch/sim.rviz
 
@@ -151,4 +159,3 @@ tags
 .history
 
 # End of https://www.gitignore.io/api/vim,ros,c++,cmake,linux,visualstudiocode
-

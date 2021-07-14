@@ -18,7 +18,7 @@ rosservice call /hiqp_joint_effort_controller/set_primitives \
   type: 'point'
   frame_id: 'tool'
   visible: true
-  color: [0.0, 0.0, 1.0, 1.0]
+  color: [0.0, 1.0, 0.0, 1.0]
   parameters: [0.0, 0.0, 0.0]
 - name: 'ee_z_axis'  
   type: 'line'
@@ -74,13 +74,13 @@ rosservice call /hiqp_joint_effort_controller/set_tasks \
   active: 1
   monitored: 0
   def_params: ['TDefFullPose', '0.0', '-1.17', '0.003', '-2.89', '-0.0', '1.82', '0.84']
-  dyn_params: ['TDynPD', '10.0', '7.0'] 
+  dyn_params: ['TDynPD', '10.0', '7.0']
 - name: 'ee_plane_project'
   priority: 1
   visible: 1
   active: 1
   monitored: 1
-  def_params: ['TDefGeomProj', 'point', 'plane', 'ee_point = table_plane']
+  def_params: ['TDefGeomProj', 'point', 'plane', 'ee_point > table_plane']
   dyn_params: ['TDynPD', '400.0', '51.0']
 - name: 'approach_align'
   priority: 1

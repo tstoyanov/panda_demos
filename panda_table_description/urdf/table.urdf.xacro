@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro" name="table" >
+
+  <!-- for simulation -->
+  <xacro:include filename="$(find panda_table_description)/urdf/table.gazebo.xacro"/>
+  <!-- end for simulation -->
+
+  <link name="world" />
+
+  <link name="table">
+    <inertial>
+      <mass value="200.0"/>
+      <inertia ixx="10.0" ixy="0" ixz="0" iyy="10.0" iyz="0" izz="10.0" />
+      <origin/>
+    </inertial>
+    <visual>
+      <geometry>
+	    <box size="1.0 1.11 0.7" />
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0.35" />
+    </visual>
+    <collision>
+      <geometry>
+	    <box size="1.0 1.11 0.7" />
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0.35" />
+    </collision>
+   </link>
+
+  <joint name="world_joint" type="fixed">
+    <parent link="world" />
+    <child link = "table" />
+    <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0" />
+  </joint>
+
+</robot>
