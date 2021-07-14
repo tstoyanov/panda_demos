@@ -26,9 +26,29 @@ joint_trajectory_vel_controller:
 # HiQP Velocity Controller ----------------------------------------
 hiqp_joint_velocity_controller:
   type: hiqp_ros/HiQPJointVelocityController
-  visualization_publish_rate: 150 #Hz
+  visualization_publish_rate: 1 #Hz
   load_primitives_from_tf: true
   marker_prefix: ""
+  joints:
+    - panda_joint1
+    - panda_joint2
+    - panda_joint3
+    - panda_joint4
+    - panda_joint5
+    - panda_joint6
+    - panda_joint7
+  task_monitoring:
+    active: 1
+    publish_rate: 1500.0
+
+# HiQP Effort Controller ----------------------------------------
+# NOTE: if running in gazebo this is NOT recommended!
+model_free_hiqp_joint_effort_controller:
+  type: hiqp_ros/HiQPJointEffortController
+  visualization_publish_rate: 25 #Hz
+  load_primitives_from_tf: true
+  marker_prefix: ""
+  model_based: false
   joints:
     - panda_joint1
     - panda_joint2
@@ -44,9 +64,12 @@ hiqp_joint_velocity_controller:
 # HiQP Effort Controller ----------------------------------------
 hiqp_joint_effort_controller:
   type: hiqp_ros/HiQPJointEffortController
-  visualization_publish_rate: 150 #Hz
+  visualization_publish_rate: 25 #Hz
   load_primitives_from_tf: true
   marker_prefix: ""
+  model_based: true
+  chain_root: "panda_link0"
+  chain_tip: "panda_hand"
   joints:
     - panda_joint1
     - panda_joint2
@@ -58,6 +81,22 @@ hiqp_joint_effort_controller:
   task_monitoring:
     active: 1
     publish_rate: 150.0
+  kv: 
+    - 30.0
+    - 30.0
+    - 30.0
+    - 30.0
+    - 20.0
+    - 12.0
+    - 10.0
+  kd: 
+    - 11.0
+    - 11.0
+    - 11.0
+    - 11.0
+    - 9.0
+    - 7.0
+    - 6.5
 
 # Franka HiQP Velocity Controller ----------------------------------------
 franka_hiqp_joint_velocity_controller:
@@ -127,3 +166,16 @@ cartesian_impedance_controller:
          - panda_joint5
          - panda_joint6
          - panda_joint7
+
+franka_gripper:
+    type: effort_controllers/JointTrajectoryController
+    joints:
+        - panda_finger_joint1
+        - panda_finger_joint2
+
+    gains:
+        panda_finger_joint1: { p: 5, d: 3.0, i: 0, i_clamp: 1 }
+        panda_finger_joint2: { p: 5, d: 1.0, i: 0, i_clamp: 1 }
+
+    state_publish_rate: 25
+

@@ -3,12 +3,13 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
     
     <xacro:macro name="panda_table_gazebo" params="robot_name:='panda' load_gripper:='true'">
-
+	    <!-- set the model to be static, enable self collision -->    
         <!-- Link0 -->
         <gazebo reference="${robot_name}_link0">
             <material>Gazebo/Grey</material>
             <mu1>0.2</mu1>
             <mu2>0.2</mu2>
+	    <self_collide>true</self_collide>
         </gazebo>
 
         <!-- Link1 -->
@@ -16,6 +17,7 @@
             <material>Gazebo/White</material>
             <mu1>0.2</mu1>
             <mu2>0.2</mu2>
+	    <self_collide>true</self_collide>
         </gazebo>
 
         <!-- Link2 -->
@@ -23,6 +25,7 @@
             <material>Gazebo/White</material>
             <mu1>0.2</mu1>
             <mu2>0.2</mu2>
+	    <self_collide>true</self_collide>
         </gazebo>
 
         <!-- Link3 -->
@@ -30,6 +33,7 @@
             <material>Gazebo/White</material>
             <mu1>0.2</mu1>
             <mu2>0.2</mu2>
+	    <self_collide>true</self_collide>
         </gazebo>
 
         <!-- Link4 -->
@@ -37,6 +41,7 @@
             <material>Gazebo/White</material>
             <mu1>0.2</mu1>
             <mu2>0.2</mu2>
+	    <self_collide>true</self_collide>
         </gazebo>
 
         <!-- Link5 -->
@@ -44,6 +49,7 @@
             <material>Gazebo/White</material>
             <mu1>0.2</mu1>
             <mu2>0.2</mu2>
+	    <self_collide>true</self_collide>
         </gazebo>
 
         <!-- Link6 -->
@@ -51,6 +57,7 @@
             <material>Gazebo/White</material>
             <mu1>0.2</mu1>
             <mu2>0.2</mu2>
+	    <self_collide>true</self_collide>
         </gazebo>
 
         <!-- Link7 -->
@@ -85,6 +92,7 @@
             <material>Gazebo/Grey</material>
             <mu1>0.2</mu1>
             <mu2>0.2</mu2>
+	    <self_collide>true</self_collide>
         </gazebo>
 
         <!-- LinkLeftFinger -->
@@ -92,6 +100,7 @@
             <material>Gazebo/Grey</material>
             <mu1>0.2</mu1>
             <mu2>0.2</mu2>
+	    <self_collide>true</self_collide>
         </gazebo>
 	</xacro:if>
 
@@ -123,6 +132,7 @@
             <mu1>0.2</mu1>
             <mu2>0.2</mu2>
 	    <self_collide>true</self_collide>
+	    <static>true</static>
         </gazebo>
  <gazebo reference="column1">
             <material>Gazebo/Grey</material>
