@@ -17,3 +17,11 @@ rosservice call /hiqp_joint_effort_controller/set_tasks \
   #def_params: ['TDefFullPose', '0.007', '-0.77', '0.007', '-2.35', '0.007', '2.1', '0.9']
 
 rosservice call /gazebo/unpause_physics "{}"
+
+rostopic pub -1 /gripper_direct_controller/command std_msgs/Float64MultiArray "layout:
+  dim:
+  - label: ''
+    size: 0
+    stride: 0
+  data_offset: 0
+data: [0.04, 0.04]" 

@@ -9,7 +9,7 @@
     <arg name="debug" default="false"/>
     <arg name="load_gripper" default="true"/>
     <arg name="robot_namespace" default="panda"/>
-    <arg name="controllers" default="joint_state_controller hiqp_joint_effort_controller"/>
+    <arg name="controllers" default="joint_state_controller hiqp_joint_effort_controller gripper_direct_controller"/>
     <arg name="rviz" default="true"/>
 
     <rosparam command="load" file="$(find panda_table_launch)/config/controllers.yaml" />
@@ -35,7 +35,7 @@
 
     <!-- load the controllers -->
     <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="$(arg controllers)"/>
-    <node name="controller_spawner_stopped" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="--stopped effort_joint_trajectory_controller effort_controller" />
+    <!--    <node name="controller_spawner_stopped" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="- -stopped effort_joint_trajectory_controller" /> -->
 
     <!-- load rviz -->
     <node name="rviz" pkg="rviz" type="rviz" if="$(arg rviz)" args="-d $(find panda_table_description)/launch/sim.rviz" />
