@@ -155,8 +155,11 @@ namespace force_controllers {
     KDL::Vector gravity = KDL::Vector::Zero();
     gravity(2) = -9.81;
     robot_state_data_.kdl_tree_.getChain(root_name_, tip_name_, kdl_chain_);
+    kdl_tree_.addChain(kdl_chain_,"root");
 
     id_solver_ = std::make_shared<KDL::ChainDynParam>(kdl_chain_, gravity);
+    fk_solver_pos_ = std::make_shared<KDL::TreeFkSolverPos_recursive>(kdl_tree_);
+    fk_solver_jac_ = std::make_shared<KDL::TreeJntToJacSolver>(kdl_tree_);
   }
 
   void BaseEffortController::sampleJointValues(){

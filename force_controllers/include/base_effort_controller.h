@@ -19,6 +19,8 @@
 #include <kdl/jntarrayvel.hpp>
 #include <kdl_parser/kdl_parser.hpp>
 #include <kdl/chaindynparam.hpp>
+#include <kdl/treefksolverpos_recursive.hpp>
+#include <kdl/treejnttojacsolver.hpp>
 
 #include "robot_state.h"
 
@@ -60,12 +62,6 @@ namespace force_controllers {
     inline const std::string& getTipName() { return tip_name_; }
     inline const KDL::Chain& getKDLChain() { return kdl_chain_; }
 
-  private:
-    BaseEffortController(const BaseEffortController& other) = delete;
-    BaseEffortController(BaseEffortController&& other) = delete;
-    BaseEffortController& operator=(const BaseEffortController& other) = delete;
-    BaseEffortController& operator=(BaseEffortController&& other) noexcept = delete;
-
     int loadUrdfToKdlTree();
     int loadJointsAndSetJointHandlesMap();
     void initInternalModel();
@@ -84,11 +80,14 @@ namespace force_controllers {
     RobotStatePtr                         robot_state_ptr_;
 
     std::shared_ptr<KDL::ChainDynParam>   id_solver_; // inverted dynamics solver
+    std::shared_ptr<KDL::TreeFkSolverPos_recursive>  fk_solver_pos_; // forward kinmetics end-effector position solver
+    std::shared_ptr<KDL::TreeJntToJacSolver>         fk_solver_jac_; // forward kinematics end-effector jacobian solver
 
     std::string                           root_name_; // root link name
     std::string                           tip_name_; // tip (end-effector) link name
 
     KDL::Chain                            kdl_chain_; // chain of links from root to tip
+    KDL::Tree                             kdl_tree_; // tree containing only chain of links from root to tip
     KDL::JntSpaceInertiaMatrix            tau_inertia_; // inertia matrix
     KDL::JntArray                         tau_coriolis_; // centrifugal and coriolis torques
     KDL::JntArray                         tau_gravity_; // gravity torques
@@ -97,6 +96,13 @@ namespace force_controllers {
     Eigen::VectorXd                       tau_u_; // driving torques
     
     unsigned int                          n_joints_;
+  
+  private:
+    BaseEffortController(const BaseEffortController& other) = delete;
+    BaseEffortController(BaseEffortController&& other) = delete;
+    BaseEffortController& operator=(const BaseEffortController& other) = delete;
+    BaseEffortController& operator=(BaseEffortController&& other) noexcept = delete;
+
 
   };
 

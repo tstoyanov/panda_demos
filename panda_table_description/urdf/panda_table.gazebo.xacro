@@ -104,7 +104,7 @@
 
 	<xacro:unless value="$(arg load_gripper)">
         <!-- Tool -->
-        <gazebo reference="tool">
+	<!-- <gazebo reference="tool">
             <material>Gazebo/Grey</material>
             <mu1>0.2</mu1>
             <mu2>0.2</mu2>
@@ -120,7 +120,14 @@
                 <frameName>tool</frameName>
                 </plugin>
             </sensor>
-        </gazebo>
+	</gazebo> -->
+		
+	<gazebo reference="tool">
+            <material>Gazebo/Grey</material>
+            <mu1>0.2</mu1>
+            <mu2>0.2</mu2>
+            <self_collide>true</self_collide>
+	</gazebo>
 
 	</xacro:unless>
 
