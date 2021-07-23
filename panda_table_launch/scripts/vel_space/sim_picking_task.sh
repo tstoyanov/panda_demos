@@ -1,7 +1,7 @@
 rosservice call /hiqp_joint_velocity_controller/remove_tasks \
 "names:
 - 'full_pose'
-- 'ee_plane_project'
+- 'ee_plane_table'
 - 'approach_align_z'
 - 'ee_cage_front'
 - 'ee_cage_back'
@@ -10,20 +10,6 @@ rosservice call /hiqp_joint_velocity_controller/remove_tasks \
 - 'ee_goal'
 " 
 rosservice call /hiqp_joint_velocity_controller/remove_all_primitives "{}"
-
-#rosservice call /hiqp_joint_velocity_controller/set_tasks \
-#"tasks:
-#- name: 'full_pose'
-#  priority: 5
-#  visible: 1
-#  active: 1
-#  monitored: 0
-#  def_params: ['TDefFullPose', '1.51', '-1.17', '0.0', '-2.89', '-0.0', '1.82', '0.84']
-#  dyn_params: ['TDynPD', '9.0', '7.0']"
-#
-#rosservice call /gazebo/unpause_physics "{}"
-
-#sleep 2
 
 
 ####################### GEOMETRIC PRIMITIVES #######################
@@ -55,10 +41,10 @@ rosservice call /hiqp_joint_velocity_controller/set_primitives \
   parameters: [0.0, 0.0, 1.0, 0.0, 0.0, 0.0]
 - name: 'table_plane'
   type: 'plane'
-  frame_id: 'world'
+  frame_id: 'panda_link0'
   visible: true
   color: [1.0, 0.0, 1.0, 1.0]
-  parameters: [0.0, 0.0, 1.0, 0.77]
+  parameters: [0.0, 0.0, 1.0, 0.0]
 - name: 'world_x_axis'
   type: 'line'
   frame_id: 'world'
@@ -96,11 +82,11 @@ rosservice call /hiqp_joint_velocity_controller/set_primitives \
   color: [0.2, 0.5, 0.2, 0.21]
   parameters: [1.0, 0.0, 0.0, -0.4]
 - name: 'goal'
-  type: 'box'
+  type: 'sphere'
   frame_id: 'world'
   visible: true
   color: [0.0, 1.0, 0.0, 1.0]
-  parameters: [-0.2, -0.0, 0.79, 0.04, 0.04, 0.04]
+  parameters: [-0.23, -0.04, 0.7, 0.04]
 - name: 'goal_point'
   type: 'point'
   frame_id: 'world'
@@ -119,57 +105,65 @@ rosservice call /hiqp_joint_velocity_controller/set_tasks \
   active: 1
   monitored: 1
   def_params: ['TDefGeomProj', 'point', 'plane', 'ee_point > table_plane']
-  dyn_params: ['TDynPD', '4.0', '5.0']
+  dyn_params: ['TDynLinear', '4.0']
 - name: 'ee_cage_front'
   priority: 2
   visible: 1
   active: 1
   monitored: 1
   def_params: ['TDefGeomProj', 'point', 'plane', 'ee_point < front_plane']
-  dyn_params: ['TDynPD', '4.0', '5.0']
+  dyn_params: ['TDynLinear', '4.0']
 - name: 'ee_cage_back'
   priority: 2
   visible: 1
   active: 1
   monitored: 1
   def_params: ['TDefGeomProj', 'point', 'plane', 'ee_point > back_plane']
-  dyn_params: ['TDynPD', '4.0', '5.0']
+  dyn_params: ['TDynLinear', '4.0']
 - name: 'ee_cage_left'
   priority: 2
   visible: 1
   active: 1
   monitored: 1
   def_params: ['TDefGeomProj', 'point', 'plane', 'ee_point < left_plane']
-  dyn_params: ['TDynPD', '4.0', '5.0']
+  dyn_params: ['TDynLinear', '4.0']
 - name: 'ee_cage_right'
   priority: 2
   visible: 1
   active: 1
   monitored: 1
   def_params: ['TDefGeomProj', 'point', 'plane', 'ee_point > right_plane']
-  dyn_params: ['TDynPD', '4.0', '5.0']
+  dyn_params: ['TDynLinear', '4.0']
 - name: 'approach_align_z'
   priority: 3
   visible: 1
   active: 1
   monitored: 1
   def_params: ['TDefGeomAlign', 'line', 'line', 'ee_z_axis = table_z_axis']
-  dyn_params: ['TDynPD', '9.0', '7.0']
+  dyn_params: ['TDynLinear', '4.0']
 - name: 'ee_goal'
   priority: 4
   visible: 1
   active: 1
   monitored: 1
-  def_params: ['TDefGeomProj', 'point', 'point', 'ee_point = goal_point']
-  dyn_params: ['TDynPD', '4.0', '5.0']
+  def_params: ['TDefGeomProj', 'point', 'sphere', 'ee_point < goal']
+  dyn_params: ['TDynLinear', '40.0']
 - name: 'full_pose'
   priority: 5
   visible: 1
   active: 1
   monitored: 0
   def_params: ['TDefFullPose', '1.51', '-1.17', '0.0', '-2.89', '-0.0', '1.82', '0.84']
-  dyn_params: ['TDynPD', '9.0', '7.0']
+  dyn_params: ['TDynLinear', '1.0']
 "
+
+rostopic pub -1 /gripper_direct_controller/command std_msgs/Float64MultiArray "layout:
+  dim:
+  - label: ''
+    size: 0
+    stride: 0
+  data_offset: 0
+data: [0.04, 0.04]" 
 
 #- name: 'ee_rl'
 #  priority: 4
