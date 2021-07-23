@@ -18,6 +18,9 @@ class TaskPrimitiveWrapper {
   public:
     virtual void getPrimitiveList(std::vector<hiqp_msgs::Primitive> &primitives) = 0;
     virtual void getTasksList(std::vector<hiqp_msgs::Task> &tasks) = 0;
+    
+    virtual void getPrimitiveNames(std::vector<std::string> &primitives) = 0;
+    virtual void getTaskNames(std::vector<std::string> &tasks) = 0;
 };
 
 ///**To simplify, a grasp intervall is given as two concentric cylinders,
@@ -27,20 +30,34 @@ class TaskPrimitiveWrapper {
 /// two cylinders and the planes (i.e., inside the shell formed by the cylinders
 /// and in between the planes described by n^Tx - d = 0)
 class GraspInterval : public TaskPrimitiveWrapper {
-  hiqp_msgs::Primitive upper;
-  hiqp_msgs::Primitive lower;
-  hiqp_msgs::Primitive left;
-  hiqp_msgs::Primitive right;
-  hiqp_msgs::Primitive inner;
-  hiqp_msgs::Primitive outer;
+  private:
+    hiqp_msgs::Primitive upper;
+    hiqp_msgs::Primitive lower;
+    hiqp_msgs::Primitive left;
+    hiqp_msgs::Primitive right;
+    hiqp_msgs::Primitive inner;
+    hiqp_msgs::Primitive outer;
 
-  std::string obj_frame_;  // object frame
-  std::string e_frame_;    // endeffector frame
-  Eigen::Vector3d e_;      // endeffector point expressed in e_frame_
-  float opening_angle;
-    
-  virtual void getPrimitiveList(std::vector<hiqp_msgs::Primitive> &primitives);
-  virtual void getTasksList(std::vector<hiqp_msgs::Task> &tasks);
+    std::string obj_frame_;  // object frame
+    std::string e_frame_;    // endeffector frame
+    Eigen::Vector3d e_;      // endeffector point expressed in e_frame_
+    float opening_angle;
+
+    bool initialized;
+
+    std::vector<hiqp_msgs::Task> tasks_;
+
+  public:    
+
+    ///sets up the grasp interval
+    void setInterval();
+
+    //getters
+    virtual void getPrimitiveList(std::vector<hiqp_msgs::Primitive> &primitives);
+    virtual void getTasksList(std::vector<hiqp_msgs::Task> &tasks);
+
+    virtual void getPrimitiveNames(std::vector<std::string> &primitives);
+    virtual void getTaskNames(std::vector<std::string> &tasks);
 
 };
 

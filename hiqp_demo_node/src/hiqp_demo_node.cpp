@@ -2,7 +2,12 @@
 
 using namespace hiqp_panda_demo; 
 
+void GraspInterval::setInterval() {
+
+}
+
 void GraspInterval::getPrimitiveList(std::vector<hiqp_msgs::Primitive> &primitives) {
+  if(!initialized) return;
   primitives.clear();
   primitives.push_back(upper);
   primitives.push_back(lower);
@@ -13,7 +18,19 @@ void GraspInterval::getPrimitiveList(std::vector<hiqp_msgs::Primitive> &primitiv
 }
 
 void GraspInterval::getTasksList(std::vector<hiqp_msgs::Task> &tasks) {
+  if(!initialized) return;
   tasks.clear();
+  for(auto it=tasks_.begin(); it!=tasks_.end(); it++) {
+    tasks.push_back(*it);
+  }
+}
+    
+void GraspInterval::getPrimitiveNames(std::vector<std::string> &primitives) {
+
+}
+
+void GraspInterval::getTaskNames(std::vector<std::string> &tasks) {
+
 }
 
 //Constructor, creates handles and gets stuff off the parameter server
