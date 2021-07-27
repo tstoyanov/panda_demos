@@ -8,6 +8,8 @@
 #include <std_srvs/Empty.h>
 
 #include <Eigen/Core>
+#include <Eigen/Geometry>
+
 
 namespace hiqp_panda_demo {
 
@@ -37,12 +39,14 @@ class GraspInterval : public TaskPrimitiveWrapper {
     hiqp_msgs::Primitive right;
     hiqp_msgs::Primitive inner;
     hiqp_msgs::Primitive outer;
+    hiqp_msgs::Primitive point_eef;
 
     std::string obj_frame_;  // object frame
     std::string e_frame_;    // endeffector frame
     Eigen::Vector3d e_;      // endeffector point expressed in e_frame_
-    float opening_angle;
+    //float opening_angle;
 
+    double DYNAMICS_GAIN=1.0;
     bool initialized;
 
     std::vector<hiqp_msgs::Task> tasks_;
@@ -50,7 +54,8 @@ class GraspInterval : public TaskPrimitiveWrapper {
   public:    
 
     ///sets up the grasp interval
-    void setInterval();
+    void setInterval(std::string obj_frame, std::string e_frame, Eigen::Vector3d &eef,
+		    Eigen::Affine3d &obj_pose);
 
     //getters
     virtual void getPrimitiveList(std::vector<hiqp_msgs::Primitive> &primitives);
@@ -61,10 +66,44 @@ class GraspInterval : public TaskPrimitiveWrapper {
 
 };
 
-class DemoNode {
+///** Alternative formulation for top grasps. 
+class TopGraspInterval : public TaskPrimitiveWrapper {
+  private:
+    hiqp_msgs::Primitive cylinder;
+    hiqp_msgs::Primitive vertical_axis;
+    hiqp_msgs::Primitive horizontal_axis;
+    hiqp_msgs::Primitive plane_above;
+    hiqp_msgs::Primitive plane_below;
+    hiqp_msgs::Primitive point_eef;
+
+    std::string obj_frame_;  // object frame
+    std::string e_frame_;    // endeffector frame
+    Eigen::Vector3d e_;      // endeffector point expressed in e_frame_
+    //float opening_angle;
+
+    bool initialized;
+
+    std::vector<hiqp_msgs::Task> tasks_;
+
+  public:    
+
+    ///sets up the grasp interval
+    void setInterval(std::string obj_frame, std::string e_frame, Eigen::Vector3d &eef,
+		    Eigen::Affine3d &obj_pose);
+
+    //getters
+    virtual void getPrimitiveList(std::vector<hiqp_msgs::Primitive> &primitives);
+    virtual void getTasksList(std::vector<hiqp_msgs::Task> &tasks);
+
+    virtual void getPrimitiveNames(std::vector<std::string> &primitives);
+    virtual void getTaskNames(std::vector<std::string> &tasks);
+
+};
+
+class DemoGrasping {
 
   public: 
-    DemoNode();
+    DemoGrasping();
   private:
     unsigned int n_jnts;
     std::vector<std::string> link_frame_names;
@@ -74,9 +113,16 @@ class DemoNode {
 
     hiqp_ros::HiQPClient hiqp_client_;
 
+    Eigen::Vector3d eef_offset_;
+    Eigen::Affine3d object_pose_;
+
     /// Servers
     ros::ServiceServer start_demo_srv_;
     bool startDemo(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res);
+
+    /// that's the equilibrium pose of the manipulator. used for resolving redundancies. 
+    std::vector<double> start_config_;
+
 };
 
 }
