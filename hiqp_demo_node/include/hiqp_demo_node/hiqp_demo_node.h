@@ -33,13 +33,19 @@ class TaskPrimitiveWrapper {
 /// and in between the planes described by n^Tx - d = 0)
 class GraspInterval : public TaskPrimitiveWrapper {
   private:
+    //related to grasp interval
     hiqp_msgs::Primitive upper;
     hiqp_msgs::Primitive lower;
     hiqp_msgs::Primitive left;
     hiqp_msgs::Primitive right;
     hiqp_msgs::Primitive inner;
     hiqp_msgs::Primitive outer;
-    hiqp_msgs::Primitive point_eef;
+    hiqp_msgs::Primitive obj_z_axis;
+    
+    //related to the robot itself
+    hiqp_msgs::Primitive point_eef; 		//point on end effector
+    hiqp_msgs::Primitive eef_approach_axis;	//axis pointing forward from gripper
+    hiqp_msgs::Primitive eef_orthogonal_axis;	//axis pointing orthogonal to grasping plane
 
     std::string obj_frame_;  // object frame
     std::string e_frame_;    // endeffector frame

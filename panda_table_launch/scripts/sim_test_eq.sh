@@ -1,12 +1,12 @@
-rosservice call /hiqp_joint_velocity_controller/remove_tasks \
+rosservice call /hiqp_joint_effort_controller/remove_tasks \
 "names:
 - 'full_pose'
 - 'approach_align_z'
 - 'ee_goal'
 " 
-rosservice call /hiqp_joint_velocity_controller/remove_all_primitives "{}"
+rosservice call /hiqp_joint_effort_controller/remove_all_primitives "{}"
 
-#rosservice call /hiqp_joint_velocity_controller/set_tasks \
+#rosservice call /hiqp_joint_effort_controller/set_tasks \
 #"tasks:
 #- name: 'full_pose'
 #  priority: 5
@@ -22,7 +22,7 @@ rosservice call /hiqp_joint_velocity_controller/remove_all_primitives "{}"
 
 
 ####################### GEOMETRIC PRIMITIVES #######################
-rosservice call /hiqp_joint_velocity_controller/set_primitives \
+rosservice call /hiqp_joint_effort_controller/set_primitives \
 "primitives:
 - name: 'ee_point'
   type: 'point'
@@ -56,27 +56,21 @@ rosservice call /hiqp_joint_velocity_controller/set_primitives \
   parameters: [1.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 - name: 'table_z_axis'
   type: 'line'
-  frame_id: 'panda_link0'
+  frame_id: 'world'
   visible: true
   color: [0.0, 1.0, 1.0, 1.0]
-  parameters: [0.0, 0.0, 1.0, 0.4, -0.35, 0.0]
-- name: 'goal_point'
-  type: 'point'
+  parameters: [0.0, 0.0, 1.0, 0.0, 0.0, 0.0]
+- name: 'goal_sphere'
+  type: 'sphere'
   frame_id: 'world'
   visible: true
   color: [0.0, 0.0, 1.0, 1.0]
-  parameters: [-0.2, -0.0, 0.79]
-- name: 'goal_sphere'
-  type: 'sphere'
-  frame_id: 'panda_link0'
-  visible: true
-  color: [0.0, 0.0, 1.0, 1.0]
-  parameters: [0.4, -0.35, 0.4, 0.05]
+  parameters: [-0.2, -0.0, 0.79, 0.05]
 "
 
 
 ####################### TASKS #######################
-rosservice call /hiqp_joint_velocity_controller/set_tasks \
+rosservice call /hiqp_joint_effort_controller/set_tasks \
 "tasks:
 - name: 'ee_goal'
   priority: 0
@@ -84,28 +78,14 @@ rosservice call /hiqp_joint_velocity_controller/set_tasks \
   active: 1
   monitored: 1
   def_params: ['TDefGeomProj', 'point', 'sphere', 'ee_point < goal_sphere']
-  dyn_params: ['TDynLinear', '1.0']
-- name: 'approach_align_z'
-  priority: 1
-  visible: 1
-  active: 1
-  monitored: 1
-  def_params: ['TDefGeomAlign', 'line', 'line', 'ee_x_axis = table_z_axis', '0.1']
-  dyn_params: ['TDynLinear', '2.0']
-- name: 'approach_project_z'
-  priority: 2
-  visible: 1
-  active: 1
-  monitored: 1
-  def_params: ['TDefGeomProj', 'line', 'line', 'ee_z_axis = table_z_axis']
-  dyn_params: ['TDynLinear', '2.0']
+  dyn_params: ['TDynPD', '1.0', '2.0']
 - name: 'full_pose'
   priority: 2
   visible: 1
   active: 1
   monitored: 0
-  def_params: ['TDefFullPose', '1.51', '-1.17', '0.0', '-2.89', '-0.0', '1.82', '0.84']
-  dyn_params: ['TDynLinear', '0.1']
+  def_params: ['TDefFullPose', '0.01', '-1.17', '0.0', '-2.89', '-0.0', '1.82', '0.84']
+  dyn_params: ['TDynPD', '1.0', '2.0']
   "
 
 #

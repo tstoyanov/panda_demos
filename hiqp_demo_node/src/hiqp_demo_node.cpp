@@ -35,6 +35,18 @@ void GraspInterval::setInterval(std::string obj_frame, std::string e_frame, Eige
       "outer", "cylinder", obj_frame_, false, {0.6, 0, 0.6, 0.2},
       {0,0,1, obj_t(0),obj_t(1),obj_t(2), obj_r+obj_r_tol, obj_h}); 
   //principal axis direction, point, radius, height
+  
+  obj_z_axis = hiqp_ros::createPrimitiveMsg(
+      "obj_z_axis", "line", obj_frame_, false, {0.6, 0, 0.6, 0.2},
+      {0,0,1, obj_t(0),obj_t(1),obj_t(2)}); 
+  eef_approach_axis = hiqp_ros::createPrimitiveMsg(
+      "eef_approach_axis", "line", e_frame_, false, {0.6, 0, 0.6, 0.2},
+      {0,0,1, 0,0,0}); 
+  eef_orthogonal_axis = hiqp_ros::createPrimitiveMsg(
+      "eef_orthogonal_axis", "line", e_frame_, false, {0.6, 0, 0.6, 0.2},
+      {1,0,0, 0,0,0}); 
+
+
 
   //------------Tasks-------------//
   // Upper/lower GRASP INTERVAL PLANE
@@ -59,6 +71,16 @@ void GraspInterval::setInterval(std::string obj_frame, std::string e_frame, Eige
        point_eef.name + " < " + outer.name},
       {"TDynLinear", std::to_string(2.0 * DYNAMICS_GAIN)}));
 
+  tasks_.push_back(hiqp_ros::createTaskMsg(
+      "orth_align", 3, false, true, true,
+      {"TDefGeomAlign", "line", "line",
+       eef_orthogonal_axis.name + " = " + obj_z_axis.name, "0.1"},
+      {"TDynLinear", std::to_string(2.0 * DYNAMICS_GAIN)}));
+  tasks_.push_back(hiqp_ros::createTaskMsg(
+      "approach_proj", 3, false, true, true,
+      {"TDefGeomProj", "line", "line",
+       eef_approach_axis.name + " = " + obj_z_axis.name},
+      {"TDynLinear", std::to_string(2.0 * DYNAMICS_GAIN)}));
 
 }
 
@@ -68,10 +90,13 @@ void GraspInterval::getPrimitiveList(std::vector<hiqp_msgs::Primitive> &primitiv
   primitives.push_back(point_eef);
   primitives.push_back(upper);
   primitives.push_back(lower);
-  primitives.push_back(left);
-  primitives.push_back(right);
+  //primitives.push_back(left);
+  //primitives.push_back(right);
   primitives.push_back(inner);
   primitives.push_back(outer);
+  primitives.push_back(obj_z_axis);
+  primitives.push_back(eef_approach_axis);
+  primitives.push_back(eef_orthogonal_axis);
 }
 
 void GraspInterval::getTasksList(std::vector<hiqp_msgs::Task> &tasks) {
@@ -92,6 +117,9 @@ void GraspInterval::getPrimitiveNames(std::vector<std::string> &primitives) {
   primitives.push_back(right.name);
   primitives.push_back(inner.name);
   primitives.push_back(outer.name);
+  primitives.push_back(obj_z_axis.name);
+  primitives.push_back(eef_approach_axis.name);
+  primitives.push_back(eef_orthogonal_axis.name);
 
 }
 
