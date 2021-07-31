@@ -4,8 +4,10 @@
 #include "geometry_msgs/PoseStamped.h"
 #include "geometry_msgs/WrenchStamped.h"
 #include <geometry_msgs/TransformStamped.h>
+#include <sensor_msgs/JointState.h>
 #include <boost/thread/mutex.hpp>
 #include "ros/ros.h"
+
 
 class Panda
 {
@@ -20,6 +22,8 @@ public:
     geometry_msgs::Quaternion straightOrientation;
     geometry_msgs::WrenchStamped wrenchMsg;
     geometry_msgs::TransformStamped transformStamped;
+    std::vector<double> q;
+    std::vector<double> dq;
     const double holeDiameter;
     const double endEffectorDiameter;
 
@@ -37,6 +41,7 @@ public:
     void updatePosition(double x, double y, double z);
     void updateWrenchForces(geometry_msgs::Wrench wrench);
     void updateTransform(geometry_msgs::Transform transform);
+    void updateJointStates(sensor_msgs::JointState joint_state);
     geometry_msgs::Wrench getWrench();
 };
 

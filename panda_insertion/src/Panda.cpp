@@ -5,6 +5,8 @@
 Panda::Panda() : holeDiameter(16.3), endEffectorDiameter(16.25)
 {
     ROS_DEBUG("Panda object created");
+    q.reserve(7);
+    dq.reserve(7);
 }
 
 // Public methods
@@ -35,7 +37,6 @@ void Panda::init(ros::NodeHandle* nodeHandler)
     straightOrientation.y = 0.014363;
     straightOrientation.z = -0.0171982;
     straightOrientation.w = 0.00678687;
-
 }
 
 void Panda::updatePosition(double x, double y, double z)
@@ -60,6 +61,12 @@ geometry_msgs::Wrench Panda::getWrench()
 void Panda::updateTransform(geometry_msgs::Transform transform)
 {
     transformStamped.transform = transform;
+}
+
+void Panda::updateJointStates(sensor_msgs::JointState joint_state)
+{
+    q = joint_state.position;
+    dq = joint_state.velocity;
 }
 
 // Private methods

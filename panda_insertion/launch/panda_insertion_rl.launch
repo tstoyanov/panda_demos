@@ -6,6 +6,7 @@
     <arg name="gui" default="false"/>
     <arg name="headless" default="false"/>
     <arg name="debug" default="false"/>
+    <arg name="robot_namespace" default="panda"/>
     <arg name="start_moveit" default="false"/>
     <arg name="load_gripper" default="false"/>
 
@@ -30,7 +31,9 @@
     <rosparam command="load" file="$(find panda_insertion)/config/spring_parameters_sim.yaml" />
 
     <!-- Load the controllers -->
-    <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="joint_state_controller effort_joint_trajectory_controller" /> 
+    <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="joint_state_controller impedance_controller" /> 
+    <node name="controller_spawner_stopped" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="--stopped effort_joint_trajectory_controller"/>
+
 
     <!-- Convert joint states to TF transforms for rviz, etc -->
     <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" respawn="true" output="screen" />
@@ -41,24 +44,7 @@
     <!-- Nodes -->
     <node name="rviz" pkg="rviz" type="rviz" args="-d $(find panda_table_description)/launch/sim.rviz" />
 
-    <node name="insertion" pkg="panda_insertion" type="insertion" output="screen">
-        <param name="jointTrajectoryTopic" type="str" value="effort_joint_trajectory_controller/command"/>
-        <param name="equilibriumPoseTopic" type="str" value="impedance_controller/equilibrium_pose"/>
-        <param name="desiredStiffnessTopic" type="str" value="impedance_controller/desired_stiffness"/>
-
-        <param name="loadControllerService" type="str" value="controller_manager/load_controller"/>
-        <param name="switchControllerService" type="str" value="controller_manager/switch_controller"/>
-
-        <param name="impedanceController" type="str" value="impedance_controller"/>
-        <param name="positionJointTrajectoryController" type="str" value="effort_joint_trajectory_controller"/>
-
-	    <remap from="/panda/franka_state_controller/F_ext" to="/force"/>
-
-        <param name="x_goal" type="double" value="0.475"/>
-        <param name="y_goal" type="double" value="0.105"/>
-        <param name="z_goal" type="double" value="0.74"/>
-        <!-- <param name="x_goal" type="double" value="0.0"/>
-        <param name="y_goal" type="double" value="0.0"/>
-        <param name="z_goal" type="double" value="0.9"/> -->
+    <node name="insertion_rl" pkg="panda_insertion" type="insertion_rl" output="screen">
     </node>
+
 </launch>

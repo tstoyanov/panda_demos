@@ -5,7 +5,7 @@
 
 #include "panda_insertion/Panda.hpp"
 #include <boost/thread/mutex.hpp>
-
+#include "geometry_msgs/Twist.h"
 #include "vector"
 #include "string"
 
@@ -33,8 +33,12 @@ public:
     Trajectory generateInternalUpTrajectory(int nrOfPoints);
 
     void writeTrajectoryToFile(Trajectory trajectory,
+                               geometry_msgs::Twist twist,
                                const std::string& fileName,
-                               bool appendToFile = false);
+                               bool appendToFile = false,
+                               bool lastTraj = false);
+
+    void writeStateToFile(const std::string& fileName, bool appendToFile = false);
 };
 
 #endif

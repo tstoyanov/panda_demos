@@ -106,8 +106,8 @@ bool Controller::moveToInitialPositionState()
     Trajectory initialTrajectory;
     try 
     {
-        initialTrajectory = trajectoryHandler->generateInitialPositionTrajectory(100);
-        //trajectoryHandler->writeTrajectoryToFile(initialTrajectory, "initTraj.csv");
+        initialTrajectory = trajectoryHandler->generateInitialPositionTrajectory(200);
+        trajectoryHandler->writeTrajectoryToFile(initialTrajectory, twist, "actions_terminals_infos.csv", true);
     }
     catch (runtime_error e)
     {
@@ -120,11 +120,15 @@ bool Controller::moveToInitialPositionState()
     ros::Rate rate(20);
     for (auto point : initialTrajectory)
     {
+        // write state
+        trajectoryHandler->writeStateToFile("states.csv", true);
+
+        // publish way point
         initialPositionMessage = messageHandler->pointPoseMessage(point);
         equilibriumPosePublisher.publish(initialPositionMessage);
         rate.sleep();
     }
-    sleepAndTell(3.0);
+    sleepAndTell(3000.0);
     return true;
 }
 
@@ -148,18 +152,6 @@ bool Controller::externalDownMovementState()
         return false;
     }
 
-    // Generate trajectory
-    Trajectory downTrajectory;
-    try
-    {
-        downTrajectory = trajectoryHandler->generateExternalDownTrajectory(75);
-        //trajectoryHandler->writeTrajectoryToFile(downTrajectory, "downTrajectory.csv");
-    }
-    catch (runtime_error e)
-    {
-        ROS_ERROR_STREAM(e.what());
-    }
-
     // Set stiffness
     geometry_msgs::Twist twist;
     twist.linear.x = translationalStiffness.at(0);
@@ -170,6 +162,18 @@ bool Controller::externalDownMovementState()
     twist.angular.z = rotationalStiffness.at(2);
     setStiffness(twist);
 
+    // Generate trajectory
+    Trajectory downTrajectory;
+    try
+    {
+        downTrajectory = trajectoryHandler->generateExternalDownTrajectory(75);
+        trajectoryHandler->writeTrajectoryToFile(downTrajectory, twist, "actions_terminals_infos.csv", true);
+    }
+    catch (runtime_error e)
+    {
+        ROS_ERROR_STREAM(e.what());
+    }
+
     PoseStamped downMovementMessage = messageHandler->emptyPoseMessage();
     
     // Execute trajectory
@@ -178,6 +182,9 @@ bool Controller::externalDownMovementState()
     {
         if (touchFloor())
             break;
+        
+        // write state
+        trajectoryHandler->writeStateToFile("states.csv", true);
 
         downMovementMessage = messageHandler->pointPoseMessage(point);
         equilibriumPosePublisher.publish(downMovementMessage);
@@ -241,7 +248,7 @@ bool Controller::spiralMotionState()
     int nrOfPoints = 100;
 
     Trajectory spiralTrajectory = trajectoryHandler->generateArchimedeanSpiral(a, b, nrOfPoints);
-    trajectoryHandler->writeTrajectoryToFile(spiralTrajectory, "spiralMotion.csv");
+    trajectoryHandler->writeTrajectoryToFile(spiralTrajectory, twist, "actions_terminals_infos.csv", true);
 
     PoseStamped spiralMotionMessage = messageHandler->emptyPoseMessage();
 
@@ -253,6 +260,9 @@ bool Controller::spiralMotionState()
         {
             return true;
         }
+
+        // write state
+        trajectoryHandler->writeStateToFile("states.csv", true);
 
         spiralMotionMessage = messageHandler->pointPoseMessage(point);
         equilibriumPosePublisher.publish(spiralMotionMessage);
@@ -426,18 +436,6 @@ bool Controller::internalUpMovementState()
         return false;
     }
 
-    // Generate trajectory
-    Trajectory upTrajectory;
-    try
-    {
-        upTrajectory = trajectoryHandler->generateInternalUpTrajectory(100);
-        //trajectoryHandler->writeTrajectoryToFile(downTrajectory, "downTrajectory.csv");
-    }
-    catch (runtime_error e)
-    {
-        ROS_ERROR_STREAM(e.what());
-    }
-
     // Set stiffness
     geometry_msgs::Twist twist;
     twist.linear.x = translationalStiffness.at(0);
@@ -448,12 +446,26 @@ bool Controller::internalUpMovementState()
     twist.angular.z = rotationalStiffness.at(2);
     setStiffness(twist);
 
+    // Generate trajectory
+    Trajectory upTrajectory;
+    try
+    {
+        upTrajectory = trajectoryHandler->generateInternalUpTrajectory(100);
+        trajectoryHandler->writeTrajectoryToFile(upTrajectory, twist, "actions_terminals_infos.csv", true, true);
+    }
+    catch (runtime_error e)
+    {
+        ROS_ERROR_STREAM(e.what());
+    }
+
     PoseStamped upMovementMessage = messageHandler->emptyPoseMessage();
 
     // Execute trajectory
     ros::Rate rate(loop_rate);
     for (auto point : upTrajectory)
     {
+        // write state
+        trajectoryHandler->writeStateToFile("states.csv", true);
 
         upMovementMessage = messageHandler->pointPoseMessage(point);
         equilibriumPosePublisher.publish(upMovementMessage);
