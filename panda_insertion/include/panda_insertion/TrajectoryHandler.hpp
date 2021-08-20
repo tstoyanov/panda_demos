@@ -9,10 +9,12 @@
 #include "vector"
 #include "string"
 
+//namespace 
+
 typedef struct Point
 {
     double x, y, z;
-} Point;
+}Point;
 
 typedef std::vector<Point> Trajectory;
 
@@ -39,6 +41,9 @@ public:
                                bool lastTraj = false);
 
     void writeStateToFile(const std::string& fileName, bool appendToFile = false);
+
+    void writeDataset(const std::string& fileName, Point& point, geometry_msgs::Twist& twist, 
+                    float reward, bool terminal, bool appendToFile = false);
 };
 
 #endif

@@ -53,6 +53,7 @@ private:
     boost::mutex mutex;
 
     double loop_rate;
+    float reward;
 
     ros::Publisher jointTrajectoryPublisher;
     ros::Publisher equilibriumPosePublisher;
@@ -65,6 +66,8 @@ public:
     Controller();
     ~Controller();
 
+    void swapToEffortController();
+    void swapToImpedanceController();
     void init(ros::NodeHandle*, Panda* panda);
 
     void startState();
@@ -87,6 +90,7 @@ private:
     void initDesiredStiffnessPublisher();
 
     bool loadController(std::string controller);
+    bool unloadController(std::string controller);
     bool swapControllerCallback(panda_insertion::SwapController::Request& request,
                                 panda_insertion::SwapController::Response& response);
 

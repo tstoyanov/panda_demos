@@ -33,13 +33,13 @@ Insertion::~Insertion()
 void Insertion::stateMachineRun()
 {
     ROS_DEBUG_STREAM_ONCE("State machine started");
-
+    
     State temporaryActiveState;
 
     mutex.lock();
     temporaryActiveState = activeState;
     mutex.unlock();
-
+ 
     switch(temporaryActiveState)
     {
         case Start:
@@ -106,9 +106,10 @@ void Insertion::stateMachineRun()
             idle();
             break;
         }
+
         default:
         {
-            ROS_DEBUG("Default");
+            ROS_DEBUG("===>Default");
             changeState("idle");
             break;
         }
@@ -244,6 +245,12 @@ bool Insertion::changeStateCallback(panda_insertion::ChangeState::Request& reque
     return true;
 }
 
+void Insertion::jointStatesCallback(const sensor_msgs::JointState& joint_state)
+{
+    //std::cout << "jointStatesCallback" << std::endl;
+    panda.updateJointStates(joint_state);
+}
+
 void Insertion::changeState(string stateName)
 {
     panda_insertion::ChangeState state;
@@ -254,6 +261,7 @@ void Insertion::changeState(string stateName)
 void Insertion::init()
 {  
     ROS_DEBUG("In init()");
+    state_machine_loop = 0;
     activeState = Start;
 
     periodicTimer = nodeHandler.createTimer(ros::Duration(0.1), &Insertion::periodicTimerCallback, this);
@@ -264,6 +272,9 @@ void Insertion::init()
     tfSubscriber = nodeHandler.subscribe("/tf", 100, &Insertion::tfSubscriberCallback,this);
     externalForceSubscriber = nodeHandler.subscribe("/panda/franka_state_controller/F_ext", 100, &Insertion::externalForceSubscriberCallback, this);
 
+    // subscribe to joint states
+    jointStateSubscriber = nodeHandler.subscribe("/joint_states", 100, &Insertion::jointStatesCallback, this);
+
     iterateStateServer = nodeHandler.advertiseService("change_state", &Insertion::changeStateCallback, this);
     stateClient = nodeHandler.serviceClient<panda_insertion::ChangeState>("change_state");
 
@@ -273,14 +284,17 @@ void Insertion::init()
 
 void Insertion::start()
 {
-    ROS_DEBUG_ONCE("In start state");
+    state_machine_loop++;
+    std::cout << "***Loop: " << state_machine_loop << std::endl;
+
+    ROS_DEBUG("===>In start state");
     controller.startState();
     changeState("movetoinitialposition");
 }
 
 void Insertion::moveToInitialPosition()
 {
-    ROS_DEBUG_ONCE("In Move to Initial Position state");
+    ROS_DEBUG("===>In Move to Initial Position state");
     controller.moveToInitialPositionState();
     //changeState("externaldownmovement");
     changeState("externalDownMovement");
@@ -288,7 +302,7 @@ void Insertion::moveToInitialPosition()
 
 void Insertion::externalDownMovement()
 {
-    ROS_DEBUG_ONCE("In external down movement state");
+    ROS_DEBUG("===>In external down movement state");
     controller.externalDownMovementState();
     ROS_DEBUG_ONCE("External down movement DONE.");
     changeState("spiralMotion");
@@ -296,7 +310,7 @@ void Insertion::externalDownMovement()
 
 void Insertion::spiralMotion()
 {
-    ROS_DEBUG_ONCE("In spiral motion state");
+    ROS_DEBUG("===>In spiral motion state");
     if (controller.spiralMotionState())
     {
         changeState("straightening");
@@ -311,7 +325,7 @@ void Insertion::spiralMotion()
 
 void Insertion::insertionWiggle()
 {
-    ROS_DEBUG_ONCE("In insertion wigglestate");
+    ROS_DEBUG("===>In insertion wigglestate");
     controller.insertionWiggleState();
     ROS_DEBUG_ONCE("Insertion wiggle DONE.");
     changeState("internalUpMovement");
@@ -319,15 +333,16 @@ void Insertion::insertionWiggle()
 
 void Insertion::straightening()
 {
-    ROS_DEBUG_ONCE("In straightening state");
+    ROS_DEBUG("===>In straightening state");
     controller.straighteningState();
     ROS_DEBUG_ONCE("Straightening DONE.");
-    changeState("insertionWiggle");
+    //changeState("insertionWiggle");
+    changeState("internalUpMovement");
 }
 
 void Insertion::internalDownMovement()
 {
-    ROS_DEBUG_ONCE("In internal down movement state");
+    ROS_DEBUG("===>In internal down movement state");
     controller.internalDownMovementState();
     ROS_DEBUG_ONCE("Internal down movement DONE.");
     changeState("finish");
@@ -335,7 +350,7 @@ void Insertion::internalDownMovement()
 
 void Insertion::internalUpMovement()
 {
-    ROS_DEBUG_ONCE("In internal up movement state");
+    ROS_DEBUG("===>In internal up movement state");
     controller.internalUpMovementState();
     ROS_DEBUG_ONCE("Internal up movement DONE.");
     changeState("finish");
@@ -343,13 +358,16 @@ void Insertion::internalUpMovement()
 
 void Insertion::finish()
 {
-    ROS_INFO_ONCE("Insertion completed.");
+    ROS_INFO("===>Insertion completed.");
     changeState("idle");
 }
 
 void Insertion::idle()
 {
-    ROS_DEBUG_ONCE("In idle state");
+    ROS_DEBUG("===>In idle state");
     //controller.matrixDifference();
     controller.idleState();
+
+    // start a new loop
+    changeState("start");
 }

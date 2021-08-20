@@ -16,6 +16,7 @@
 #include "geometry_msgs/PoseStamped.h"
 #include "trajectory_msgs/JointTrajectory.h"
 #include "controller_manager_msgs/LoadController.h"
+#include "controller_manager_msgs/UnloadController.h"
 #include "controller_manager_msgs/SwitchController.h"
 
 #include "ros/console.h"
@@ -25,7 +26,7 @@
 
 using namespace std;
 using namespace trajectory_msgs;
-using namespace geometry_msgs;
+//using namespace geometry_msgs;
 using namespace controller_manager_msgs;
 
 // Constructors
@@ -42,6 +43,7 @@ Controller::~Controller()
 void Controller::init(ros::NodeHandle* nodeHandler, Panda* panda)
 {
     loop_rate = 10;
+    reward = 0.0;
 
     this->nodeHandler = nodeHandler;
     this->panda = panda;
@@ -58,21 +60,41 @@ void Controller::init(ros::NodeHandle* nodeHandler, Panda* panda)
     swapControllerClient = nodeHandler->serviceClient<panda_insertion::SwapController>("swap_controller");
 }
 
-void Controller::startState()
+void Controller::swapToEffortController()
 {
-    sleepAndTell(4.0);
-    JointTrajectory initialPoseMessageJoint = messageHandler->initialJointTrajectoryMessage();
-    jointTrajectoryPublisher.publish(initialPoseMessageJoint);
-    sleepAndTell(4.0);
+    // Get controllers from parameter server
+    panda_insertion::SwapController swapController;
+    nodeHandler->getParam("insertion/impedanceController", swapController.request.from);
+    nodeHandler->getParam("insertion/positionJointTrajectoryController",swapController.request.to);
 
+    swapControllerClient.call(swapController);
+    sleepAndTell(0.5);
 }
 
-bool Controller::moveToInitialPositionState()
+void Controller::swapToImpedanceController()
 {
     // Get controllers from parameter server
     panda_insertion::SwapController swapController;
     nodeHandler->getParam("insertion/positionJointTrajectoryController", swapController.request.from);
     nodeHandler->getParam("insertion/impedanceController", swapController.request.to);
+
+    swapControllerClient.call(swapController);
+    sleepAndTell(0.5);
+}
+
+void Controller::startState()
+{    
+    sleepAndTell(4.0);
+
+    JointTrajectory initialPoseMessageJoint = messageHandler->initialJointTrajectoryMessage();
+    jointTrajectoryPublisher.publish(initialPoseMessageJoint);
+    sleepAndTell(4.0);
+}
+
+bool Controller::moveToInitialPositionState()
+{
+    swapToImpedanceController();
+    sleepAndTell(0.5);
 
     vector<double> translationalStiffness;
     const string translationalParameter = "/move_to_initial_position/stiffness/translational";
@@ -90,9 +112,6 @@ bool Controller::moveToInitialPositionState()
         return false;
     }
 
-    swapControllerClient.call(swapController);
-    sleepAndTell(0.5);
-
     // Set stiffness
     geometry_msgs::Twist twist;
     twist.linear.x = translationalStiffness.at(0);
@@ -107,28 +126,38 @@ bool Controller::moveToInitialPositionState()
     try 
     {
         initialTrajectory = trajectoryHandler->generateInitialPositionTrajectory(200);
-        trajectoryHandler->writeTrajectoryToFile(initialTrajectory, twist, "actions_terminals_infos.csv", true);
+        //trajectoryHandler->writeTrajectoryToFile(initialTrajectory, twist, "actions_terminals_infos.csv", true);
     }
     catch (runtime_error e)
     {
         ROS_ERROR_STREAM(e.what());
     }
 
-    PoseStamped initialPositionMessage = messageHandler->emptyPoseMessage();
-
+    geometry_msgs::PoseStamped initialPositionMessage = messageHandler->emptyPoseMessage();
+    
     // Execute trajectory
+    reward = 0;
     ros::Rate rate(20);
+    int i = 0;
+    bool bTerminal = false;
     for (auto point : initialTrajectory)
     {
-        // write state
-        trajectoryHandler->writeStateToFile("states.csv", true);
+        i++;
+        if (i == initialTrajectory.size())
+        {
+            bTerminal = true;
+            reward += 1.0;
+        }
+        
+        // write dataset of state, action, reward, terminal
+        trajectoryHandler->writeDataset("peg_in_hole_dataset.csv", point, twist, reward, bTerminal, true);
 
         // publish way point
         initialPositionMessage = messageHandler->pointPoseMessage(point);
         equilibriumPosePublisher.publish(initialPositionMessage);
         rate.sleep();
     }
-    sleepAndTell(3000.0);
+    sleepAndTell(3.0);
     return true;
 }
 
@@ -167,25 +196,34 @@ bool Controller::externalDownMovementState()
     try
     {
         downTrajectory = trajectoryHandler->generateExternalDownTrajectory(75);
-        trajectoryHandler->writeTrajectoryToFile(downTrajectory, twist, "actions_terminals_infos.csv", true);
+        //trajectoryHandler->writeTrajectoryToFile(downTrajectory, twist, "actions_terminals_infos.csv", true);
     }
     catch (runtime_error e)
     {
         ROS_ERROR_STREAM(e.what());
     }
 
-    PoseStamped downMovementMessage = messageHandler->emptyPoseMessage();
+    geometry_msgs::PoseStamped downMovementMessage = messageHandler->emptyPoseMessage();
     
     // Execute trajectory
     ros::Rate rate(loop_rate);
+    int i = 0;
+    bool bTerminal = false;
     for (auto point : downTrajectory)
     {
         if (touchFloor())
             break;
-        
-        // write state
-        trajectoryHandler->writeStateToFile("states.csv", true);
 
+        i++;
+        if (i == downTrajectory.size())
+        {
+            bTerminal = true;
+            reward += 1.0;
+        }
+        
+        // write dataset of state, action, reward, terminal
+        trajectoryHandler->writeDataset("peg_in_hole_dataset.csv", point, twist, reward, bTerminal, true);
+        
         downMovementMessage = messageHandler->pointPoseMessage(point);
         equilibriumPosePublisher.publish(downMovementMessage);
 
@@ -248,12 +286,14 @@ bool Controller::spiralMotionState()
     int nrOfPoints = 100;
 
     Trajectory spiralTrajectory = trajectoryHandler->generateArchimedeanSpiral(a, b, nrOfPoints);
-    trajectoryHandler->writeTrajectoryToFile(spiralTrajectory, twist, "actions_terminals_infos.csv", true);
+    //trajectoryHandler->writeTrajectoryToFile(spiralTrajectory, twist, "actions_terminals_infos.csv", true);
 
-    PoseStamped spiralMotionMessage = messageHandler->emptyPoseMessage();
+    geometry_msgs::PoseStamped spiralMotionMessage = messageHandler->emptyPoseMessage();
 
     // Execute trajectory
     ros::Rate rate(loop_rate);
+    int i = 0;
+    bool bTerminal = false;
     for (auto point : spiralTrajectory)
     {
         if (inHole()) 
@@ -261,8 +301,15 @@ bool Controller::spiralMotionState()
             return true;
         }
 
-        // write state
-        trajectoryHandler->writeStateToFile("states.csv", true);
+        i++;
+        if (i == spiralTrajectory.size())
+        {
+            bTerminal = true;
+            reward += 1.0;
+        }
+        
+        // write dataset of state, action, reward, terminal
+        trajectoryHandler->writeDataset("peg_in_hole_dataset.csv", point, twist, reward, bTerminal, true);
 
         spiralMotionMessage = messageHandler->pointPoseMessage(point);
         equilibriumPosePublisher.publish(spiralMotionMessage);
@@ -314,7 +361,7 @@ bool Controller::insertionWiggleState()
         ROS_DEBUG_STREAM("i: " << i);
         ROS_DEBUG_STREAM("xAng: " << xAng << ", yAng: " << yAng);
 
-        PoseStamped wiggleMessage = messageHandler->insertionWigglePoseMessage(xAng, yAng);
+        geometry_msgs::PoseStamped wiggleMessage = messageHandler->insertionWigglePoseMessage(xAng, yAng);
         equilibriumPosePublisher.publish(wiggleMessage);
         rate.sleep();
         i++;
@@ -367,9 +414,23 @@ bool Controller::straighteningState()
 
     ros::Rate rate(loop_rate);
     int i = 0;
+    bool bTerminal = false;
     geometry_msgs::PoseStamped poseMessage = messageHandler->straighteningPoseMessage();
     while (ros::ok() && i < 20)
     {
+        if (i == 19)
+        {
+            bTerminal = true;
+            reward += 1.0;
+        }
+        Point point;
+        point.x = poseMessage.pose.position.x;
+        point.y = poseMessage.pose.position.y;
+        point.z = poseMessage.pose.position.z;
+
+        // write dataset of state, action, reward, terminal
+        trajectoryHandler->writeDataset("peg_in_hole_dataset.csv", point, twist, reward, bTerminal, true);
+
         equilibriumPosePublisher.publish(poseMessage);
         rate.sleep();
         i++;
@@ -404,7 +465,7 @@ bool Controller::internalDownMovementState()
     int i = 0;
     ros::Rate rate(loop_rate);
     double z_coord = panda->initialPosition.z - 0.03;
-    PoseStamped externalDownMovementPositionMessage = messageHandler->downMovementPoseMessage(z_coord);
+    geometry_msgs::PoseStamped externalDownMovementPositionMessage = messageHandler->downMovementPoseMessage(z_coord);
     
     while (ros::ok() && i < 35)
     {
@@ -451,21 +512,30 @@ bool Controller::internalUpMovementState()
     try
     {
         upTrajectory = trajectoryHandler->generateInternalUpTrajectory(100);
-        trajectoryHandler->writeTrajectoryToFile(upTrajectory, twist, "actions_terminals_infos.csv", true, true);
+        //trajectoryHandler->writeTrajectoryToFile(upTrajectory, twist, "actions_terminals_infos.csv", true, true);
     }
     catch (runtime_error e)
     {
         ROS_ERROR_STREAM(e.what());
     }
 
-    PoseStamped upMovementMessage = messageHandler->emptyPoseMessage();
+    geometry_msgs::PoseStamped upMovementMessage = messageHandler->emptyPoseMessage();
 
     // Execute trajectory
     ros::Rate rate(loop_rate);
+    int i = 0;
+    bool bTerminal = false;
     for (auto point : upTrajectory)
     {
-        // write state
-        trajectoryHandler->writeStateToFile("states.csv", true);
+        i++;
+        if (i == upTrajectory.size())
+        {
+            bTerminal = true;
+            reward += 1.0;
+        }
+        
+        // write dataset of state, action, reward, terminal
+        trajectoryHandler->writeDataset("peg_in_hole_dataset.csv", point, twist, reward, bTerminal, true);
 
         upMovementMessage = messageHandler->pointPoseMessage(point);
         equilibriumPosePublisher.publish(upMovementMessage);
@@ -480,26 +550,15 @@ bool Controller::idleState()
 {
     geometry_msgs::Transform transform;
 
-    ros::Rate rate(loop_rate);
-    while (ros::ok())
-    {
-        mutex.lock();
-        transform = panda->transformStamped.transform;
-        mutex.unlock();
-/*
-        ROS_DEBUG_STREAM("orientation.x: " << transform.rotation.x << endl <<
-                         "orientation.y: " << transform.rotation.y << endl <<  
-                         "orientation.z: " << transform.rotation.z << endl <<  
-                         "orientation.w: " << transform.rotation.w << endl);
-*/
-        ROS_DEBUG_STREAM("\ntranslation.x: " << transform.translation.x << endl <<
-                         "translation.y: " << transform.translation.y << endl <<  
-                         "translation.z: " << transform.translation.z << endl);
+    mutex.lock();
+    transform = panda->transformStamped.transform;
+    mutex.unlock();
 
-    
+    ROS_DEBUG_STREAM("\ntranslation.x: " << transform.translation.x << endl <<
+                    "translation.y: " << transform.translation.y << endl <<  
+                    "translation.z: " << transform.translation.z << endl);
 
-        rate.sleep();
-    }
+    swapToEffortController();
 
     return true;
 }
@@ -559,6 +618,30 @@ bool Controller::loadController(string controller)
     }
 
     ROS_ERROR("Could not load controller %s", controller.c_str());
+
+    return false;
+}
+
+bool Controller::unloadController(string controller)
+{
+    ROS_DEBUG_STREAM("In unloadController()");
+
+    string serviceName;
+    nodeHandler->getParam("insertion/unloadControllerService", serviceName);
+
+    ROS_DEBUG_STREAM("Trying to unload controller " << controller << " with service " << serviceName);
+
+    ros::ServiceClient client = nodeHandler->serviceClient<UnloadController>(serviceName);
+
+    UnloadController service;
+    service.request.name = controller.c_str();
+
+    if (client.call(service))
+    {
+        return true;
+    }
+
+    ROS_ERROR("Could not unload controller %s", controller.c_str());
 
     return false;
 }

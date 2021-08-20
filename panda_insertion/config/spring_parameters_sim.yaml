@@ -25,9 +25,6 @@ spiral:
 #  goal: [0.155, 0.3228, -0.007]
   goal: [0.127, 0.3228, -0.007]
 
-
-
-
 straightening:
   stiffness:
     translational: [600.0, 600.0, 200.0]

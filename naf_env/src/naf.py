@@ -11,7 +11,6 @@ from mpl_toolkits.mplot3d import *
 #import mpl_toolkits.mplot3d as a3
 import quad
 
-from faces import Faces
 from scipy.spatial import HalfspaceIntersection
 from scipy.spatial import ConvexHull
 from scipy.optimize import linprog

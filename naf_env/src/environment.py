@@ -63,7 +63,7 @@ class ManipulateEnv(gym.Env):
 
         self.fresh=False
 
-        csv_train = open("/home/quantao/panda_logs/constraints.csv", 'w', newline='')
+        csv_train = open("/home/quantao/hiqp_logs/constraints.csv", 'w', newline='')
         self.twriter = csv.writer(csv_train, delimiter=' ')
         self.episode_trace = [(np.identity(self.action_space.shape[0]),self.action_space.high,0)]
              

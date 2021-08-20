@@ -18,6 +18,11 @@ find_package(Eigen3 REQUIRED)
 
 add_definitions(-std=c++11) 
 
+add_message_files(FILES 
+    #EquilibriumPose.msg
+    #DesiredStiffness.msg
+    StateMsg.msg)
+
 add_service_files(FILES
     ChangeState.srv
     SwapController.srv
@@ -46,7 +51,14 @@ add_executable(insertion
   src/TrajectoryHandler.cpp
 )
 
+add_executable(insertion_rl
+  src/insertion_spirl.cpp
+  src/InsertionRL.cpp
+  src/Panda.cpp
+)
+
 target_link_libraries(insertion ${catkin_LIBRARIES})
+target_link_libraries(insertion_rl ${catkin_LIBRARIES})
 
 #add_library(panda_insertion
   #src/Insertion.cpp
@@ -56,5 +68,5 @@ target_link_libraries(insertion ${catkin_LIBRARIES})
 #)
 
 add_dependencies(insertion ${${PROJECT_NAME}_generate_messages_cpp} ${${PROJECT_NAME}_EXPORT_TARGETS} ${catkin_EXPORTED_TARGETS} )
-#add_dependencies(insertion ${PROJECT_NAME}_generate_messages_cpp)
+add_dependencies(insertion_rl ${${PROJECT_NAME}_generate_messages_cpp} ${${PROJECT_NAME}_EXPORT_TARGETS} ${catkin_EXPORTED_TARGETS} )
 

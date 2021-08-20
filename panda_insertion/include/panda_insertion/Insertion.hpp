@@ -38,7 +38,7 @@ private:
     Controller controller;
     Panda panda;
     boost::mutex mutex;
-
+    int state_machine_loop;
 
     ros::NodeHandle nodeHandler;
 
@@ -52,6 +52,7 @@ private:
     // Subscribers
     ros::Subscriber tfSubscriber;
     ros::Subscriber externalForceSubscriber;
+    ros::Subscriber jointStateSubscriber;
 
     // Servers and clients
     ros::ServiceServer iterateStateServer;
@@ -72,6 +73,8 @@ public:
     void externalForceSubscriberCallback(const geometry_msgs::WrenchStampedConstPtr& message);
     bool changeStateCallback(panda_insertion::ChangeState::Request& request, panda_insertion::ChangeState::Response& response);
     void changeState(std::string stateName);
+
+    void jointStatesCallback(const sensor_msgs::JointState& joint_states);
 
     void start();
     void moveToInitialPosition();

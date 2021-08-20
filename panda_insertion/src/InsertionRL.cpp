@@ -8,6 +8,7 @@
 #include <boost/thread.hpp>
 #include <ros/duration.h>
 #include <boost/algorithm/string.hpp>
+#include <tf/tf.h>
 
 using namespace std;
 
@@ -93,19 +94,28 @@ void InsertionRL::updateRLObservation()
     obs_msg.ee_translation = {panda.transformStamped.transform.translation.x, 
                             panda.transformStamped.transform.translation.y,
                             panda.transformStamped.transform.translation.z};
-    obs_msg.ee_rotation = {panda.transformStamped.transform.rotation.x, 
+    //obs_msg.ee_rotation = {panda.transformStamped.transform.rotation.x, 
+    //                        panda.transformStamped.transform.rotation.y,
+    //                        panda.transformStamped.transform.rotation.z,
+    //                        panda.transformStamped.transform.rotation.w};
+    tf::Quaternion q(panda.transformStamped.transform.rotation.x, 
                             panda.transformStamped.transform.rotation.y,
                             panda.transformStamped.transform.rotation.z,
-                            panda.transformStamped.transform.rotation.w};
+                            panda.transformStamped.transform.rotation.w);
+    //tf::Quaternion q_test(0.17295812, 0.01997833, 0.11299411, 0.97822221);
+    tf::Matrix3x3 m(q);
+    double roll, pitch, yaw;
+    m.getRPY(roll, pitch, yaw);
+    obs_msg.theta_z = yaw;
     obs_msg.f_ext = panda.getWrench().force.z;
 /*
-    std::cout << panda.q[0] << " "
+    std::cout << "RPY:" << roll << " "
             << std::endl;
-    std::cout << panda.dq[0] << " "
+    std::cout << pitch << " "
             << std::endl;
-    std::cout << panda.transformStamped.transform.translation.x << " "
+    std::cout << yaw << " "
             << std::endl;
-            */
+*/    
     observationPublisher.publish(obs_msg);
 }
 
