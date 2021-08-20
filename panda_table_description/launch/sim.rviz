@@ -10,7 +10,6 @@ Panels:
         - /TF1/Tree1
         - /MarkerArray1
         - /MarkerArray1/Namespaces1
-        - /Effort1
       Splitter Ratio: 0.497854083776474
     Tree Height: 823
   - Class: rviz/Selection
@@ -64,6 +63,10 @@ Visualization Manager:
         All Enabled: false
         mount_flange_link:
           Value: false
+        panda_hand:
+          Value: true
+        panda_leftfinger:
+          Value: true
         panda_link0:
           Value: true
         panda_link1:
@@ -82,10 +85,10 @@ Visualization Manager:
           Value: false
         panda_link8:
           Value: false
+        panda_rightfinger:
+          Value: true
         table:
           Value: false
-        tool:
-          Value: true
         world:
           Value: true
       Marker Scale: 1
@@ -106,8 +109,11 @@ Visualization Manager:
                           panda_link6:
                             panda_link7:
                               panda_link8:
-                                tool:
-                                  {}
+                                panda_hand:
+                                  panda_leftfinger:
+                                    {}
+                                  panda_rightfinger:
+                                    {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -121,6 +127,16 @@ Visualization Manager:
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
         mount_flange_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        panda_hand:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        panda_leftfinger:
           Alpha: 1
           Show Axes: false
           Show Trail: false
@@ -174,7 +190,7 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
-        tool:
+        table:
           Alpha: 1
           Show Axes: false
           Show Trail: false
@@ -191,7 +207,7 @@ Visualization Manager:
       Visual Enabled: true
     - Class: rviz/MarkerArray
       Enabled: true
-      Marker Topic: /impedance_controller/visualization_marker
+      Marker Topic: /hiqp_joint_velocity_controller/visualization_marker
       Name: MarkerArray
       Namespaces:
         current: true
@@ -200,16 +216,16 @@ Visualization Manager:
       Value: true
     - Class: rviz/InteractiveMarkers
       Enable Transparency: true
-      Enabled: true
+      Enabled: false
       Name: InteractiveMarkers
       Show Axes: false
       Show Descriptions: true
       Show Visual Aids: false
       Update Topic: /equilibrium_pose_marker/update
-      Value: true
+      Value: false
     - Alpha: 1
       Class: rviz/Effort
-      Enabled: true
+      Enabled: false
       History Length: 1
       Joints:
         panda_joint1:
@@ -232,7 +248,7 @@ Visualization Manager:
       TF Prefix: ""
       Topic: /joint_states
       Unreliable: false
-      Value: true
+      Value: false
       Width: 0.019999999552965164
   Enabled: true
   Global Options:
