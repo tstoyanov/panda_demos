@@ -4,7 +4,7 @@
     <!-- arguments -->
     <arg name="paused" default="false"/>
     <arg name="use_sim_time" default="true"/>
-    <arg name="gui" default="false"/>
+    <arg name="gui" default="true"/>
     <arg name="headless" default="false"/>
     <arg name="debug" default="false"/>
     <arg name="start_moveit" default="true"/>
@@ -28,8 +28,10 @@
     <rosparam file="$(find panda_table_description)/config/panda_gazebo_control.yaml" command="load"/>
 
     <!-- load the controllers -->
-    <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="joint_state_controller velocity_joint_trajectory_controller franka_gripper" />
+    <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="joint_state_controller velocity_joint_trajectory_controller gripper_direct_controller" />
 
+    <param name="box_description" command="$(find xacro)/xacro --inorder $(find panda_table_description)/urdf/box.urdf.xacro"/>
+    <node name="spawn_object" pkg="gazebo_ros" type="spawn_model" args="-param box_description -urdf -model box -x -0.3 -y -0.2 -z 0.72"/>
 
     <!-- convert joint states to TF transforms for rviz, etc -->
     <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" respawn="true" output="screen"/>

@@ -16,25 +16,32 @@
     <link name="object_link">
         <inertial>
             <origin xyz="0 0 0" />
-            <mass value="0.1" />
+            <mass value="0.2" />
             <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01" />
         </inertial>
         <visual>
             <origin xyz="0 0 0"/>
-            <geometry>
-                <box size="0.03 0.03 0.03" />
+	    <geometry>
+		    <!--
+			    <box size="0.03 0.03 0.03" />
+		<mesh filename="package://panda_table_description/meshes/rough_box.dae"/>
+		    -->
+		<mesh filename="package://panda_table_description/meshes/smooth_box.dae" scale="0.7 0.7 0.7"/>
             </geometry>
         </visual>
         <collision>
             <origin xyz="0 0 0"/>
             <geometry>
-                <box size="0.03 0.03 0.03" />
+		    <!--
+		<box size="0.03 0.03 0.03" />
+		    -->
+		<mesh filename="package://panda_table_description/meshes/smooth_box.dae" scale="0.7 0.7 0.7"/>
             </geometry>
             <surface>
                 <friction>
                     <ode>
-                        <mu>10000</mu>
-                        <mu2>10000</mu2>
+                        <mu>50</mu>
+                        <mu2>50</mu2>
                     </ode>
                 </friction>
             </surface>
