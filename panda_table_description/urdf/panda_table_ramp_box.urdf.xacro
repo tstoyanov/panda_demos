@@ -7,7 +7,7 @@
 
   <!-- for simulation -->
   <xacro:include filename="$(find panda_table_description)/urdf/panda_vel.transmission.xacro"/>
-  <xacro:include filename="$(find panda_table_description)/urdf/panda_table.gazebo.xacro"/>
+  <xacro:include filename="$(find panda_table_description)/urdf/panda_table_ramp.gazebo.xacro"/>
   <!--xacro:include filename="$(find panda_table_description)/urdf/table.urdf.xacro"/-->
   <!-- end for simulation -->
 
@@ -81,13 +81,13 @@
     </inertial>
     <visual>
       <geometry>
-        <box size="0.25 1 0.175" />
+        <box size="0.25 0.2775 0.175" />
       </geometry>
       <origin rpy="0 0 0" xyz="0 0 0" />
     </visual>
     <collision>
       <geometry>
-        <box size="0.25 1 0.175" />
+        <box size="0.25 0.2775 0.175" />
       </geometry>
       <origin rpy="0 0 0" xyz="0 0 0" />
     </collision>
@@ -101,15 +101,43 @@
     </inertial>
     <visual>
       <geometry>
-        <box size="1 0.2775 0.2" />
+        <box size="0.2775 0.2775 0.2" />
       </geometry>
       <origin rpy="0 0 0" xyz="0 0 0" />
     </visual>
     <collision>
       <geometry>
-        <box size="1 0.2775 0.2" />
+        <box size="0.2775 0.2775 0.2" />
       </geometry>
       <origin rpy="0 0 0" xyz="0 0 0" />
+    </collision>
+  </link>
+
+  <link name="object_link">
+    <inertial>
+      <origin xyz="0 0 0" />
+      <mass value="10.0" />
+      <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0"/>
+      <geometry>
+        <box size="0.04 0.04 0.04" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0"/>
+      <geometry>
+        <box size="0.04 0.04 0.04" />
+      </geometry>
+      <surface>
+        <friction>
+          <ode>
+            <mu>10000.0</mu>
+            <mu2>10000.0</mu2>
+          </ode>
+        </friction>
+      </surface>
     </collision>
   </link>
 
@@ -151,5 +179,9 @@
     <child link = "ramp_base" />
     <origin xyz="0.0 -0.3899 0.74395" rpy="0.0 0.0 0.0" />
   </joint>
+
+  <gazebo reference="object_link">
+    <material>Gazebo/Red</material>
+  </gazebo>
 
 </robot>
