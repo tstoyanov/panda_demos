@@ -12,7 +12,13 @@
 	    <self_collide>true</self_collide>
     </gazebo>
 
-
+    <gazebo reference="object_base_link">
+        <gravity>1</gravity>
+    </gazebo>
+    
+    <gazebo reference="object_link">
+        <material>Gazebo/Red</material>
+    </gazebo>
     </xacro:macro>
 
 </robot>
