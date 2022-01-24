@@ -173,60 +173,6 @@
 
 	</xacro:unless>
 
-
-	<!-- Table and columns -->
-        <!--
- 	<gazebo reference="table">
-            <material>Gazebo/Grey</material>
-            <mu1>0.2</mu1>
-            <mu2>0.2</mu2>
-	    <self_collide>true</self_collide>
-        <static>true</static>
-    </gazebo>
- 	<gazebo reference="column1">
-            <material>Gazebo/Grey</material>
-            <mu1>0.2</mu1>
-            <mu2>0.2</mu2>
-	    <self_collide>true</self_collide>
-        </gazebo>
- 	<gazebo reference="column2">
-            <material>Gazebo/Grey</material>
-            <mu1>0.2</mu1>
-            <mu2>0.2</mu2>
-            <self_collide>true</self_collide>
-        </gazebo>
- 	<gazebo reference="mount_flange_link">
-            <material>Gazebo/Grey</material>
-            <mu1>0.2</mu1>
-            <mu2>0.2</mu2>
-        </gazebo>
- 	<gazebo reference="work_piece">
-            <material>Gazebo/Grey</material>
-            <mu1>0.2</mu1>
-            <mu2>0.2</mu2>
-	    <self_collide>true</self_collide>
-        </gazebo>
-
-     <gazebo reference="ramp">
-            <material>Gazebo/Grey</material>
-            <mu1>0.2</mu1>
-            <mu2>0.2</mu2>
-	        <self_collide>true</self_collide>
-        <   static>true</static>
-         </gazebo>
-
-    
-	<!- Box -->
-        
- 	<gazebo reference="box">
-            <material>Gazebo/Red</material>
-            <mu1>0.2</mu1>
-            <mu2>0.2</mu2>
-	    <self_collide>true</self_collide>
-        </gazebo>
-
-
-
     </xacro:macro>
 
 </robot>

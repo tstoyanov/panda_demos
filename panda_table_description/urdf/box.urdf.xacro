@@ -1,11 +1,7 @@
 <?xml version="1.0"?>
-<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="simple_box">
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="box">
     <xacro:include filename="$(find panda_table_description)/urdf/box.gazebo.xacro"/>
-    
-    <link name="object_base_link">
-    </link>
-   
-    <link name="object_link">
+    <link name="box_link">
         <inertial>
             <origin xyz="0 0 0" />
             <mass value="0.2" />
@@ -39,14 +35,5 @@
             </surface>
         </collision>
     </link>
-
-    <joint name="object_base_joint" type="fixed">
-        <parent link="object_base_link"/>
-        <child link="object_link"/>
-        <axis xyz="0 0 1" />
-        <origin xyz="0 0 0" rpy="0 0 0"/>
-        <dynamics damping="0.0" friction="10.0"/>
-    </joint>
-    
 
 </robot>

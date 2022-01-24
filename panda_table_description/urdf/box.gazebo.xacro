@@ -5,18 +5,7 @@
     <xacro:macro name="box_gazebo">
 
 	<!-- Box -->
- 	<gazebo reference="box">
-            <material>Gazebo/Red</material>
-            <mu1>10000</mu1>
-            <mu2>10000</mu2>
-	    <self_collide>true</self_collide>
-    </gazebo>
-
-    <gazebo reference="object_base_link">
-        <gravity>1</gravity>
-    </gazebo>
-    
-    <gazebo reference="object_link">
+    <gazebo reference="box_link">
         <material>Gazebo/Red</material>
     </gazebo>
     </xacro:macro>
