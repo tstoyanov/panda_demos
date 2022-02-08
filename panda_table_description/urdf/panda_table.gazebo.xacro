@@ -92,6 +92,10 @@
 	    <collision name="right_outer_collision">
             <surface>
             <friction>
+            <ode>
+                <mu>10</mu>
+                <mu2>10</mu2>
+			</ode>
               <torsional>
                 <coefficient>10.0</coefficient>
                 <use_patch_radius>true</use_patch_radius>
@@ -120,6 +124,10 @@
    	    <collision name="left_outer_collision">
             <surface>
             <friction>
+         	<ode>
+                <mu>10</mu>
+                <mu2>10</mu2>
+			</ode>
               <torsional>
                 <coefficient>10.0</coefficient>
                 <use_patch_radius>true</use_patch_radius>
