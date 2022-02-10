@@ -273,7 +273,7 @@ void Insertion::init()
     externalForceSubscriber = nodeHandler.subscribe("/panda/franka_state_controller/F_ext", 100, &Insertion::externalForceSubscriberCallback, this);
 
     // subscribe to joint states
-    jointStateSubscriber = nodeHandler.subscribe("/joint_states", 100, &Insertion::jointStatesCallback, this);
+    jointStateSubscriber = nodeHandler.subscribe("/panda/franka_state_controller/joint_states", 100, &Insertion::jointStatesCallback, this);
 
     iterateStateServer = nodeHandler.advertiseService("change_state", &Insertion::changeStateCallback, this);
     stateClient = nodeHandler.serviceClient<panda_insertion::ChangeState>("change_state");

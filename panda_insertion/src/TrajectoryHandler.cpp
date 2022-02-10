@@ -359,7 +359,7 @@ void TrajectoryHandler::writeDataset(const string& fileName,
     tf::Matrix3x3 m_action(q_action);
     double theta_x, theta_y, theta_z;
     m_action.getRPY(theta_x, theta_y, theta_z);
-
+    
     // state, action, reward, terminal
     outfile // state(19 dimensional)
             << panda->q[0] << "," << panda->q[1] << "," << panda->q[2] << "," << panda->q[3] << ","
@@ -367,7 +367,7 @@ void TrajectoryHandler::writeDataset(const string& fileName,
             << panda->dq[0] << "," << panda->dq[1] << "," << panda->dq[2] << "," << panda->dq[3] << ","
             << panda->dq[4] << "," << panda->dq[5] << "," << panda->dq[6] << ","
             << transform.translation.x << "," 
-            << transform.translation.y << "," 
+            << transform.translation.y << ","
             << transform.translation.z << ","
             << yaw << ","
             << panda->getWrench().force.z << ","

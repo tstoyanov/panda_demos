@@ -2,6 +2,7 @@
 
 #include <eigen_conversions/eigen_msg.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf/tf.h>
 
 #include <cmath>
 
@@ -30,6 +31,31 @@ PoseStampedMsg MessageHandler::pointPoseMessage(Point point)
     message.pose.orientation = panda->straightOrientation;
     
     return message;
+}
+
+void MessageHandler::sineYaw(PoseStampedMsg& message, int i)
+{    
+    // get RPY
+    mutex.lock();
+    geometry_msgs::Transform transform = panda->transformStamped.transform;
+    mutex.unlock();
+    tf::Quaternion myQuaternion(transform.rotation.x, 
+                                transform.rotation.y,
+                                transform.rotation.z,
+                                transform.rotation.w);
+    tf::Matrix3x3 m(myQuaternion);
+    double roll, pitch, yaw;
+    m.getRPY(roll, pitch, yaw);
+                                                         
+    // sine Yaw
+    float alpha = 1.0;
+    yaw = alpha/i*sin(0.1*i);
+    myQuaternion.setRPY(roll, pitch, yaw);
+                                                                                              
+    message.pose.orientation.x = myQuaternion.x();
+    message.pose.orientation.x = myQuaternion.y();
+    message.pose.orientation.x = myQuaternion.z();
+    message.pose.orientation.x = myQuaternion.w();
 }
 
 JointTrajectoryMsg MessageHandler::initialJointTrajectoryMessage()

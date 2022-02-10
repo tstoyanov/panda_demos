@@ -29,6 +29,7 @@ public:
     MessageHandler(ros::NodeHandle* nodeHandler, Panda* panda);
 
     PoseStampedMsg pointPoseMessage(Point point);
+    void sineYaw(PoseStampedMsg& message, int i);
     JointTrajectoryMsg initialJointTrajectoryMessage();
     PoseStampedMsg downMovementPoseMessage(double zCoordinate);
     PoseStampedMsg emptyPoseMessage();

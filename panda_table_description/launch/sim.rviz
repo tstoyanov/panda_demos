@@ -63,10 +63,6 @@ Visualization Manager:
         All Enabled: false
         mount_flange_link:
           Value: false
-        panda_hand:
-          Value: true
-        panda_leftfinger:
-          Value: true
         panda_link0:
           Value: true
         panda_link1:
@@ -85,10 +81,10 @@ Visualization Manager:
           Value: false
         panda_link8:
           Value: false
-        panda_rightfinger:
-          Value: true
         table:
           Value: false
+        tool:
+          Value: true
         world:
           Value: true
       Marker Scale: 1
@@ -109,11 +105,8 @@ Visualization Manager:
                           panda_link6:
                             panda_link7:
                               panda_link8:
-                                panda_hand:
-                                  panda_leftfinger:
-                                    {}
-                                  panda_rightfinger:
-                                    {}
+                                tool:
+                                  {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -127,16 +120,6 @@ Visualization Manager:
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
         mount_flange_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_hand:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        panda_leftfinger:
           Alpha: 1
           Show Axes: false
           Show Trail: false
@@ -190,7 +173,7 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
-        table:
+        tool:
           Alpha: 1
           Show Axes: false
           Show Trail: false
@@ -207,7 +190,7 @@ Visualization Manager:
       Visual Enabled: true
     - Class: rviz/MarkerArray
       Enabled: true
-      Marker Topic: /hiqp_joint_velocity_controller/visualization_marker
+      Marker Topic: /impedance_controller/visualization_marker
       Name: MarkerArray
       Namespaces:
         current: true
@@ -228,20 +211,7 @@ Visualization Manager:
       Enabled: false
       History Length: 1
       Joints:
-        panda_joint1:
-          Value: true
-        panda_joint2:
-          Value: true
-        panda_joint3:
-          Value: true
-        panda_joint4:
-          Value: true
-        panda_joint5:
-          Value: true
-        panda_joint6:
-          Value: true
-        panda_joint7:
-          Value: true
+        {}
       Name: Effort
       Robot Description: robot_description
       Scale: 1

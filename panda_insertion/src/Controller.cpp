@@ -145,7 +145,7 @@ bool Controller::moveToInitialPositionState()
         i++;
         if (i == initialTrajectory.size())
         {
-            bTerminal = true;
+            //bTerminal = true;
             reward += 1.0;
         }
         
@@ -211,15 +211,20 @@ bool Controller::externalDownMovementState()
     bool bTerminal = false;
     for (auto point : downTrajectory)
     {
-        if (touchFloor())
-            break;
-
         i++;
-        if (i == downTrajectory.size())
+        if (touchFloor())
         {
-            bTerminal = true;
+            //bTerminal = true;
             reward += 1.0;
+            // write dataset of state, action, reward, terminal
+            trajectoryHandler->writeDataset("peg_in_hole_dataset.csv", point, twist, reward, bTerminal, true);
+            break;
         }
+
+        //if (i == downTrajectory.size())
+        //{
+        //    bTerminal = true;
+        //}
         
         // write dataset of state, action, reward, terminal
         trajectoryHandler->writeDataset("peg_in_hole_dataset.csv", point, twist, reward, bTerminal, true);
@@ -296,22 +301,30 @@ bool Controller::spiralMotionState()
     bool bTerminal = false;
     for (auto point : spiralTrajectory)
     {
+        i++;
         if (inHole()) 
         {
+            //bTerminal = true;
+            reward += 1.0;
+            // write dataset of state, action, reward, terminal
+            trajectoryHandler->writeDataset("peg_in_hole_dataset.csv", point, twist, reward, bTerminal, true);
+            
             return true;
         }
 
-        i++;
-        if (i == spiralTrajectory.size())
-        {
-            bTerminal = true;
-            reward += 1.0;
-        }
+        //if (i == spiralTrajectory.size())
+        //{
+        //    bTerminal = true;
+        //}
         
         // write dataset of state, action, reward, terminal
         trajectoryHandler->writeDataset("peg_in_hole_dataset.csv", point, twist, reward, bTerminal, true);
 
         spiralMotionMessage = messageHandler->pointPoseMessage(point);
+        // add sine Yaw
+        messageHandler->sineYaw(spiralMotionMessage, i);
+        std::cout << "======spiral motion message:" << spiralMotionMessage << std::endl;
+
         equilibriumPosePublisher.publish(spiralMotionMessage);
         rate.sleep();
     }
@@ -420,7 +433,7 @@ bool Controller::straighteningState()
     {
         if (i == 19)
         {
-            bTerminal = true;
+            //bTerminal = true;
             reward += 1.0;
         }
         Point point;
@@ -758,7 +771,7 @@ bool Controller::inHole()
 
     ROS_DEBUG_STREAM("z: " << transMsg.translation.z);
 
-    if (transMsg.translation.z < 0.0214)
+    if (transMsg.translation.z < 0.035)
     {
         ROS_DEBUG_STREAM("In hole, x-force: " << wrench.force.x << ", y-force: " << wrench.force.y
                          << "z-force: " << wrench.force.z);
