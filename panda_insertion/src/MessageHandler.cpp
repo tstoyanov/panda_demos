@@ -33,7 +33,7 @@ PoseStampedMsg MessageHandler::pointPoseMessage(Point point)
     return message;
 }
 
-void MessageHandler::sineYaw(PoseStampedMsg& message, int i)
+double MessageHandler::sineYaw(PoseStampedMsg& message, int i)
 {    
     // get RPY
     mutex.lock();
@@ -48,14 +48,17 @@ void MessageHandler::sineYaw(PoseStampedMsg& message, int i)
     m.getRPY(roll, pitch, yaw);
                                                          
     // sine Yaw
-    float alpha = 1.0;
-    yaw = alpha/i*sin(0.1*i);
+    float alpha = 0.2;
+    yaw = alpha*sin(0.05*i);
+    //std::cout << "++sine yaw:" << yaw << std::endl;
     myQuaternion.setRPY(roll, pitch, yaw);
                                                                                               
     message.pose.orientation.x = myQuaternion.x();
-    message.pose.orientation.x = myQuaternion.y();
-    message.pose.orientation.x = myQuaternion.z();
-    message.pose.orientation.x = myQuaternion.w();
+    message.pose.orientation.y = myQuaternion.y();
+    message.pose.orientation.z = myQuaternion.z();
+    message.pose.orientation.w = myQuaternion.w();
+
+    return yaw;
 }
 
 JointTrajectoryMsg MessageHandler::initialJointTrajectoryMessage()

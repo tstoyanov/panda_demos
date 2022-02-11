@@ -265,7 +265,8 @@ bool Controller::spiralMotionState()
     transform = panda->transformStamped.transform;
     mutex.unlock();
 
-    const double MAX_HEIGHT = 0.05;
+    std::cout << "+++spiral z:" << transform.translation.z << std::endl; 
+    const double MAX_HEIGHT = 0.06;
     if (transform.translation.z > MAX_HEIGHT)
     {
         ROS_ERROR("Tool too high, aborting spiral state.");
@@ -288,7 +289,7 @@ bool Controller::spiralMotionState()
 
     double a = 0.0;
     double b = 0.35 * 0.001;
-    int nrOfPoints = 100;
+    int nrOfPoints = 200;
 
     Trajectory spiralTrajectory = trajectoryHandler->generateArchimedeanSpiral(a, b, nrOfPoints);
     //trajectoryHandler->writeTrajectoryToFile(spiralTrajectory, twist, "actions_terminals_infos.csv", true);
@@ -302,28 +303,25 @@ bool Controller::spiralMotionState()
     for (auto point : spiralTrajectory)
     {
         i++;
+        
+        spiralMotionMessage = messageHandler->pointPoseMessage(point);
+        // add sine Yaw
+        double theta_z = messageHandler->sineYaw(spiralMotionMessage, i);
+        //std::cout << "theta_z in contrller:" << theta_z << std::endl;
+        //std::cout << "======spiral motion message:" << spiralMotionMessage << std::endl;
+
         if (inHole()) 
         {
             //bTerminal = true;
             reward += 1.0;
             // write dataset of state, action, reward, terminal
-            trajectoryHandler->writeDataset("peg_in_hole_dataset.csv", point, twist, reward, bTerminal, true);
+            trajectoryHandler->writeSpiralDataset("peg_in_hole_dataset.csv", spiralMotionMessage, theta_z, twist, reward, bTerminal, true);
             
             return true;
         }
 
-        //if (i == spiralTrajectory.size())
-        //{
-        //    bTerminal = true;
-        //}
-        
         // write dataset of state, action, reward, terminal
-        trajectoryHandler->writeDataset("peg_in_hole_dataset.csv", point, twist, reward, bTerminal, true);
-
-        spiralMotionMessage = messageHandler->pointPoseMessage(point);
-        // add sine Yaw
-        messageHandler->sineYaw(spiralMotionMessage, i);
-        std::cout << "======spiral motion message:" << spiralMotionMessage << std::endl;
+        trajectoryHandler->writeSpiralDataset("peg_in_hole_dataset.csv", spiralMotionMessage, theta_z, twist, reward, bTerminal, true);
 
         equilibriumPosePublisher.publish(spiralMotionMessage);
         rate.sleep();
@@ -771,7 +769,7 @@ bool Controller::inHole()
 
     ROS_DEBUG_STREAM("z: " << transMsg.translation.z);
 
-    if (transMsg.translation.z < 0.035)
+    if (transMsg.translation.z < 0.04)
     {
         ROS_DEBUG_STREAM("In hole, x-force: " << wrench.force.x << ", y-force: " << wrench.force.y
                          << "z-force: " << wrench.force.z);

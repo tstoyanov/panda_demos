@@ -44,6 +44,9 @@ public:
 
     void writeDataset(const std::string& fileName, Point& point, geometry_msgs::Twist& twist, 
                     float reward, bool terminal, bool appendToFile = false);
+
+    void writeSpiralDataset(const std::string& fileName, geometry_msgs::PoseStamped& message, double theta_z, geometry_msgs::Twist& twist, 
+                    float reward, bool terminal, bool appendToFile = false);
 };
 
 #endif

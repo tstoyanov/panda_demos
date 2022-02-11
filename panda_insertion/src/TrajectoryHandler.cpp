@@ -387,3 +387,77 @@ void TrajectoryHandler::writeDataset(const string& fileName,
 
 }
 
+void TrajectoryHandler::writeSpiralDataset(const string& fileName,
+                                        geometry_msgs::PoseStamped& message,
+                                        double theta_z,
+                                        geometry_msgs::Twist& twist,
+                                        float reward,
+                                        bool terminal,
+                                        bool appendToFile)
+{
+    ofstream outfile;
+
+    std::stringstream filePath;
+    filePath << ros::package::getPath("panda_insertion")
+             << "/trajectories/" << fileName;
+
+    if (appendToFile)
+    {
+        outfile.open(filePath.str(), ios_base::app);
+    }
+    else
+    {
+        outfile.open(filePath.str());
+    }
+
+    if (!outfile.is_open())
+    {
+        ROS_WARN_STREAM("Unable to open file " << filePath.str());
+        return;
+    }
+
+    // get robot transform
+    mutex.lock();
+    geometry_msgs::Transform transform = panda->transformStamped.transform;
+    mutex.unlock();
+
+    //state rotation
+    tf::Quaternion q(transform.rotation.x, 
+                     transform.rotation.y,
+                     transform.rotation.z,
+                     transform.rotation.w);
+    tf::Matrix3x3 m(q);
+    double roll, pitch, yaw;
+    m.getRPY(roll, pitch, yaw);
+   
+    //std::cout << "+++writing action:" << message.pose.position.x << ","
+    //        << message.pose.position.y << ","
+    //        << message.pose.position.z << ","
+    //        << theta_z << std::endl;;
+
+    // state, action, reward, terminal
+    outfile // state(19 dimensional)
+            << panda->q[0] << "," << panda->q[1] << "," << panda->q[2] << "," << panda->q[3] << ","
+            << panda->q[4] << "," << panda->q[5] << "," << panda->q[6] << ","
+            << panda->dq[0] << "," << panda->dq[1] << "," << panda->dq[2] << "," << panda->dq[3] << ","
+            << panda->dq[4] << "," << panda->dq[5] << "," << panda->dq[6] << ","
+            << transform.translation.x << "," 
+            << transform.translation.y << ","
+            << transform.translation.z << ","
+            << yaw << ","
+            << panda->getWrench().force.z << ","
+            // action(8 dimensional)
+            << message.pose.position.x << ","
+            << message.pose.position.y << ","
+            << message.pose.position.z << ","
+            << theta_z << ","
+            << twist.linear.x << ","
+            << twist.linear.y << ","
+            << twist.linear.z << ","
+            << twist.angular.z << ","
+            // reward
+            << reward << ","
+            // terminal flag
+            << terminal << "\n";
+
+}
