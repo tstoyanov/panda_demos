@@ -5,7 +5,7 @@
   <arg name="load_description" default="true"/>
   <arg name="robot_namespace" default="panda"/>
   <arg name="load_gripper" default="false"/>
-  <arg name="robot_ip" default="192.168.200.3"/>
+  <arg name="robot_ip" default="172.16.0.101"/>
   <arg name="controllers" default="franka_state_controller franka_hiqp_joint_effort_controller"/>
   <arg name="rviz" default="false"/>
 

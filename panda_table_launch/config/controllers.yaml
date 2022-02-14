@@ -169,3 +169,60 @@ franka_gripper:
     panda_finger_joint2: { p: 5, d: 1.0, i: 0, i_clamp: 1 }
 
   state_publish_rate: 25
+
+# Franka HiQP Velocity Controller ----------------------------------------
+franka_hiqp_joint_velocity_controller:
+  type: franka_hiqp/FrankaHiQPJointVelocityController
+  visualization_publish_rate: 3 #Hz
+  load_primitives_from_tf: true
+  c_state_publish_rate: 150.0
+  marker_prefix: ""
+  joints:
+    - panda_joint1
+    - panda_joint2
+    - panda_joint3
+    - panda_joint4
+    - panda_joint5
+    - panda_joint6
+    - panda_joint7
+  task_monitoring:
+    active: 1
+    publish_rate: 150.0
+
+# HiQP Effort Controller ----------------------------------------
+franka_hiqp_joint_effort_controller:
+  arm_id: panda
+  type: franka_hiqp/FrankaHiQPJointEffortController
+  visualization_publish_rate: 3 #Hz
+  load_primitives_from_tf: true
+  c_state_publish_rate: 150.0
+  marker_prefix: ""
+  joints:
+    - panda_joint1
+    - panda_joint2
+    - panda_joint3
+    - panda_joint4
+    - panda_joint5
+    - panda_joint6
+    - panda_joint7
+  task_monitoring:
+    active: 1
+    publish_rate: 150.0
+  alpha_vel: 0.2
+  delta_tau_max: 1.0
+  kv: 
+    - 30.0
+    - 30.0
+    - 30.0
+    - 30.0
+    - 20.0
+    - 12.0
+    - 10.0
+  kd: 
+    - 11.0
+    - 11.0
+    - 11.0
+    - 11.0
+    - 9.0
+    - 7.0
+    - 6.5
