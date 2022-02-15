@@ -33,7 +33,7 @@ void InsertionRL::init()
     this->tfListener = new tf2_ros::TransformListener(tfBuffer);
 
     transformTimer = nodeHandler.createTimer(ros::Duration(0.1), &InsertionRL::transformTimerCallback, this);
-    jointStateSubscriber = nodeHandler.subscribe("/joint_states", 100, &InsertionRL::jointStatesCallback, this);
+    jointStateSubscriber = nodeHandler.subscribe("/panda/joint_states", 100, &InsertionRL::jointStatesCallback, this);
     externalForceSubscriber = nodeHandler.subscribe("/panda/franka_state_controller/F_ext", 100, &InsertionRL::externalForceCallback, this);
 
     observationPublisher = nodeHandler.advertise<panda_insertion::StateMsg>("insertion_spirl/state", 100);

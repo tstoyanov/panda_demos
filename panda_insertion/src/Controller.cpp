@@ -289,7 +289,7 @@ bool Controller::spiralMotionState()
 
     double a = 0.0;
     double b = 0.35 * 0.001;
-    int nrOfPoints = 200;
+    int nrOfPoints = 250;
 
     Trajectory spiralTrajectory = trajectoryHandler->generateArchimedeanSpiral(a, b, nrOfPoints);
     //trajectoryHandler->writeTrajectoryToFile(spiralTrajectory, twist, "actions_terminals_infos.csv", true);

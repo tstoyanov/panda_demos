@@ -48,7 +48,7 @@ double MessageHandler::sineYaw(PoseStampedMsg& message, int i)
     m.getRPY(roll, pitch, yaw);
                                                          
     // sine Yaw
-    float alpha = 0.2;
+    float alpha = 0.4;
     yaw = alpha*sin(0.05*i);
     //std::cout << "++sine yaw:" << yaw << std::endl;
     myQuaternion.setRPY(roll, pitch, yaw);
