@@ -4,10 +4,14 @@
   <arg name="start_arm" default="true"/>
   <arg name="load_description" default="true"/>
   <arg name="robot_namespace" default="panda"/>
-  <arg name="load_gripper" default="false"/>
+  <arg name="load_gripper" default="true"/>
   <arg name="robot_ip" default="172.16.0.101"/>
   <arg name="controllers" default="franka_state_controller franka_hiqp_joint_velocity_controller"/>
   <arg name="rviz" default="false"/>
+
+  <arg name="arm_id"      default="panda" />
+  <arg name="joint_names" default="[$(arg arm_id)_finger_joint1, $(arg arm_id)_finger_joint2]" />
+
 
   <rosparam command="load" file="$(find panda_table_launch)/config/controllers.yaml" ns="$(arg robot_namespace)" />
   <rosparam command="load" file="$(find panda_table_launch)/config/franka_limits.yaml" ns="$(arg robot_namespace)" />
@@ -33,6 +37,12 @@
      </node>
   </group>
 
-  <node name="rviz" pkg="rviz" type="rviz" if="$(arg rviz)"/>
+  <node name="franka_gripper" pkg="franka_gripper" type="franka_gripper_node" output="screen">
+    <param name="robot_ip" value="$(arg robot_ip)"/>
+    <rosparam command="load" file="$(find franka_gripper)/config/franka_gripper_node.yaml" />
+    <rosparam param="joint_names" subst_value="true">$(arg joint_names)</rosparam>
+  </node>
+
+  <node name="rviz" pkg="rviz" type="rviz" if="$(arg rviz)" args="-d /home/frankanuc01/.rviz/default.rviz"/>
 
 </launch>
