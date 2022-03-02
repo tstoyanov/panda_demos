@@ -136,21 +136,21 @@ bool Controller::moveToInitialPositionState()
     geometry_msgs::PoseStamped initialPositionMessage = messageHandler->emptyPoseMessage();
     
     // Execute trajectory
-    reward = 0;
+    //reward = 0;
     ros::Rate rate(20);
     int i = 0;
     bool bTerminal = false;
     for (auto point : initialTrajectory)
     {
         i++;
-        if (i == initialTrajectory.size())
+        //if (i == initialTrajectory.size())
         {
             //bTerminal = true;
-            reward += 1.0;
+            //reward += 1.0;
         }
         
         // write dataset of state, action, reward, terminal
-        trajectoryHandler->writeDataset("peg_in_hole_dataset.csv", point, twist, reward, bTerminal, true);
+        //trajectoryHandler->writeDataset("peg_in_hole_dataset.csv", point, twist, reward, bTerminal, true);
 
         // publish way point
         initialPositionMessage = messageHandler->pointPoseMessage(point);
@@ -208,6 +208,7 @@ bool Controller::externalDownMovementState()
     // Execute trajectory
     ros::Rate rate(loop_rate);
     int i = 0;
+    reward = 0;
     bool bTerminal = false;
     for (auto point : downTrajectory)
     {
@@ -294,6 +295,15 @@ bool Controller::spiralMotionState()
     Trajectory spiralTrajectory = trajectoryHandler->generateArchimedeanSpiral(a, b, nrOfPoints);
     //trajectoryHandler->writeTrajectoryToFile(spiralTrajectory, twist, "actions_terminals_infos.csv", true);
 
+    Trajectory spiralTrajectory1 = trajectoryHandler->generateArchimedeanSpiral(0.0, 0.34*0.0015, nrOfPoints);
+    
+    Trajectory spiralTrajectory2 = trajectoryHandler->generateArchimedeanSpiral(0.01, 0.345*0.002, nrOfPoints);
+    
+    Trajectory spiralTrajectory3 = trajectoryHandler->generateArchimedeanSpiral(0.005, 0.32*0.003, nrOfPoints);
+    
+    trajectoryHandler->writeSpiralTrajectories(spiralTrajectory, spiralTrajectory1, spiralTrajectory2, spiralTrajectory3, "spiral_trajectories.csv", true);
+    
+    
     geometry_msgs::PoseStamped spiralMotionMessage = messageHandler->emptyPoseMessage();
 
     // Execute trajectory
@@ -312,15 +322,17 @@ bool Controller::spiralMotionState()
 
         if (inHole()) 
         {
-            //bTerminal = true;
+            bTerminal = true;
             reward += 1.0;
             // write dataset of state, action, reward, terminal
+            //trajectoryHandler->writeDataset("peg_in_hole_dataset.csv", point, twist, reward, bTerminal, true);
             trajectoryHandler->writeSpiralDataset("peg_in_hole_dataset.csv", spiralMotionMessage, theta_z, twist, reward, bTerminal, true);
             
             return true;
         }
 
         // write dataset of state, action, reward, terminal
+        //trajectoryHandler->writeDataset("peg_in_hole_dataset.csv", point, twist, reward, bTerminal, true);
         trajectoryHandler->writeSpiralDataset("peg_in_hole_dataset.csv", spiralMotionMessage, theta_z, twist, reward, bTerminal, true);
 
         equilibriumPosePublisher.publish(spiralMotionMessage);
@@ -429,10 +441,10 @@ bool Controller::straighteningState()
     geometry_msgs::PoseStamped poseMessage = messageHandler->straighteningPoseMessage();
     while (ros::ok() && i < 20)
     {
-        if (i == 19)
+        //if (i == 19)
         {
             //bTerminal = true;
-            reward += 1.0;
+            //reward += 1.0;
         }
         Point point;
         point.x = poseMessage.pose.position.x;
@@ -440,7 +452,7 @@ bool Controller::straighteningState()
         point.z = poseMessage.pose.position.z;
 
         // write dataset of state, action, reward, terminal
-        trajectoryHandler->writeDataset("peg_in_hole_dataset.csv", point, twist, reward, bTerminal, true);
+        //trajectoryHandler->writeDataset("peg_in_hole_dataset.csv", point, twist, reward, bTerminal, true);
 
         equilibriumPosePublisher.publish(poseMessage);
         rate.sleep();
@@ -539,14 +551,14 @@ bool Controller::internalUpMovementState()
     for (auto point : upTrajectory)
     {
         i++;
-        if (i == upTrajectory.size())
+        //if (i == upTrajectory.size())
         {
-            bTerminal = true;
-            reward += 1.0;
+            //bTerminal = true;
+            //reward += 1.0;
         }
         
         // write dataset of state, action, reward, terminal
-        trajectoryHandler->writeDataset("peg_in_hole_dataset.csv", point, twist, reward, bTerminal, true);
+        //trajectoryHandler->writeDataset("peg_in_hole_dataset.csv", point, twist, reward, bTerminal, true);
 
         upMovementMessage = messageHandler->pointPoseMessage(point);
         equilibriumPosePublisher.publish(upMovementMessage);

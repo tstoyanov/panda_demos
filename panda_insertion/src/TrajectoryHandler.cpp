@@ -270,6 +270,65 @@ void TrajectoryHandler::writeTrajectoryToFile(Trajectory trajectory,
     outfile.close();
 }
 
+void TrajectoryHandler::writeSpiralTrajectories(Trajectory trajectory,
+                                            Trajectory trajectory1,
+                                            Trajectory trajectory2,
+                                            Trajectory trajectory3,
+                                            const std::string& fileName,
+                                            bool appendToFile)
+{
+    ofstream outfile;
+
+    std::stringstream filePath;
+    filePath << ros::package::getPath("panda_insertion")
+             << "/trajectories/" << fileName;
+
+    if (appendToFile)
+    {
+        outfile.open(filePath.str(), ios_base::app);
+    }
+    else
+    {
+        outfile.open(filePath.str());
+    }
+
+    if (!outfile.is_open())
+    {
+        ROS_WARN_STREAM("Unable to open file " << filePath.str());
+        return;
+    }
+
+    for (auto& point : trajectory)
+    {
+        // actions
+        outfile << point.x << "," << point.y << "," << point.z << "\n";
+         
+    }
+    
+    for (auto& point : trajectory1)
+    {
+        // actions
+        outfile << point.x << "," << point.y << "," << point.z << "\n";
+    }
+    
+    for (auto& point : trajectory2)
+    {
+        // actions
+        outfile << point.x << "," << point.y << "," << point.z << "\n";
+    }
+
+    for (auto& point : trajectory3)
+    {
+        // actions
+        outfile << point.x << "," << point.y << "," << point.z << "\n";
+    }
+
+    ROS_DEBUG_STREAM("Wrote trajectory to file " << filePath.str());
+
+    outfile.close();
+}
+
+
 void TrajectoryHandler::writeStateToFile(const string& fileName,
                                         bool appendToFile)
 {

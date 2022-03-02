@@ -33,7 +33,12 @@ public:
     Trajectory generateInitialPositionTrajectory(int nrOfPoints);
     Trajectory generateExternalDownTrajectory(int nrOfPoints);
     Trajectory generateInternalUpTrajectory(int nrOfPoints);
-
+    void writeSpiralTrajectories(Trajectory trajectory,
+                                            Trajectory trajectory1,
+                                            Trajectory trajectory2,
+                                            Trajectory trajectory3,
+                                            const std::string& fileName,
+                                            bool appendToFile);
     void writeTrajectoryToFile(Trajectory trajectory,
                                geometry_msgs::Twist twist,
                                const std::string& fileName,
