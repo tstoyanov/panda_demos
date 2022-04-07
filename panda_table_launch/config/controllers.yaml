@@ -172,7 +172,8 @@ franka_gripper:
 
 # Franka HiQP Velocity Controller ----------------------------------------
 franka_hiqp_joint_velocity_controller:
-  type: franka_hiqp/FrankaHiQPJointVelocityController
+#  type: franka_hiqp/FrankaHiQPJointVelocityController
+  type: hiqp_ros/HiQPJointVelocityController
   visualization_publish_rate: 3 #Hz
   load_primitives_from_tf: true
   c_state_publish_rate: 150.0
