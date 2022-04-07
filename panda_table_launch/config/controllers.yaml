@@ -187,7 +187,7 @@ franka_hiqp_joint_velocity_controller:
     - panda_joint7
   task_monitoring:
     active: 1
-    publish_rate: 150.0
+    publish_rate: 250.0
 
 # HiQP Effort Controller ----------------------------------------
 franka_hiqp_joint_effort_controller:
